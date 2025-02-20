@@ -1,0 +1,234 @@
+#' Main function for colocboost post-hoc analysis
+#'
+#' @details
+#' The following functions are included in the post-hoc analysis:
+#'
+#' Colocalization signal - `colocboost_posthoc_coloc` - identify the colocalized confidence sets and the corresponding causal configurations.
+#'
+#' Un-colocalization signal - `colocboost_posthoc_noncoloc` - identify the causal confidence sets for each trait only.
+#'
+#' Add-hoc merging functions including
+#'
+#' \itemize{
+#'  \item{merge_coloc_single}{merge the colocalized sets and the single causal set if pass the \code{between_purity}}
+#'  \item{merge_single}{merge the single causal sets for different traits if pass the \code{between_purity}}
+#' }
+#'
+#' Refine of the colocalization sets (TO-DO-LIST)
+#'
+#' Summary of the colocboost results and get the output of colocboost (TO-DO-LIST)
+#'
+#' @export
+colocboost_posthoc <- function(cb_obj,
+                               coverage = 0.95,
+                               func_intw = "fun_R",
+                               alpha = 1.5,
+                               check_null = 0.1,
+                               check_null_method = "profile",
+                               check_null_max=2e-5,
+                               dedup = TRUE,
+                               overlap = TRUE,
+                               n_purity = 100,
+                               min_abs_corr = 0.5,
+                               coverage_singlew = 0.8,
+                               median_abs_corr = NULL,
+                               between_cluster = 0.8,
+                               between_purity = 0.8,
+                               weaker_ucos = TRUE,
+                               merging = TRUE,
+                               tol = 1e-9,
+                               output_level = 1){
+
+    if (class(cb_obj) != "colocboost"){
+        stop("Input must from colocboost function!")}
+  
+    # - data information
+    data_info <- get_data_info(cb_obj)
+    if (data_info$n_trait == 1 & output_level == 1){ output_level = 2 }
+    if (cb_obj$cb_model_para$num_updates == 1){
+        cb_output <- list("cos_summary" = NULL,
+                          "vcp" = NULL,
+                          "cos_details" = NULL,
+                          "data_info" = data_info)
+        # - save model and all coloc and single information for diagnostic
+        if (output_level != 1){
+            tmp <- get_full_output(cb_obj = cb_obj, past_out = NULL, variants = NULL)
+            if (output_level == 2){
+                cb_output$ucos_details = tmp$ucos_detials
+                cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "ucos_details")]
+            } else {
+                cb_output$ucos_details = tmp$ucos_detials
+                cb_output$diagnostic_details = tmp[-1]
+                cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "ucos_details", "diagnostic_details")]
+            }
+            if (data_info$n_trait == 1){
+              cb_output <- list("ucos_summary" = NULL, "pip" = NULL,
+                                "ucos_details" = NULL, "data_info" = data_info)
+            }
+        }
+
+    } else {
+
+        if (cb_obj$cb_model_para$M==1){
+          check_null_method = "obj"
+          check_null = check_null_max = 0.1
+        }
+        cb_obj <- get_max_profile(cb_obj, check_null_max=check_null_max, check_null_method = check_null_method)
+        # --------- about colocalized confidence sets ---------------------------------
+        out_coloc <- colocboost_posthoc_coloc(cb_obj,
+                                              coverage = coverage,
+                                              func_intw = func_intw,
+                                              alpha = alpha,
+                                              check_null = check_null,
+                                              check_null_method = check_null_method,
+                                              dedup = dedup,
+                                              overlap = overlap,
+                                              n_purity = n_purity,
+                                              min_abs_corr = min_abs_corr,
+                                              coverage_singlew = coverage_singlew,
+                                              median_abs_corr = median_abs_corr,
+                                              between_cluster = between_cluster,
+                                              between_purity = between_purity,
+                                              tol = tol)
+
+        # --------- about non-colocalized confidence sets ---------------------------------
+        L <- cb_obj$cb_model_para$L
+        if (L == 1){ weaker_ucos = FALSE }
+        update <- cb_obj$cb_model_para$update_status
+        csets_each <- list()
+        change_obj_each <- purity_each <- vector(mode='list', length=L)
+        avWeight_csets_each <- single_trait <- c()
+        for (i in 1:L){
+            pos.each.single <- which((colSums(update) == 1) * (update[i,] == 1) + (update[i,] == -1) == 1)
+            pos.each.all <- which(update[i,] != 0)
+            # - if length(pos.each.all) = 1, idea check lfsr
+            if (length(pos.each.single) >= 1){
+                pos_temp <- match(pos.each.single, pos.each.all)
+                cb_obj_single <- list("cb_data" = list(),
+                                      "cb_model" = cb_obj$cb_model[i],
+                                      "cb_model_para" = cb_obj$cb_model_para)
+                cb_obj_single$cb_data <- list("data" = cb_obj$cb_data$data[i], "dict" = 1)
+                # change R number
+                cb_obj_single$cb_model_para$L = 1
+                # for single trait, if missing we need to extract from other
+                if (!is.null(cb_obj_single$cb_data$data[[1]][["Y"]])){
+                    if (is.null(cb_obj_single$cb_data$data[[1]]$X)){
+                        X_dict <- cb_obj$cb_data$dict[i]
+                        cb_obj_single$cb_data$data[[1]]$X <- cb_obj$cb_data$data[[X_dict]]$X
+                    }
+                }
+                if (!is.null(cb_obj_single$cb_data$data[[1]][["XtY"]])){
+                    if (is.null(cb_obj_single$cb_data$data[[1]]$XtX)){
+                        X_dict <- cb_obj$cb_data$dict[i]
+                        cb_obj_single$cb_data$data[[1]]$X <- cb_obj$cb_data$data[[X_dict]]$XtX
+                    }
+                }
+                class(cb_obj_single) <- "colocboost"
+                out_each <- colocboost_posthoc_noncoloc(cb_obj_single,
+                                                        coverage = coverage,
+                                                        check_null = check_null,
+                                                        check_null_method = check_null_method,
+                                                        dedup = dedup,
+                                                        overlap = overlap,
+                                                        n_purity = n_purity,
+                                                        min_abs_corr = min_abs_corr,
+                                                        median_abs_corr = median_abs_corr,
+                                                        between_cluster = between_cluster,
+                                                        between_purity = between_purity,
+                                                        weaker_ucos = weaker_ucos,
+                                                        tol = tol)
+                aaa <- out_each$csets$csets
+                if (length(aaa) != 0){
+                    single_trait <- c(single_trait, rep(i, length(aaa)))
+                    names(aaa) <- paste0("sets:","Y",i,":", names(aaa))
+                    csets_each <- c(csets_each, aaa)
+                    bbb <- out_each$csets$avWeight
+                    colnames(bbb) <-  names(aaa)
+                    avWeight_csets_each <- cbind(avWeight_csets_each, bbb)
+                    temp <- matrix(0, ncol = L, nrow = length(aaa))
+                    temp[,i] <- as.numeric(unlist(out_each$csets$cs_change))
+                    rownames(temp) <- names(aaa)
+                    change_obj_each[[i]] <- temp
+                    purity_tmp <- out_each$csets$purity
+                    rownames(purity_tmp) <- names(aaa)
+                    purity_each[[i]] <- purity_tmp
+                }
+            }
+        }
+        out_single <- list("csets_each" = csets_each,
+                           "avW_csets_each" = avWeight_csets_each,
+                           "change_obj_each" = as.data.frame(do.call(rbind, change_obj_each)),
+                           "purity_each" = as.data.frame(do.call(rbind, purity_each)),
+                           "single_trait" = single_trait)
+
+        # -------------------------- Post Processing --------------------------
+        # ----- Remove high correlated confident sets between colocsets and single sets
+        if ( length(out_coloc$csets$csets)!=0 & length(out_single$csets_each)!=0){
+            past_out <- merge_coloc_single(cb_obj, out_coloc, out_single, coverage = coverage,
+                                           min_abs_corr = min_abs_corr,tol = tol,
+                                           between_purity = between_purity)
+        } else if (length(out_coloc$csets$csets)!=0 & length(out_single$csets_each)==0) {
+            past_out <- list("single" = NULL, "coloc" = out_coloc)
+        } else if (length(out_coloc$csets$csets)==0 & length(out_single$csets_each)!=0){
+            past_out <- list("single" = out_single, "coloc" = NULL)
+        } else {
+            past_out <- list("single" = NULL, "coloc" = NULL)
+        }
+        # ----- Merge two single sets
+        if (length(past_out$single$csets_each) > 1){
+            if (merging) {
+                past_out <- merge_single(cb_obj, past_out,
+                                         min_abs_corr = min_abs_corr,
+                                         median_abs_corr = median_abs_corr,
+                                         n_purity = n_purity,
+                                         between_purity = between_purity,
+                                         tol = tol)
+            }
+        }
+
+        ############# - extract colocboost output - ####################
+        # - colocalization results
+        cb_obj$cb_model_para$alpha <- alpha
+        cb_obj$cb_model_para$coverage <- coverage
+        coloc_results <- get_cos_details(cb_obj, coloc_out = past_out$coloc$csets, data_info = data_info)
+        cb_output <- list("vcp" = coloc_results$vcp,
+                          "cos_details" = coloc_results$coloc_results,
+                          "data_info" = data_info)
+        
+        ### - extract summary table
+        target_idx <- cb_obj$cb_model_para$target_idx
+        summary_table <- get_cos_summary(cb_output, target_trait = data_info$traits_info$traits_names[target_idx])
+        cb_output <- c(cb_output, list(cos_summary = summary_table))
+        cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info")]
+
+        # - save model and all coloc and single information for diagnostic
+        if (output_level != 1){
+          tmp <- get_full_output(cb_obj = cb_obj, past_out = past_out, variants = data_info$variants, cb_output = cb_output)
+          if (output_level == 2){
+            cb_output <- c(cb_output, list("ucos_details" = tmp$ucos_details))
+            cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "ucos_details")]
+          } else {
+            cb_output <- c(cb_output, list("ucos_details" = tmp$ucos_details))
+            cb_output$diagnostic_details = tmp[-1]
+            cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "ucos_details", "diagnostic_details")]
+          }
+          # - if fine-boost, the summary table will be the summary of finemapping
+          if (data_info$n_trait == 1){
+            cb_output <- cb_output[-match(c("cos_summary","vcp","cos_details"), names(cb_output))]
+            remain_obj <- names(cb_output)
+            if (!is.null(cb_output$ucos_details$ucos)){
+              cb_output$pip <- apply(do.call(cbind,cb_output$ucos_details$ucos_weight), 1, function(w0) 1-prod(1-w0))
+              names(cb_output$pip) <- data_info$variants
+              cb_output$ucos_summary <- get_summary_table_fm(cb_output)
+            } else {
+              tmp <- list("pip" = NULL, "ucos_summary" = NULL)
+              cb_output <- c(cb_output, tmp)
+            }
+            cb_output <- cb_output[c("ucos_summary", "pip", remain_obj)]
+          }
+        }
+    }
+
+    return(cb_output)
+
+}
