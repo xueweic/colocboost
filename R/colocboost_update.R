@@ -7,13 +7,13 @@
 #'
 #' @return colocboost object after gradient boosting update
 #' @export
-boost_joint <- function(cb_model, cb_model_para, cb_data,
-                        tau = 0.01,
-                        decayrate = 1,
-                        func_prior = "z2z",
-                        lambda = 0.5,
-                        lambda_target = 1,
-                        LD_obj = FALSE){
+colocboost_update <- function(cb_model, cb_model_para, cb_data,
+                              tau = 0.01,
+                              decayrate = 1,
+                              func_prior = "z2z",
+                              lambda = 0.5,
+                              lambda_target = 1,
+                              LD_obj = FALSE){
 
     # - clear which trait need to be updated at which jk
     pos.update <- which(cb_model_para$update_temp$update_status != 0)

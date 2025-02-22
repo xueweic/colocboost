@@ -1,0 +1,35 @@
+Package: colocboost
+Type: Package
+Date: 2024-09-01
+Title: R package for multi-trait colocalization analysis
+Version: 0.1.0
+Authors@R: c(
+  person(given = "Xuewei", family = "Cao", email = "xc2270@cumc.columbia.edu", role = c("cre", "aut")),
+  person(given = "Haochen", family = "Sun", email = "hs3393@cumc.columbia.edu", role = "aut"),
+  person(given = "Ru", family = "Feng", email = "rf2872@cumc.columbia.edu", role = "aut"),
+  person(given = "Rahul", family = "Mazumder", email = "rahulmaz@mit.edu", role = "aut"),
+  person(given = "The Alzheimer’s Disease Functional Genomics Consortium", role = "aut"),
+  person(given = "Kushal", family = "Dey", email = "deyk@mskcc.org", role = c("aut")),
+  person(given = "Gao", family = "Wang", email = "gw2411@cumc.columbia.edu", role = c("aut"))
+  )
+Maintainer: The package maintainer <xc2270@cumc.columbia.edu>
+Description: More about what it does (maybe more than one line)
+    Use four spaces when indenting paragraphs within the Description.
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.3.2
+URL: https://github.com/StatFunGen/colocboost
+BugReports: https://github.com/StatFunGen/colocboost/issues
+Depends:
+    R (>= 4.0.0)
+Imports:
+    Rfast,
+    matrixStats
+Suggests: 
+    knitr,
+    rmarkdown,
+    susieR,
+    ashr
+VignetteBuilder: knitr
+Roxygen: list(markdown = TRUE)
+License: MIT + file LICENSE
