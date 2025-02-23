@@ -1,0 +1,10 @@
+Package: colocboost
+Title: Multi-context colocalization analysis tool for molecular QTL and GWAS studies
+Version: 0.1.0
+Authors@R:
+    person("Xuewei", "Cao", , "first.last@example.com", role = c("aut", "cre"))
+Description: This R package implements ColocBoost --- motivated and designed for colocalization analysis of multiple genetic association studies --- as a multi-task learning approach to variable selection regression with highly correlated predictors and sparse effects, based on frequentist statistical inference. It provides statistical evidence to identify which subsets of predictors have non-zero effects on which subsets of response variables.
+License: MIT
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2

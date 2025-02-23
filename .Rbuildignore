@@ -1,0 +1,17 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^\.Rhistory$
+^\.RData$
+^\.DS_Store$
+^\.vscode$
+^\.git
+^\.github
+^\.gitignore
+^codecov.yml
+^src/Makevars$
+^tests/testthat/__snaps$
+^pixi.toml
+^pixi.lock
+^\.pixi
+^cran-comments\.md$
+^LICENSE\.md$
