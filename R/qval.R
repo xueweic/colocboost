@@ -1,7 +1,8 @@
-# licence, acknowledge, source, directly copy without modification!!!!!!
-# @noRd: not export, internal use
-
-
+# 
+#' These functions calculate the q-values corresponding to a given set of p-values, directly copy without modification from https://github.com/StoreyLab/qvalue. 
+#' It is implemented under the LGPL license (https://github.com/StoreyLab/qvalue/blob/master/DESCRIPTION)
+#'  The functions are marked as internal, meaning it is not meant to be exported for external use.
+#'
 #' @title
 #' Estimate the q-values for a given set of p-values
 #'
@@ -83,10 +84,7 @@
 #' @author John D. Storey
 #' @seealso \code{\link{pi0est}}, \code{\link{lfdr}}, \code{\link{summary.qvalue}},
 #' \code{\link{plot.qvalue}}, \code{\link{hist.qvalue}}, \code{\link{write.qvalue}}
-#' @keywords qvalue
-#' @aliases qvalue
-#' @import stats
-#' @export
+#' @noRd
 qvalue <- function(p, fdr.level = NULL, pfdr = FALSE, lfdr.out = TRUE, pi0 = NULL, ...) {
   # Argument checks
   p_in <- qvals_out <- lfdr_out <- p
@@ -222,9 +220,7 @@ qvalue <- function(p, fdr.level = NULL, pfdr = FALSE, lfdr.out = TRUE, pi0 = NUL
 #'
 #' @author John D. Storey
 #' @seealso \code{\link{qvalue}}
-#' @keywords pi0est, proportion true nulls
-#' @aliases pi0est
-#' @export
+#' @noRd
 pi0est <- function(p, lambda = seq(0.05,0.95,0.05), pi0.method = c("smoother", "bootstrap"),
                    smooth.df = 3, smooth.log.pi0 = FALSE, ...) {
   # Check input arguments
@@ -348,9 +344,7 @@ pi0est <- function(p, lambda = seq(0.05,0.95,0.05), pi0.method = c("smoother", "
 #'
 #' @author John D. Storey
 #' @seealso \code{\link{qvalue}}, \code{\link{pi0est}}, \code{\link{hist.qvalue}}
-#' @aliases lfdr
-#' @keywords local False Discovery Rate, lfdr
-#' @export
+#' @noRd
 lfdr <- function(p, pi0 = NULL, trunc = TRUE, monotone = TRUE,
                  transf = c("probit", "logit"), adj = 1.5, eps = 10 ^ -8, ...) {
   # Check inputs

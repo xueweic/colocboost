@@ -119,13 +119,13 @@ colocboost_workhorse <- function(cb_data,
                                                         coloc_thres = coloc_thres)
             
             # step 2: gradient boosting for the updated traits
-            cb_model <- boost_joint(cb_model, cb_model_para, cb_data,
-                                    tau = tau,
-                                    decayrate = decayrate,
-                                    func_prior = func_prior,
-                                    lambda = lambda,
-                                    lambda_target = lambda_target,
-                                    LD_obj = LD_obj)
+            cb_model <- colocboost_update(cb_model, cb_model_para, cb_data,
+                                          tau = tau,
+                                          decayrate = decayrate,
+                                          func_prior = func_prior,
+                                          lambda = lambda,
+                                          lambda_target = lambda_target,
+                                          LD_obj = LD_obj)
             
             # print(paste("m: update", which(cb_model_para$update_temp$update_status != 0), "at", cb_model_para$update_temp$real_update_jk[which(cb_model_para$update_temp$update_status != 0)]))
             

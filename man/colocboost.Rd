@@ -56,7 +56,6 @@ colocboost(
   check_null_method = "profile",
   check_null_max = 0.02,
   residual_correlation = NULL,
-  maf_cut = 0.005,
   LD_obj = FALSE,
   weaker_ucos = TRUE,
   output_level = 1
@@ -151,8 +150,6 @@ if the local FDR for all variants are greater than \code{lfsr_max}.}
 \item{check_null_max}{The smallest value of change of profile loglikelihood for each trait.}
 
 \item{residual_correlation}{The residual correlation based on the sample overlap, it is diagonal if it is NULL.}
-
-\item{maf_cut}{The smallest cutof of the MAF.}
 
 \item{LD_obj}{When \code{LD_obj = FALSE}, objective fuunction doesn't include LD information.}
 

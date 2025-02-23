@@ -239,7 +239,8 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL){
 #' get_summary_table(cb_output)
 #' get_summary_table(cb_output, target_trait = c("Y1", "Y2"))
 #'
-#' @export
+#' @noRd
+#' @keywords cb_post_inference
 get_cos_summary <- function(cb_output, traits_names = NULL, gene_name = NULL, target_trait = NULL){
 
     coloc_csets <- cb_output$cos_details$cos$cos_index
@@ -293,7 +294,8 @@ get_cos_summary <- function(cb_output, traits_names = NULL, gene_name = NULL, ta
 }
 
 
-
+#' @noRd
+#' @keywords cb_post_inference
 get_full_output <- function(cb_obj, past_out = NULL, variants = NULL, cb_output = NULL){
 
     cb_model <- cb_obj$cb_model
@@ -495,7 +497,8 @@ get_full_output <- function(cb_obj, past_out = NULL, variants = NULL, cb_output 
 
 }
 
-
+#' @noRd
+#' @keywords cb_post_inference
 get_summary_table_fm <- function(cb_output, traits_names = NULL, gene_name = NULL){
   
   specific_cs <- cb_output$ucos_details

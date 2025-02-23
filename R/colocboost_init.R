@@ -37,8 +37,7 @@ colocboost_init_data <- function(X, Y, dict_YX,
                                  target_variants = TRUE,
                                  overlap_varaints = FALSE,
                                  intercept=TRUE, standardize=TRUE,
-                                 residual_correlation = NULL,
-                                 maf_cut = 0.005){
+                                 residual_correlation = NULL){
 
     #################  initialization #######################################
     cb_data <- list("data" = list())
@@ -104,19 +103,7 @@ colocboost_init_data <- function(X, Y, dict_YX,
                 }
 
             }
-            # - if low frequency variants
-            ###### FIXME.
-            ###### currently, only consider 0-1-2 genotype matrix, need to be changed later.
-            if ((sum(x_tmp==0|x_tmp==1|x_tmp==2)) > nrow(x_tmp)*ncol(x_tmp)*0.9){
-                maf <- colMeans(x_tmp) / 2
-                pos.low <- which(maf <= maf_cut)
-                if (length(pos.low) != 0){
-                    change_x = TRUE
-                    x_tmp[, pos.low] = 0
-                    drop_lowfreq <- c(drop_lowfreq, colnames(x_tmp)[pos.low])
-                }
-            }
-            # - if missing X
+            # - if missing X - FIXME
             snp.name <- keep.snps[[dict_YX[i]]]
             if (length(snp.name) != length(keep.snp.names)){
                 x_extend <- matrix(0, nrow = nrow(x_tmp), ncol = length(keep.snp.names),

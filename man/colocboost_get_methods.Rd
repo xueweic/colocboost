@@ -2,32 +2,17 @@
 % Please edit documentation in R/colocboost_output.R
 \name{colocboost_get_methods}
 \alias{colocboost_get_methods}
-\alias{get_cos_summary}
 \title{Set of functions for post inferences from ColocBoost}
 \usage{
 colocboost_get_methods()
-
-get_cos_summary(
-  cb_output,
-  traits_names = NULL,
-  gene_name = NULL,
-  target_trait = NULL
-)
 }
 \description{
 The \code{colocboost_get_methods} functions access basic properties inferences from a fitted ColocBoost model. This documentation serves as a summary for all related post-inference functions.
-
-Get the colocalization summary table with or without the specific traits.
 }
 \details{
 The following functions are included in this set:
 \code{get_summary_table} get the colocalization summary table with or without the specific traits.
 
 These functions are not exported individually and are accessed via \code{colocboost_get_methods}.
-}
-\examples{
-get_summary_table(cb_output)
-get_summary_table(cb_output, target_trait = c("Y1", "Y2"))
-
 }
 \keyword{cb_post_inference}

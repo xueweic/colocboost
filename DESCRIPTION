@@ -1,13 +1,37 @@
 Package: colocboost
+Type: Package
+Date: 2024-09-01
 Title: Multi-context colocalization analysis tool for molecular QTL and GWAS studies
 Version: 0.1.0
-Authors@R:
-    person("Xuewei", "Cao", , "first.last@example.com", role = c("aut", "cre"))
+Authors@R: c(
+  person(given = "Xuewei", family = "Cao", email = "xc2270@cumc.columbia.edu", role = c("cre", "aut")),
+  person(given = "Haochen", family = "Sun", email = "hs3393@cumc.columbia.edu", role = "aut"),
+  person(given = "Ru", family = "Feng", email = "rf2872@cumc.columbia.edu", role = "aut"),
+  person(given = "Rahul", family = "Mazumder", email = "rahulmaz@mit.edu", role = "aut"),
+  person(given = "The Alzheimer’s Disease Functional Genomics Consortium", role = "aut"),
+  person(given = "Kushal", family = "Dey", email = "deyk@mskcc.org", role = c("aut")),
+  person(given = "Gao", family = "Wang", email = "gw2411@cumc.columbia.edu", role = c("aut"))
+  )
+Maintainer: The package maintainer <xc2270@cumc.columbia.edu>
 Description: This R package implements ColocBoost --- motivated and designed for colocalization analysis of multiple genetic association studies --- as a multi-task learning approach to variable selection regression with highly correlated predictors and sparse effects, based on frequentist statistical inference. It provides statistical evidence to identify which subsets of predictors have non-zero effects on which subsets of response variables.
-License: MIT
 Encoding: UTF-8
-Roxygen: list(markdown = TRUE)
+LazyData: true
 RoxygenNote: 7.3.2
+URL: https://github.com/StatFunGen/colocboost
+BugReports: https://github.com/StatFunGen/colocboost/issues
+Depends:
+    R (>= 4.0.0)
+Imports:
+    Rfast,
+    matrixStats
 Suggests: 
     testthat (>= 3.0.0)
+    knitr,
+    rmarkdown,
+    susieR,
+    ashr
+VignetteBuilder: knitr
+RoxygenNote: 7.3.2
+Roxygen: list(markdown = TRUE)
 Config/testthat/edition: 3
+License: MIT

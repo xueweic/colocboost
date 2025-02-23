@@ -1,18 +1,19 @@
 #' @rdname colocboost
 #'
-#' @title ColocBoost: A gradient boosting informed multi-omics colocalization method
+#' @title ColocBoost: A gradient boosting informed multi-omics xQTL colocalization method
 #'
-#' @description `colocboost` implements a proximity-smoothed gradient boosting approach for multi-trait colocalization at gene loci,
-#'              accommodating multiple causal variants. This method, introduced by Cao et al. (2024), is particularly suited for scaling
+#' @description `colocboost` implements a proximity adaptive smoothing gradient boosting approach for multi-trait colocalization at gene loci,
+#'              accommodating multiple causal variants. This method, introduced by Cao et al. (2025), is particularly suited for scaling
 #'              to large datasets involving numerous molecular quantitative traits and disease traits.
-#'              In brief, this function fits a multiple linear regression model \eqn{Y = XB + E} in matrix form.
+#'              In brief, this function fits a multiple linear regression model \eqn{Y = XB + E} in matrix form. 
+#'              ColocBoost can be generally used in multi-task variable selection regression problem.
 #'
-#' @details The function \code{colocboost} implements the proximity smoothed gradient boosting method from Cao et al (2024).
-#' The option \code{refine = TRUE} implements an additional step to help merge the confidence sets with small \code{between_putiry}
+#' @details The function \code{colocboost} implements the proximity smoothed gradient boosting method from Cao et al (2025).
+#' There is an additional step to help merge the confidence sets with small \code{between_putiry}
 #' (default is 0.8) but within the same locus. This step addresses potential instabilities in linkage disequilibrium (LD) estimation
 #' that may arise from small sample sizes or discrepancies in minor allele frequencies (MAF) across different confidence sets.
 #'
-#'
+#' @section Input Data:
 #' @param X A list of genotype matrices for different traits, or a single matrix if all traits share the same genotypes.
 #'          Each matrix should have column names, if sample sizes and variants possibly differing across matrices.
 #' @param Y A list of vectors of traits or an N by L matrix if it is considered for the same X and multiple traits.
@@ -72,7 +73,6 @@
 #' @param check_null_method The metric to check the null sets. Default is "profile"
 #' @param check_null_max The smallest value of change of profile loglikelihood for each trait.
 #' @param residual_correlation The residual correlation based on the sample overlap, it is diagonal if it is NULL.
-#' @param maf_cut The smallest cutof of the MAF.
 #' @param LD_obj When \code{LD_obj = FALSE}, objective fuunction doesn't include LD information.
 #' @param output_level When \code{output_level = 2}, return the entire Colocboost model to diagnostic results (more space).
 #'
@@ -148,7 +148,6 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                        check_null_method = "profile",
                        check_null_max = 0.02,
                        residual_correlation = NULL, # sample overlap, it is diagonal if it is NULL
-                       maf_cut = 0.005,
                        LD_obj = FALSE,
                        weaker_ucos = TRUE,
                        output_level = 1){
@@ -512,8 +511,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                                     overlap_varaints = overlap_varaints,
                                     intercept = intercept,
                                     standardize = standardize,
-                                    residual_correlation = residual_correlation,
-                                    maf_cut = maf_cut)
+                                    residual_correlation = residual_correlation)
 
     ##################  colocboost updates   ###################################
     message("Starting gradient boosting algorithm.")
