@@ -2,7 +2,7 @@
 % Please edit documentation in R/colocboost.R
 \name{colocboost}
 \alias{colocboost}
-\title{ColocBoost: A gradient boosting informed multi-omics colocalization method}
+\title{ColocBoost: A gradient boosting informed multi-omics xQTL colocalization method}
 \usage{
 colocboost(
   X = NULL,
@@ -70,7 +70,7 @@ Each matrix should have column names, if sample sizes and variants possibly diff
 \item{sumstat}{A list of data.frames of summary statistics.
 The coloumns of data.frame should include either \code{z} or \code{beta}/\code{sebeta}.
 \code{n} is the sample size for the summary statistics, it is highly recommendation to provide.
-\code{variants} is required if sumstat for different traits do not have the same number of variants.
+\code{variant} is required if sumstat for different traits do not have the same number of variants.
 \code{var_y} is the variance of phenotype (default is 1 meaning that the Y is in the \dQuote{standarized} scale).}
 
 \item{LD}{A list of correlation matrix indicating the LD matrix for each genotype. It also could be a single matrix if all sumstats were
@@ -86,6 +86,12 @@ The innovation: do not provide the same matrix in \code{LD} to reduce the comput
 
 \item{traits_names}{The names of traits, which has the same order for Y.}
 
+\item{effect_est}{Matrix of snp regression coefficients (i.e. regression beta values) in the genomic region}
+
+\item{effect_se}{Matrix of standard errors associated with the beta values}
+
+\item{effect_n}{A scalar or a vector of sample sizes for estimating regression coefficients. Highly recommendated!}
+
 \item{M}{The maximum number of gradient boosting iterations. If the number of traits are large, it will be automatically increased to a larger number.}
 
 \item{stop_thresh}{The stop criterion for overall profile loglikelihood function.}
@@ -95,21 +101,23 @@ The innovation: do not provide the same matrix in \code{LD} to reduce the comput
 \item{decayrate}{The decayrate for step size. If the objective function is large at the early iterations,
 we need to have the higher step size to improve the computational efficiency.}
 
-\item{tau}{The smooth parameter for proximity smoothed weights for the best update jk-star.}
+\item{tau}{The smooth parameter for proximity adaptive smoothing weights for the best update jk-star.}
 
-\item{prioritize_jkstar}{When \code{prioritize_jkstar = TRUE}, the selected traits will prioritize best update j_k^star in boosting iteration.}
+\item{prioritize_jkstar}{When \code{prioritize_jkstar = TRUE}, the selected traits will prioritize best update j_k^star in SEC.}
+
+\item{func_compare}{The criterion when we update jk-star in SEC (default is "min_max").}
 
 \item{jk_equiv_cor}{The LD cutoff between overall best update jk-star and marginal best update jk-l for lth trait}
 
 \item{jk_equiv_loglik}{The change of loglikelihood cutoff between overall best update jk-star and marginal best update jk-l for lth trait}
 
-\item{coloc_thres}{The cutoff of checking if the best update jk-star is the potential causal variant for trait l if jk-l is not similar to jk-star.}
+\item{coloc_thres}{The cutoff of checking if the best update jk-star is the potential causal variant for trait l if jk-l is not similar to jk-star (used in Delayed SEC).}
 
 \item{intercept}{If \code{intercept = TRUE}, the intercept is fitted. Setting \code{intercept = FALSE} is generally not recommended.}
 
 \item{standardize}{If \code{standardize = TRUE}, standardize the columns of genotype and traits to unit variance.}
 
-\item{coverage}{A number between 0 and 1 specifying the \dQuote{coverage} of the estimated confidence sets (default is 0.95).}
+\item{coverage}{A number between 0 and 1 specifying the \dQuote{coverage} of the estimated colocalization confidence sets (CoS) (default is 0.95).}
 
 \item{between_cluster}{The small correlation for the weights distributions across different iterations to be decided having only one cluster.}
 
@@ -134,14 +142,36 @@ to merge colocalized sets, which may resulting in a huge set.}
 
 \item{merging}{When \code{merging = TRUE}, the sets for only one trait will be merged if passed the \code{between_purity}.}
 
+\item{coverage_singlew}{A number between 0 and 1 specifying the weight in each SEC (default is 0.8).}
+
+\item{lambda}{The ratio \link{0,1} for z^2 and z in fun_prior simplex, defult is 0.5}
+
+\item{lambda_target}{The ratio for z^2 and z in fun_prior simplex for the target trait, default is 1}
+
+\item{func_intw}{The integrated weight method. The default is "fun_R", indicating the same log-scale for different colocalized traits.}
+
+\item{alpha}{The strenght to integrate weight from differnt traits, default is 1.5}
+
+\item{func_prior}{The data-drive local association simplex \eqn{\delta} for smoothing the weights. Default is "LD_z2z" is the elastic net for z-score and also weighted by LD.}
+
 \item{func_multicorrection}{The alternative method to check the stop criteria. When \code{func_multicorrection = "lfdr"}, boosting iterations will be stopped
 if the local FDR for all variants are greater than \code{lfsr_max}.}
 
-\item{target_idx}{The index of the target trait}
+\item{target_idx}{The index of the target trait if perform targeted ColocBoost}
+
+\item{target_variants}{If \code{target_variants = TRUE}, only consider the variants exsit in the target trait.}
+
+\item{overlap_varaints}{If \code{overlap_varaints = TRUE}, only perform colocalization in the overlapped region.}
 
 \item{stop_null}{The cutoff of nominal p-value when \code{func_multicorrection = "Z"}.}
 
+\item{multicorrection_max}{The cutoff of the smallest FDR for pre-filtering the traits when \code{func_multicorrection = "lfdr"} or \code{func_multicorrection = "lfsr"}.}
+
+\item{multicorrection_cut}{The cutoff of the smallest FDR for stop criteria when \code{func_multicorrection = "lfdr"} or \code{func_multicorrection = "lfsr"}.}
+
 \item{ash_prior}{The prior distribution for calculating lfsr when \code{func_multicorrection = "lfsr"}.}
+
+\item{p.adjust.methods}{The adjusted pvalue method in stats:p.adj  when \code{func_multicorrection = "fdr"}}
 
 \item{check_null}{The cut off value for change conditional objective function. Default is 0.1.}
 
@@ -153,39 +183,44 @@ if the local FDR for all variants are greater than \code{lfsr_max}.}
 
 \item{LD_obj}{When \code{LD_obj = FALSE}, objective fuunction doesn't include LD information.}
 
-\item{output_level}{When \code{output_level = 2}, return the entire Colocboost model to diagnostic results (more space).}
+\item{weaker_ucos}{If \code{weaker_ucos = TRUE}, consider the weaker single effect due to coupling effects}
 
-\item{compare_method}{The criterion when we update jk-star (default is "min_max").}
-
-\item{w_cset}{The integrated weight method. The default is "fun_R", indicating the same log-scale for different colocalized traits.}
-
-\item{prob_style}{The penalty \eqn{\delta} for smoothing the weights. Default is "z2z" is the elastic net for z-score and also weighted by LD.}
-
-\item{target_prop}{The proportion of the importance of the target trait. It is not a recommendation that setting up a value greater than 0.5.}
-
-\item{lfsr_max}{The cutoff of the smallest FDR for pre-filtering the traits when \code{func_multicorrection = "lfdr"} or \code{func_multicorrection = "lfsr"}.}
-
-\item{lfsr_cut}{The cutoff of the smallest FDR for stop criteria when \code{func_multicorrection = "lfdr"} or \code{func_multicorrection = "lfsr"}.}
+\item{output_level}{When \code{output_level = 2}, return the ucos details for the single specific effects.
+When \code{output_level = 3}, return the entire Colocboost model to diagnostic results (more space).}
 }
 \value{
 A \code{"colocboost"} object with some or all of the following elements:
 
-\item{coloc_results}{A object with all information for colocalization results.}
-
+\item{cos_summary}{A summary table for colocalization events.}
+\item{cos_details}{A object with all information for colocalization results.}
 \item{vcp}{The variant colocalized probability for each variant.}
+\item{data_info}{A object with detailed information from input data}
 }
 \description{
-\code{colocboost} implements a proximity-smoothed gradient boosting approach for multi-trait colocalization at gene loci,
-accommodating multiple causal variants. This method, introduced by Cao et al. (2024), is particularly suited for scaling
+\code{colocboost} implements a proximity adaptive smoothing gradient boosting approach for multi-trait colocalization at gene loci,
+accommodating multiple causal variants. This method, introduced by Cao et al. (2025), is particularly suited for scaling
 to large datasets involving numerous molecular quantitative traits and disease traits.
 In brief, this function fits a multiple linear regression model \eqn{Y = XB + E} in matrix form.
+ColocBoost can be generally used in multi-task variable selection regression problem.
 }
 \details{
-The function \code{colocboost} implements the proximity smoothed gradient boosting method from Cao et al (2024).
-The option \code{refine = TRUE} implements an additional step to help merge the confidence sets with small \code{between_putiry}
+The function \code{colocboost} implements the proximity smoothed gradient boosting method from Cao et al (2025).
+There is an additional step to help merge the confidence sets with small \code{between_putiry}
 (default is 0.8) but within the same locus. This step addresses potential instabilities in linkage disequilibrium (LD) estimation
 that may arise from small sample sizes or discrepancies in minor allele frequencies (MAF) across different confidence sets.
 }
+\section{Input Data}{
+
+}
+
+\section{Model Parameters}{
+NA
+}
+
+\section{Post-processing Parameters}{
+NA
+}
+
 \examples{
 colocboost(X=X, Y=Y)
 
