@@ -1,0 +1,92 @@
+name: Continuous Integration
+
+on:
+  pull_request:
+    paths-ignore:
+      - .github/*
+      - .gitignore
+      - README.md
+
+jobs:
+  ci_linux-64:
+    name: linux-64 CI
+    runs-on: ubuntu-latest
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: ["r43", "r44"]
+    
+    steps:
+      - name: Checkout pull request branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create TOML from recipe
+        run: .github/workflows/create_toml_from_yaml.sh ${GITHUB_WORKSPACE}
+
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.8.3
+
+      - name: Run unit tests
+        run: pixi run --environment ${{ matrix.environment }} devtools_test
+
+      # - name: Check unit test code coverage
+      #   run: pixi run --environment ${{ matrix.environment }} codecov
+
+      #- name: Run R CMD CHECK
+        #run: pixi run rcmdcheck
+
+  ci_osx-64:
+    name: osx-64 CI
+    runs-on: macos-13
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: ["r43", "r44"]
+
+    steps:
+      - name: Checkout pull request branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create TOML from recipe
+        run: .github/workflows/create_toml_from_yaml.sh ${GITHUB_WORKSPACE}
+
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.8.3
+
+      - name: Run unit tests
+        run: pixi run --environment ${{ matrix.environment }} devtools_test
+
+      #- name: Run R CMD CHECK
+        #run: pixi run rcmdcheck
+  
+  ci_osx-arm64:
+    name: osx-arm64 CI
+    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: ["r43", "r44"]
+    
+    steps:
+      - name: Checkout pull request branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create TOML from recipe
+        run: .github/workflows/create_toml_from_yaml.sh ${GITHUB_WORKSPACE}
+
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.8.3
+
+      - name: Run unit tests
+        run: pixi run --environment ${{ matrix.environment }} devtools_test
+
+      #- name: Run R CMD CHECK
+        #run: pixi run rcmdcheck

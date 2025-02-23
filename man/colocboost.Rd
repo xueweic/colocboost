@@ -166,8 +166,6 @@ if the local FDR for all variants are greater than \code{lfsr_max}.}
 \item{lfsr_max}{The cutoff of the smallest FDR for pre-filtering the traits when \code{func_multicorrection = "lfdr"} or \code{func_multicorrection = "lfsr"}.}
 
 \item{lfsr_cut}{The cutoff of the smallest FDR for stop criteria when \code{func_multicorrection = "lfdr"} or \code{func_multicorrection = "lfsr"}.}
-
-\item{maf_cut}{The smallest cutof of the MAF.}
 }
 \value{
 A \code{"colocboost"} object with some or all of the following elements:

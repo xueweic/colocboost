@@ -1,0 +1,35 @@
+context:
+  version: VERSION_PLACEHOLDER
+
+package:
+  name: r-colocboost
+  version: ${{ version }}
+
+source:
+  path: colocboost-${{ version }}.tar.gz
+  sha256: SHA256SUM_PLACEHOLDER
+
+build:
+  noarch: generic
+  number: BUILD_PLACEHOLDER
+  script: R CMD INSTALL --build .
+
+requirements:
+  host:
+    - r-base
+  run:
+    - r-base
+
+tests:
+  - script:
+      - R -e "library('colocboost')"
+
+about:
+  license: MIT
+  license_file: LICENSE.md
+  summary: Multi-context colocalization analysis tool for molecular QTL and GWAS studies
+  homepage: https://github.com/StatFunGen/colocboost
+
+extra:
+  recipe-maintainers:
+    - danielnachun

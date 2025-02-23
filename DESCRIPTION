@@ -1,7 +1,7 @@
 Package: colocboost
 Type: Package
 Date: 2024-09-01
-Title: R package for multi-trait colocalization analysis
+Title: Multi-context colocalization analysis tool for molecular QTL and GWAS studies
 Version: 0.1.0
 Authors@R: c(
   person(given = "Xuewei", family = "Cao", email = "xc2270@cumc.columbia.edu", role = c("cre", "aut")),
@@ -13,8 +13,7 @@ Authors@R: c(
   person(given = "Gao", family = "Wang", email = "gw2411@cumc.columbia.edu", role = c("aut"))
   )
 Maintainer: The package maintainer <xc2270@cumc.columbia.edu>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Description: This R package implements ColocBoost --- motivated and designed for colocalization analysis of multiple genetic association studies --- as a multi-task learning approach to variable selection regression with highly correlated predictors and sparse effects, based on frequentist statistical inference. It provides statistical evidence to identify which subsets of predictors have non-zero effects on which subsets of response variables.
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.3.2
@@ -26,10 +25,13 @@ Imports:
     Rfast,
     matrixStats
 Suggests: 
+    testthat (>= 3.0.0)
     knitr,
     rmarkdown,
     susieR,
     ashr
 VignetteBuilder: knitr
+RoxygenNote: 7.3.2
 Roxygen: list(markdown = TRUE)
-License: MIT + file LICENSE
+Config/testthat/edition: 3
+License: MIT

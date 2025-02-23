@@ -7,3 +7,4 @@ export(colocboost_inits)
 export(colocboost_posthoc)
 export(colocboost_update)
 export(colocboost_workhorse)
+
