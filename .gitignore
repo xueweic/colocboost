@@ -60,6 +60,6 @@ src/*.dylib
 src/Makevars
 **/.ipynb_checkpoints
 .vscode
-pixi.lock
+/pixi.lock
 .pixi
-pixi.toml
+/pixi.toml
