@@ -263,7 +263,7 @@ get_cos_summary <- function(cb_output, traits_names = NULL, gene_name = NULL, ta
         summary_table[,1] <- FALSE
         summary_table[,2] <- unlist(sapply(coloc_trait, function(tmp) paste0(tmp, collapse = "; ")))
         summary_table[,3] <- names(coloc_sets)
-        summary_table[,4] <- as.numeric(diag(cb_output$cos_details$cos_purity$min_abs_cor))
+        summary_table[,4] <- as.numeric(diag(as.matrix(cb_output$cos_details$cos_purity$min_abs_cor)))
         summary_table[,5] <- unlist(sapply(cb_output$cos_details$cos$cos_variants, function(tmp) tmp[1]))    
         summary_table[,6] <- sapply(coloc_sets, function(tmp) max(vcp[tmp]))                                  
         summary_table[,7] <- as.numeric(sapply(coloc_sets, length))
