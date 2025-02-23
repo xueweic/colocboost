@@ -85,8 +85,7 @@
 #' \code{\link{plot.qvalue}}, \code{\link{hist.qvalue}}, \code{\link{write.qvalue}}
 #' @keywords qvalue
 #' @aliases qvalue
-#' @import splines ggplot2 reshape2 stats
-#' @importFrom grid grid.newpage pushViewport viewport grid.layout
+#' @import stats
 #' @export
 qvalue <- function(p, fdr.level = NULL, pfdr = FALSE, lfdr.out = TRUE, pi0 = NULL, ...) {
   # Argument checks
