@@ -25,13 +25,12 @@ Imports:
     Rfast,
     matrixStats
 Suggests: 
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
     knitr,
     rmarkdown,
     susieR,
     ashr
 VignetteBuilder: knitr
-RoxygenNote: 7.3.2
 Roxygen: list(markdown = TRUE)
 Config/testthat/edition: 3
 License: MIT

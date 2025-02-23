@@ -20,7 +20,7 @@
 #' @param sumstat A list of data.frames of summary statistics.
 #'                  The coloumns of data.frame should include either \code{z} or \code{beta}/\code{sebeta}.
 #'                  \code{n} is the sample size for the summary statistics, it is highly recommendation to provide.
-#'                  \code{variants} is required if sumstat for different traits do not have the same number of variants.
+#'                  \code{variant} is required if sumstat for different traits do not have the same number of variants.
 #'                  \code{var_y} is the variance of phenotype (default is 1 meaning that the Y is in the \dQuote{standarized} scale).
 #' @param LD A list of correlation matrix indicating the LD matrix for each genotype. It also could be a single matrix if all sumstats were
 #'           obtained from the same gentoypes.
@@ -31,20 +31,38 @@
 #'                  The first column should be 1:L for L sumstat The second column should be the index of \code{LD} corresponding to the sumstat.
 #'                  The innovation: do not provide the same matrix in \code{LD} to reduce the computational burden.
 #' @param traits_names The names of traits, which has the same order for Y.
+#' @param target_idx The index of the target trait if perform targeted ColocBoost
+#' @param effect_est Matrix of snp regression coefficients (i.e. regression beta values) in the genomic region
+#' @param effect_se Matrix of standard errors associated with the beta values
+#' @param effect_n A scalar or a vector of sample sizes for estimating regression coefficients. Highly recommendated!
+#' @param target_variants If \code{target_variants = TRUE}, only consider the variants exsit in the target trait.
+#' @param overlap_varaints If \code{overlap_varaints = TRUE}, only perform colocalization in the overlapped region.
+#' @param intercept If \code{intercept = TRUE}, the intercept is fitted. Setting \code{intercept = FALSE} is generally not recommended.
+#' @param standardize If \code{standardize = TRUE}, standardize the columns of genotype and traits to unit variance.
+#' 
+#' @section Model Parameters
 #' @param M The maximum number of gradient boosting iterations. If the number of traits are large, it will be automatically increased to a larger number.
 #' @param stop_thresh The stop criterion for overall profile loglikelihood function.
 #' @param step The minimum step size (learning rate) for updating in each iteration.
 #' @param decayrate The decayrate for step size. If the objective function is large at the early iterations,
 #'                  we need to have the higher step size to improve the computational efficiency.
-#' @param tau The smooth parameter for proximity smoothed weights for the best update jk-star.
-#' @param prioritize_jkstar When \code{prioritize_jkstar = TRUE}, the selected traits will prioritize best update j_k^star in boosting iteration.
-#' @param compare_method The criterion when we update jk-star (default is "min_max").
+#' @param tau The smooth parameter for proximity adaptive smoothing weights for the best update jk-star.
+#' @param prioritize_jkstar When \code{prioritize_jkstar = TRUE}, the selected traits will prioritize best update j_k^star in SEC.
+#' @param func_compare The criterion when we update jk-star in SEC (default is "min_max").
 #' @param jk_equiv_cor The LD cutoff between overall best update jk-star and marginal best update jk-l for lth trait
 #' @param jk_equiv_loglik The change of loglikelihood cutoff between overall best update jk-star and marginal best update jk-l for lth trait
-#' @param coloc_thres The cutoff of checking if the best update jk-star is the potential causal variant for trait l if jk-l is not similar to jk-star.
-#' @param intercept If \code{intercept = TRUE}, the intercept is fitted. Setting \code{intercept = FALSE} is generally not recommended.
-#' @param standardize If \code{standardize = TRUE}, standardize the columns of genotype and traits to unit variance.
-#' @param coverage A number between 0 and 1 specifying the \dQuote{coverage} of the estimated confidence sets (default is 0.95).
+#' @param coloc_thres The cutoff of checking if the best update jk-star is the potential causal variant for trait l if jk-l is not similar to jk-star (used in Delayed SEC).
+#' @param lambda The ratio [0,1] for z^2 and z in fun_prior simplex, defult is 0.5
+#' @param lambda_target The ratio for z^2 and z in fun_prior simplex for the target trait, default is 1
+#' @param func_prior The data-drive local association simplex \eqn{\delta} for smoothing the weights. Default is "LD_z2z" is the elastic net for z-score and also weighted by LD.
+#' @param func_multicorrection The alternative method to check the stop criteria. When \code{func_multicorrection = "lfdr"}, boosting iterations will be stopped
+#'                      if the local FDR for all variants are greater than \code{lfsr_max}.
+#' @param stop_null The cutoff of nominal p-value when \code{func_multicorrection = "Z"}.
+#' @param multicorrection_max The cutoff of the smallest FDR for pre-filtering the traits when \code{func_multicorrection = "lfdr"} or \code{func_multicorrection = "lfsr"}.
+#' @param multicorrection_cut The cutoff of the smallest FDR for stop criteria when \code{func_multicorrection = "lfdr"} or \code{func_multicorrection = "lfsr"}.
+#' 
+#' @section Post-processing Parameters
+#' @param coverage A number between 0 and 1 specifying the \dQuote{coverage} of the estimated colocalization confidence sets (CoS) (default is 0.95).
 #' @param between_cluster The small correlation for the weights distributions across different iterations to be decided having only one cluster.
 #' @param dedup If \code{dedup = TRUE}, the duplicate confidence sets will be removed in the post-processing.
 #' @param overlap If \code{overlap = TRUE}, the overlapped confidence sets will be removed in the post-processing.
@@ -59,28 +77,26 @@
 #'                          to merge colocalized sets, which may resulting in a huge set.
 #' @param tol A small, non-negative number specifying the convergence tolerance for checking the overlap of the variants in different sets.
 #' @param merging When \code{merging = TRUE}, the sets for only one trait will be merged if passed the \code{between_purity}.
-#' @param w_cset The integrated weight method. The default is "fun_R", indicating the same log-scale for different colocalized traits.
-#' @param prob_style The penalty \eqn{\delta} for smoothing the weights. Default is "z2z" is the elastic net for z-score and also weighted by LD.
-#' @param target_idx The index of the target trait
-#' @param target_prop The proportion of the importance of the target trait. It is not a recommendation that setting up a value greater than 0.5.
-#' @param func_multicorrection The alternative method to check the stop criteria. When \code{func_multicorrection = "lfdr"}, boosting iterations will be stopped
-#'                      if the local FDR for all variants are greater than \code{lfsr_max}.
-#' @param stop_null The cutoff of nominal p-value when \code{func_multicorrection = "Z"}.
-#' @param lfsr_max The cutoff of the smallest FDR for pre-filtering the traits when \code{func_multicorrection = "lfdr"} or \code{func_multicorrection = "lfsr"}.
-#' @param lfsr_cut The cutoff of the smallest FDR for stop criteria when \code{func_multicorrection = "lfdr"} or \code{func_multicorrection = "lfsr"}.
+#' @param coverage_singlew A number between 0 and 1 specifying the weight in each SEC (default is 0.8).
+#' @param func_intw The integrated weight method. The default is "fun_R", indicating the same log-scale for different colocalized traits.
+#' @param alpha The strenght to integrate weight from differnt traits, default is 1.5
 #' @param ash_prior The prior distribution for calculating lfsr when \code{func_multicorrection = "lfsr"}.
+#' @param p.adjust.methods The adjusted pvalue method in stats:p.adj  when \code{func_multicorrection = "fdr"}
 #' @param check_null The cut off value for change conditional objective function. Default is 0.1.
 #' @param check_null_method The metric to check the null sets. Default is "profile"
 #' @param check_null_max The smallest value of change of profile loglikelihood for each trait.
 #' @param residual_correlation The residual correlation based on the sample overlap, it is diagonal if it is NULL.
+#' @param weaker_ucos If \code{weaker_ucos = TRUE}, consider the weaker single effect due to coupling effects
 #' @param LD_obj When \code{LD_obj = FALSE}, objective fuunction doesn't include LD information.
-#' @param output_level When \code{output_level = 2}, return the entire Colocboost model to diagnostic results (more space).
+#' @param output_level When \code{output_level = 2}, return the ucos details for the single specific effects. 
+#'                      When \code{output_level = 3}, return the entire Colocboost model to diagnostic results (more space).
 #'
 #' @return A \code{"colocboost"} object with some or all of the following elements:
 #'
-#' \item{coloc_results}{A object with all information for colocalization results.}
-#'
+#' \item{cos_summary}{A summary table for colocalization events.}
+#' \item{cos_details}{A object with all information for colocalization results.}
 #' \item{vcp}{The variant colocalized probability for each variant.}
+#' \item{data_info}{A object with detailed information from input data}
 #'
 #' @export
 #'
@@ -126,15 +142,12 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                        tol = 1e-9, # tol for LD
                        merging = TRUE, # if merge two sets for one trait
                        coverage_singlew = 0.8,
-                       # ----- add one more median_abs_corr
-                       ##### - almost fixed argument - ############
                        lambda = 0.5, # the ratio for z^2 and z in weight penalty
                        lambda_target = 1,
                        func_intw = "fun_R", # integrated weight method
                        alpha = 1.5, # integrated weight smooth ratio
                        func_prior = "LD_z2z", # penalty for weights
                        func_multicorrection = "lfdr",
-                       
                        # --- add-hoc
                        target_idx = NULL, # important now for sumstat
                        target_variants = TRUE,
