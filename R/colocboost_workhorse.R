@@ -92,15 +92,15 @@ colocboost_workhorse <- function(cb_data,
     if (M==1){
       # single effect with or without LD matrix
       message("Running colocboost with assumption of one causal per trait!")
-      cb_obj <- colocboost_onecausal(cb_model, cb_model_para, cb_data,
-                                     jk_equiv_cor = jk_equiv_cor,
-                                     jk_equiv_loglik = jk_equiv_loglik,
-                                     tau = tau,
-                                     decayrate = decayrate,
-                                     func_prior = func_prior,
-                                     lambda = lambda,
-                                     lambda_target = lambda_target,
-                                     LD_obj = LD_obj)
+      cb_obj <- colocboost_one_causal(cb_model, cb_model_para, cb_data,
+                                      jk_equiv_cor = jk_equiv_cor,
+                                      jk_equiv_loglik = jk_equiv_loglik,
+                                      tau = tau,
+                                      decayrate = decayrate,
+                                      func_prior = func_prior,
+                                      lambda = lambda,
+                                      lambda_target = lambda_target,
+                                      LD_obj = LD_obj)
     } else {
       
         # - add more iterations for more traits
@@ -258,36 +258,36 @@ colocboost_workhorse <- function(cb_data,
     return(cb_obj)
 }
 
-
-
 # - update cb_model at the begining
 cb_model_update <- function(cb_data, cb_model, cb_model_para){
-
-
-    pos <- which(cb_model_para$update_temp$update_status != 0)
-    for (i in pos){
-        X_dict <- cb_data$dict[i]
-        data_each <- cb_data$data[[i]]
-        model_each <- cb_model[[i]]
-        tmp <- get_correlation(X = cb_data$data[[X_dict]]$X, res = model_each$res, XtY = data_each$XtY,
-                               N = data_each$N, YtY = data_each$YtY,
-                               XtX = cb_data$data[[X_dict]]$XtX,
-                               beta_k = model_each$beta,
-                               miss_idx = data_each$snp_miss)
-        cb_model[[i]]$correlation <- tmp
-        cb_model[[i]]$z <- get_z(tmp, n=data_each$N, model_each$res)
-
-    }
-    return(cb_model)
-
+  
+  
+  pos <- which(cb_model_para$update_temp$update_status != 0)
+  for (i in pos){
+    X_dict <- cb_data$dict[i]
+    data_each <- cb_data$data[[i]]
+    model_each <- cb_model[[i]]
+    tmp <- get_correlation(X = cb_data$data[[X_dict]]$X, res = model_each$res, XtY = data_each$XtY,
+                           N = data_each$N, YtY = data_each$YtY,
+                           XtX = cb_data$data[[X_dict]]$XtX,
+                           beta_k = model_each$beta,
+                           miss_idx = data_each$snp_miss)
+    cb_model[[i]]$correlation <- tmp
+    cb_model[[i]]$z <- get_z(tmp, n=data_each$N, model_each$res)
+    
+  }
+  return(cb_model)
+  
 }
 
 
 cb_model_para_update <- function(cb_model, cb_model_para){
-    # - additional calculating profile_loglikelihood
-    tmp <- sum(sapply(1:length(cb_model), function(i) tail(cb_model[[i]]$profile_loglike_each, n=1)))
-    cb_model_para$profile_loglike <- c(cb_model_para$profile_loglike, tmp)
-    return(cb_model_para)
-
+  # - additional calculating profile_loglikelihood
+  tmp <- sum(sapply(1:length(cb_model), function(i) tail(cb_model[[i]]$profile_loglike_each, n=1)))
+  cb_model_para$profile_loglike <- c(cb_model_para$profile_loglike, tmp)
+  return(cb_model_para)
+  
 }
+
+
 
