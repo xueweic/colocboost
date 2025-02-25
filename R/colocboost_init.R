@@ -51,7 +51,7 @@ colocboost_init_data <- function(X, Y, dict_YX,
     }
     if (target_variants & !is.null(target_idx)){
         if (target_idx > length(keep.snps)){
-          stop("Target trait index is over the total number of traits! please check!")
+          stop("Target outcome index is over the total number of outcomes! please check!")
         }
         keep.snp.names <- keep.snps[[dict[target_idx]]]
         if (overlap_varaints){
@@ -122,7 +122,7 @@ colocboost_init_data <- function(X, Y, dict_YX,
                 tmp$X <- x_stand
             }
             cb_data$data[[flag]] <- tmp
-            names(cb_data$data)[flag] <- paste0("ind_trait_",i)
+            names(cb_data$data)[flag] <- paste0("ind_outcome_",i)
             flag = flag + 1
         }
         cb_data$dict = c(dict_YX_final)
@@ -223,7 +223,7 @@ colocboost_init_data <- function(X, Y, dict_YX,
 
             }
             cb_data$data[[flag]] <- tmp
-            names(cb_data$data)[flag] <- paste0("sumstat_trait_",i)
+            names(cb_data$data)[flag] <- paste0("sumstat_outcome_",i)
             flag = flag + 1
 
         }
@@ -337,7 +337,7 @@ colocboost_init_para <- function(cb_data, cb_model,tau=0.01,
                                  multicorrection_cut=1,
                                  func_multicorrection = "lfdr",
                                  LD_obj = FALSE,
-                                 traits_names = NULL,
+                                 outcome_names = NULL,
                                  target_idx = NULL){
 
 
@@ -346,16 +346,16 @@ colocboost_init_para <- function(cb_data, cb_model,tau=0.01,
     N <- sapply(cb_data$data, function(dt) dt$N)
     # - number of SNPs
     P <- if (!is.null(cb_data$data[[1]]$X)) ncol(cb_data$data[[1]]$X) else length(cb_data$data[[1]]$XtY)
-    # - number of traits
+    # - number of outcomes
     L <- length(cb_data$data)
     # - initial profile loglikelihood
     profile_loglike <- sum(sapply(1:length(cb_model), function(i) tail(cb_model[[i]]$profile_loglike_each, n=1)))
-    # - check initial update trait
+    # - check initial update outcome
     stop_null <- sapply(cb_model, function(tmp) min(tmp$multi_correction_univariate))
     pos_stop <- which(stop_null >= multicorrection_cut)
     update_y = rep(1, L)
     if (length(pos_stop) != 0){ update_y[pos_stop] <- 0 } else {pos_stop = NULL}
-    if (!is.null(traits_names)){ traits_names = traits_names } else {traits_names = paste0("Y", 1:L)}
+    if (!is.null(outcome_names)){ outcome_names = outcome_names } else {outcome_names = paste0("Y", 1:L)}
 
     cb_model_para = list("L" = L,
                          "P" = P,
@@ -371,8 +371,8 @@ colocboost_init_para <- function(cb_data, cb_model,tau=0.01,
                          "true_stop" = pos_stop,
                          "LD_obj" = LD_obj,
                          "real_update_jk" = c(),
-                         "traits_names" = traits_names,
-                         "snp_names" = cb_data$snp.names,
+                         "outcome_names" = outcome_names,
+                         "variables" = cb_data$snp.names,
                          "target_idx" = target_idx)
     class(cb_model_para) = "colocboost"
 

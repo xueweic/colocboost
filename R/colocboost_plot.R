@@ -1,30 +1,31 @@
 
 
-cb_plot <- function(cb_output, y = "log10p", 
-                    gene_name = NULL,
-                    trait_idx = NULL, 
-                    trait_names = NULL,
-                    plot_cols = 2,
-                    pos = NULL,
-                    plot_cs_idx = NULL,
-                    variant_coord = FALSE,
-                    show_coloc = TRUE,
-                    show_hits = FALSE,
-                    show_cos_to_uncoloc = FALSE,
-                    show_cos_to_uncoloc_idx = NULL,
-                    show_cos_to_uncoloc_trait = NULL,
-                    points_color = "grey80", cos_color = NULL,
-                    ylim_each = TRUE, 
-                    trait_legend_pos = "top",
-                    trait_legend_size = 1.2,
-                    cos_legend_pos = "bottomleft",
-                    show_snp = FALSE,
-                    lab_style = c(2, 1),
-                    axis_style = c(2, 1),
-                    title_style = c(2.5, 2), 
-                    add_vertical = FALSE, add_vertical_idx = NULL, 
-                    add_genetrack = FALSE,
-                    ...){
+colocboost_plot <- function(cb_output, y = "log10p", 
+                            gene_name = NULL,
+                            trait_idx = NULL, 
+                            trait_names = NULL,
+                            plot_cols = 2,
+                            pos = NULL,
+                            plot_cs_idx = NULL,
+                            variant_coord = FALSE,
+                            show_coloc = TRUE,
+                            show_hits = FALSE,
+                            show_cos_to_uncoloc = FALSE,
+                            show_cos_to_uncoloc_idx = NULL,
+                            show_cos_to_uncoloc_trait = NULL,
+                            points_color = "grey80", cos_color = NULL,
+                            ylim_each = TRUE, 
+                            trait_legend_pos = "top",
+                            trait_legend_size = 1.2,
+                            cos_legend_pos = "bottomleft",
+                            show_snp = FALSE,
+                            lab_style = c(2, 1),
+                            axis_style = c(2, 1),
+                            title_style = c(2.5, 2), 
+                            add_vertical = FALSE, add_vertical_idx = NULL, 
+                            add_genetrack = FALSE,
+                            ...){
+                    
   
     # get cb_plot_input data from colocboost results
     cb_plot_input <- get_input_plot(cb_output, plot_cs_idx = plot_cs_idx, 
@@ -40,6 +41,145 @@ cb_plot <- function(cb_output, y = "log10p",
                                  cos_legend_pos = cos_legend_pos,
                                  show_snp = show_snp, lab_style = lab_style, axis_style = axis_style,
                                  title_style = title_style, ... )
+    
+    colocboost_plot_basic = function (cb_plot_input, cb_plot_init,
+                                      trait_idx = NULL, pos = NULL,
+                                      plot_cols = 2, 
+                                      add_vertical = FALSE, add_vertical_idx = NULL, 
+                                      show_hits = TRUE, 
+                                      ...) {
+      
+      args <- list(...)
+      args <- c(args, cb_plot_init[c("xlab","ylab")])
+      args$col = cb_plot_init$bg
+      if (is.null(pos)){
+        args$x = cb_plot_init$x
+        y = cb_plot_init$y
+      } else {
+        args$x = cb_plot_init$x[pos]
+        y = lapply(cb_plot_init$y, function(yy) yy[pos])
+      }
+      args$pch = cb_plot_init$pch
+      args$cex.axis = cb_plot_init$axis_size
+      args$cex.lab = cb_plot_init$lab_size
+      args$font.lab = cb_plot_init$lab_face
+      # - change position
+      cb_plot_init$trait_legend_pos <- switch(cb_plot_init$trait_legend_pos,
+                                              "right" = 4, "left" = 2, "top" = 3,"bottom" = 1)
+      
+      # - begin plotting
+      coloc_cos <- cb_plot_input$cos
+      traits <- cb_plot_input$traits
+      if (is.null(trait_idx)){
+        if (is.null(coloc_cos)){
+          # - no colocalized effects, draw all traits in this region
+          if (length(cb_plot_input$traits)==1){
+            message("There is no fine-mapped causal effect in this region!. Showing margianl for this trait!")
+          } else {
+            message("There is no colocalization in this region!. Showing margianl for all traits!")
+          }
+          trait_idx <- 1:length(y)
+        } else {
+          n.coloc <- length(coloc_cos)
+          coloc_index <- cb_plot_input$coloc_index
+          trait_idx <- Reduce(union, coloc_index)
+        }
+        if (!is.null(cb_plot_input$target_trait)){
+          p_target <- grep(cb_plot_input$target_trait, traits)
+          include_target <- sapply(cb_plot_input$coloc_index, function(ci){ p_target %in% ci })
+          if (any(include_target)){
+            coloc_index <- cb_plot_input$coloc_index[order(include_target == "FALSE")]
+            coloc_index <- Reduce(union, coloc_index)
+            trait_idx <- c(p_target, setdiff(coloc_index, p_target))
+          }
+        }
+      }
+      if(length(trait_idx)==1){plot_cols=1}
+      nrow <- ceiling( length(trait_idx) / plot_cols )
+      if (!is.null(cb_plot_init$xtext)){bottom = 6} else {bottom=2}
+      if (!is.null(cb_plot_init$title)){
+        par(mfrow=c(nrow, plot_cols), mar=c(bottom,5,2,1), oma = c(0, 0, 3, 0))
+      } else {
+        par(mfrow=c(nrow, plot_cols), mar=c(bottom,5,2,1), oma = c(0, 0, 1, 0))
+      }
+      for (iy in trait_idx){
+        args$y = y[[iy]]
+        args$ylim = c(0, cb_plot_init$ymax[iy])
+        if (!is.null(cb_plot_init$xtext)){
+          args$xaxt = "n"
+          do.call(plot, args)
+          axis(1, at = args$x, labels = FALSE)
+          text(x = args$x, y = par("usr")[3] - 0.1, labels = cb_plot_init$xtext, srt = 45, adj = 1, xpd = TRUE)
+        } else {
+          do.call(plot, args)
+        }
+        mtext(traits[iy], side = cb_plot_init$trait_legend_pos, line = 0.2, adj = 0.5,
+              cex = cb_plot_init$trait_legend_size, font = 1)
+        if (add_vertical){
+          for (iii in 1:length(add_vertical_idx)){
+            abline(v = add_vertical_idx[iii], col = '#E31A1C', lwd = 1.5, lty = 'dashed')
+          }
+        }
+        
+        # mark variants in CoS to colocalized traits
+        if (!is.null(coloc_cos)){
+          n.coloc <- length(coloc_cos)
+          coloc_index <- cb_plot_input$coloc_index
+          legend_text = list(col = vector())
+          legend_text$col = head(cb_plot_init$col, n.coloc)
+          
+          # check which coloc set for this trait
+          p.coloc <- sapply(coloc_index, function(idx) sum(idx==iy)!=0 )
+          p.coloc <- which(p.coloc)
+          coloc_cos.idx <- coloc_cos[p.coloc]
+          for (i.cs in p.coloc){
+            # add the points with specific color
+            cs <- as.numeric(coloc_cos[[i.cs]])
+            x0 <- intersect(args$x, cs)
+            y1 = args$y[match(x0, args$x)]
+            points(x0,y1, pch = 21, bg = legend_text$col[i.cs], col = NA, cex = 1.5,lwd = 2.5)
+            if (show_hits){
+              # add the hits points with "red"
+              cs_hits <- as.numeric(cb_plot_input$cos_hits[[i.cs]])
+              x_hits <- intersect(args$x, cs_hits)
+              y_hits = args$y[match(x_hits, args$x)]
+              points(x_hits, y_hits, pch = 21, bg=legend_text$col[i.cs], col = "#E31A1C", cex = 2, lwd = 3)
+            }
+          }
+          
+          # mark variants in CoS to uncolocalized traits
+          uncoloc <- cb_plot_input$uncoloc
+          if (!is.null(uncoloc)){
+            p.uncoloc <- sapply(uncoloc$trait_to_uncoloc, function(idx) sum(idx==iy)!=0 )
+            p.uncoloc <- which(p.uncoloc)
+            texts <- shape_col <- texts_col <- c()
+            for (i.uncoloc in p.uncoloc){
+              uncoloc_trait <- uncoloc$trait_to_uncoloc[[i.uncoloc]]
+              if (iy %in% uncoloc_trait){
+                # add the points with specific color
+                cs <- as.numeric(uncoloc$cos_to_uncoloc[[i.uncoloc]])
+                x0 <- intersect(args$x, cs)
+                y1 = args$y[match(x0, args$x)]
+                points(x0,y1, pch = 4, col = adjustcolor(legend_text$col[i.uncoloc], alpha.f = 0.3), 
+                       cex = 1.5, lwd = 1.5)
+                texts <- c(texts, uncoloc$cos_uncoloc_texts[i.cs])
+                shape_col <- c(shape_col, adjustcolor(legend_text$col[i.uncoloc], alpha.f = 1))
+                texts_col <- c(texts_col, adjustcolor(legend_text$col[i.uncoloc], alpha.f = 0.8))
+              }
+            }
+            if (length(texts)==0){next}
+            legend(cb_plot_init$cos_legend_pos, texts, bty = "n", col = shape_col, text.col = texts_col,
+                   cex = 1.5, pt.cex = 1.5, pch = 4, x.intersp = 0.1, y.intersp = 0.3)
+          }
+        }
+      }
+      if (!is.null(cb_plot_init$title)){
+        mtext(cb_plot_init$title, side = 3, line = 0, outer = TRUE, 
+              cex = cb_plot_init$title_size, font = cb_plot_init$title_face)
+      }
+      return(invisible())
+      
+    }
     
     colocboost_plot_basic(cb_plot_input, cb_plot_init, pos = pos,
                           trait_idx = trait_idx, plot_cols = plot_cols, 
@@ -313,141 +453,3 @@ plot_initial <- function(cb_plot_input, y = "log10p",
 }
 
 
-colocboost_plot_basic = function (cb_plot_input, cb_plot_init,
-                                  trait_idx = NULL, pos = NULL,
-                                  plot_cols = 2, 
-                                  add_vertical = FALSE, add_vertical_idx = NULL, 
-                                  show_hits = TRUE, 
-                                  ...) {
-  
-  args <- list(...)
-  args <- c(args, cb_plot_init[c("xlab","ylab")])
-  args$col = cb_plot_init$bg
-  if (is.null(pos)){
-    args$x = cb_plot_init$x
-    y = cb_plot_init$y
-  } else {
-    args$x = cb_plot_init$x[pos]
-    y = lapply(cb_plot_init$y, function(yy) yy[pos])
-  }
-  args$pch = cb_plot_init$pch
-  args$cex.axis = cb_plot_init$axis_size
-  args$cex.lab = cb_plot_init$lab_size
-  args$font.lab = cb_plot_init$lab_face
-  # - change position
-  cb_plot_init$trait_legend_pos <- switch(cb_plot_init$trait_legend_pos,
-                                          "right" = 4, "left" = 2, "top" = 3,"bottom" = 1)
-  
-  # - begin plotting
-  coloc_cos <- cb_plot_input$cos
-  traits <- cb_plot_input$traits
-  if (is.null(trait_idx)){
-    if (is.null(coloc_cos)){
-      # - no colocalized effects, draw all traits in this region
-      if (length(cb_plot_input$traits)==1){
-        message("There is no fine-mapped causal effect in this region!. Showing margianl for this trait!")
-      } else {
-        message("There is no colocalization in this region!. Showing margianl for all traits!")
-      }
-      trait_idx <- 1:length(y)
-    } else {
-      n.coloc <- length(coloc_cos)
-      coloc_index <- cb_plot_input$coloc_index
-      trait_idx <- Reduce(union, coloc_index)
-    }
-    if (!is.null(cb_plot_input$target_trait)){
-      p_target <- grep(cb_plot_input$target_trait, traits)
-      include_target <- sapply(cb_plot_input$coloc_index, function(ci){ p_target %in% ci })
-      if (any(include_target)){
-          coloc_index <- cb_plot_input$coloc_index[order(include_target == "FALSE")]
-          coloc_index <- Reduce(union, coloc_index)
-          trait_idx <- c(p_target, setdiff(coloc_index, p_target))
-      }
-    }
-  }
-  if(length(trait_idx)==1){plot_cols=1}
-  nrow <- ceiling( length(trait_idx) / plot_cols )
-  if (!is.null(cb_plot_init$xtext)){bottom = 6} else {bottom=2}
-  if (!is.null(cb_plot_init$title)){
-    par(mfrow=c(nrow, plot_cols), mar=c(bottom,5,2,1), oma = c(0, 0, 3, 0))
-  } else {
-    par(mfrow=c(nrow, plot_cols), mar=c(bottom,5,2,1), oma = c(0, 0, 1, 0))
-  }
-  for (iy in trait_idx){
-    args$y = y[[iy]]
-    args$ylim = c(0, cb_plot_init$ymax[iy])
-    if (!is.null(cb_plot_init$xtext)){
-      args$xaxt = "n"
-      do.call(plot, args)
-      axis(1, at = args$x, labels = FALSE)
-      text(x = args$x, y = par("usr")[3] - 0.1, labels = cb_plot_init$xtext, srt = 45, adj = 1, xpd = TRUE)
-    } else {
-      do.call(plot, args)
-    }
-    mtext(traits[iy], side = cb_plot_init$trait_legend_pos, line = 0.2, adj = 0.5,
-          cex = cb_plot_init$trait_legend_size, font = 1)
-    if (add_vertical){
-      for (iii in 1:length(add_vertical_idx)){
-        abline(v = add_vertical_idx[iii], col = '#E31A1C', lwd = 1.5, lty = 'dashed')
-      }
-    }
-    
-    # mark variants in CoS to colocalized traits
-    if (!is.null(coloc_cos)){
-      n.coloc <- length(coloc_cos)
-      coloc_index <- cb_plot_input$coloc_index
-      legend_text = list(col = vector())
-      legend_text$col = head(cb_plot_init$col, n.coloc)
-      
-      # check which coloc set for this trait
-      p.coloc <- sapply(coloc_index, function(idx) sum(idx==iy)!=0 )
-      p.coloc <- which(p.coloc)
-      coloc_cos.idx <- coloc_cos[p.coloc]
-      for (i.cs in p.coloc){
-        # add the points with specific color
-        cs <- as.numeric(coloc_cos[[i.cs]])
-        x0 <- intersect(args$x, cs)
-        y1 = args$y[match(x0, args$x)]
-        points(x0,y1, pch = 21, bg = legend_text$col[i.cs], col = NA, cex = 1.5,lwd = 2.5)
-        if (show_hits){
-          # add the hits points with "red"
-          cs_hits <- as.numeric(cb_plot_input$cos_hits[[i.cs]])
-          x_hits <- intersect(args$x, cs_hits)
-          y_hits = args$y[match(x_hits, args$x)]
-          points(x_hits, y_hits, pch = 21, bg=legend_text$col[i.cs], col = "#E31A1C", cex = 2, lwd = 3)
-        }
-      }
-      
-      # mark variants in CoS to uncolocalized traits
-      uncoloc <- cb_plot_input$uncoloc
-      if (!is.null(uncoloc)){
-        p.uncoloc <- sapply(uncoloc$trait_to_uncoloc, function(idx) sum(idx==iy)!=0 )
-        p.uncoloc <- which(p.uncoloc)
-        texts <- shape_col <- texts_col <- c()
-        for (i.uncoloc in p.uncoloc){
-          uncoloc_trait <- uncoloc$trait_to_uncoloc[[i.uncoloc]]
-          if (iy %in% uncoloc_trait){
-            # add the points with specific color
-            cs <- as.numeric(uncoloc$cos_to_uncoloc[[i.uncoloc]])
-            x0 <- intersect(args$x, cs)
-            y1 = args$y[match(x0, args$x)]
-            points(x0,y1, pch = 4, col = adjustcolor(legend_text$col[i.uncoloc], alpha.f = 0.3), 
-                   cex = 1.5, lwd = 1.5)
-            texts <- c(texts, uncoloc$cos_uncoloc_texts[i.cs])
-            shape_col <- c(shape_col, adjustcolor(legend_text$col[i.uncoloc], alpha.f = 1))
-            texts_col <- c(texts_col, adjustcolor(legend_text$col[i.uncoloc], alpha.f = 0.8))
-          }
-        }
-        if (length(texts)==0){next}
-        legend(cb_plot_init$cos_legend_pos, texts, bty = "n", col = shape_col, text.col = texts_col,
-               cex = 1.5, pt.cex = 1.5, pch = 4, x.intersp = 0.1, y.intersp = 0.3)
-      }
-    }
-  }
-  if (!is.null(cb_plot_init$title)){
-    mtext(cb_plot_init$title, side = 3, line = 0, outer = TRUE, 
-          cex = cb_plot_init$title_size, font = cb_plot_init$title_face)
-  }
-  return(invisible())
-  
-}

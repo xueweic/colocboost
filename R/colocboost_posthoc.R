@@ -5,13 +5,13 @@
 #'
 #' Colocalization signal - `colocboost_posthoc_coloc` - identify the colocalized confidence sets and the corresponding causal configurations.
 #'
-#' Un-colocalization signal - `colocboost_posthoc_noncoloc` - identify the causal confidence sets for each trait only.
+#' Un-colocalization signal - `colocboost_posthoc_noncoloc` - identify the causal confidence sets for each outcome only.
 #'
 #' Add-hoc merging functions including
 #'
 #' \itemize{
 #'  \item{merge_coloc_single}{merge the colocalized sets and the single causal set if pass the \code{between_purity}}
-#'  \item{merge_single}{merge the single causal sets for different traits if pass the \code{between_purity}}
+#'  \item{merge_single}{merge the single causal sets for different outcomes if pass the \code{between_purity}}
 #' }
 #'
 #' Refine of the colocalization sets (TO-DO-LIST)
@@ -44,7 +44,7 @@ colocboost_posthoc <- function(cb_obj,
   
     # - data information
     data_info <- get_data_info(cb_obj)
-    if (data_info$n_trait == 1 & output_level == 1){ output_level = 2 }
+    if (data_info$n_outcomes == 1 & output_level == 1){ output_level = 2 }
     if (cb_obj$cb_model_para$num_updates == 1){
         cb_output <- list("cos_summary" = NULL,
                           "vcp" = NULL,
@@ -52,7 +52,7 @@ colocboost_posthoc <- function(cb_obj,
                           "data_info" = data_info)
         # - save model and all coloc and single information for diagnostic
         if (output_level != 1){
-            tmp <- get_full_output(cb_obj = cb_obj, past_out = NULL, variants = NULL)
+            tmp <- get_full_output(cb_obj = cb_obj, past_out = NULL, variables = NULL)
             if (output_level == 2){
                 cb_output$ucos_details = tmp$ucos_detials
                 cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "ucos_details")]
@@ -61,7 +61,7 @@ colocboost_posthoc <- function(cb_obj,
                 cb_output$diagnostic_details = tmp[-1]
                 cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "ucos_details", "diagnostic_details")]
             }
-            if (data_info$n_trait == 1){
+            if (data_info$n_outcome == 1){
               cb_output <- list("ucos_summary" = NULL, "pip" = NULL,
                                 "ucos_details" = NULL, "data_info" = data_info)
             }
@@ -110,7 +110,7 @@ colocboost_posthoc <- function(cb_obj,
                 cb_obj_single$cb_data <- list("data" = cb_obj$cb_data$data[i], "dict" = 1)
                 # change R number
                 cb_obj_single$cb_model_para$L = 1
-                # for single trait, if missing we need to extract from other
+                # for single outcome, if missing we need to extract from other
                 if (!is.null(cb_obj_single$cb_data$data[[1]][["Y"]])){
                     if (is.null(cb_obj_single$cb_data$data[[1]]$X)){
                         X_dict <- cb_obj$cb_data$dict[i]
@@ -197,13 +197,13 @@ colocboost_posthoc <- function(cb_obj,
         
         ### - extract summary table
         target_idx <- cb_obj$cb_model_para$target_idx
-        summary_table <- get_cos_summary(cb_output, target_trait = data_info$traits_info$traits_names[target_idx])
+        summary_table <- get_cos_summary(cb_output, target_outcome = data_info$outcome_info$outcome_names[target_idx])
         cb_output <- c(cb_output, list(cos_summary = summary_table))
         cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info")]
 
         # - save model and all coloc and single information for diagnostic
         if (output_level != 1){
-          tmp <- get_full_output(cb_obj = cb_obj, past_out = past_out, variants = data_info$variants, cb_output = cb_output)
+          tmp <- get_full_output(cb_obj = cb_obj, past_out = past_out, variables = data_info$variables, cb_output = cb_output)
           if (output_level == 2){
             cb_output <- c(cb_output, list("ucos_details" = tmp$ucos_details))
             cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "ucos_details")]
@@ -213,12 +213,12 @@ colocboost_posthoc <- function(cb_obj,
             cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "ucos_details", "diagnostic_details")]
           }
           # - if fine-boost, the summary table will be the summary of finemapping
-          if (data_info$n_trait == 1){
+          if (data_info$n_outcomes == 1){
             cb_output <- cb_output[-match(c("cos_summary","vcp","cos_details"), names(cb_output))]
             remain_obj <- names(cb_output)
             if (!is.null(cb_output$ucos_details$ucos)){
               cb_output$pip <- apply(do.call(cbind,cb_output$ucos_details$ucos_weight), 1, function(w0) 1-prod(1-w0))
-              names(cb_output$pip) <- data_info$variants
+              names(cb_output$pip) <- data_info$variables
               cb_output$ucos_summary <- get_summary_table_fm(cb_output)
             } else {
               tmp <- list("pip" = NULL, "ucos_summary" = NULL)
