@@ -324,7 +324,7 @@ colocboost_posthoc_noncoloc <- function(cb_obj_single,
                           "purity" = purity[ordering,],
                           "evidence_strength" = evidence_strength[ordering],
                           "requested_coverage" = coverage,
-                          "cs_change" = cs_change,
+                          "cs_change" = cs_change[ordering,,drop=FALSE],
                           "avWeight" = as.matrix(avWeight[,ordering]))
 
             } else {

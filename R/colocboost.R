@@ -30,7 +30,7 @@
 #' @param dict_sumstatLD A L by 2 matrix of dictionary for \code{sumstat} and \code{LD} if there exist subsets of traits corresponding to the same sumstat.
 #'                  The first column should be 1:L for L sumstat The second column should be the index of \code{LD} corresponding to the sumstat.
 #'                  The innovation: do not provide the same matrix in \code{LD} to reduce the computational burden.
-#' @param traits_names The names of traits, which has the same order for Y.
+#' @param outcome_names The names of traits, which has the same order for Y.
 #' @param target_idx The index of the target trait if perform targeted ColocBoost
 #' @param effect_est Matrix of snp regression coefficients (i.e. regression beta values) in the genomic region
 #' @param effect_se Matrix of standard errors associated with the beta values
@@ -108,7 +108,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                        ###### - index dict for X match multiple Y / LD match multiple sumstat
                        dict_YX = NULL, # Y index for 1st column, X index for 2nd column
                        dict_sumstatLD = NULL, # sumstat index for 1st column, LD index for 2nd column
-                       traits_names = NULL, # the names of traits
+                       outcome_names = NULL, # the names of outcomes
                        ###### - HyPrColoc input
                        effect_est = NULL, # same as HyPrColoc, beta hat matrix: with rowname of snp names
                        effect_se = NULL, # same as HyPrColoc, sebeta hat matrix with rowname of snp names
@@ -140,7 +140,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                        median_abs_corr = NULL,
                        between_purity = 0.8, # minimum LD between two csets
                        tol = 1e-9, # tol for LD
-                       merging = TRUE, # if merge two sets for one trait
+                       merging = TRUE, # if merge two sets for one outcome
                        coverage_singlew = 0.8,
                        lambda = 0.5, # the ratio for z^2 and z in weight penalty
                        lambda_target = 1,
@@ -244,10 +244,10 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                     for (i in 1:length(Y)){
                         tmp <- unique(dict_YX[dict_YX[,1]==i,2])
                         if (length(tmp) == 0){
-                            warning(paste("Error: You don't provide matched X for trait", i))
+                            warning(paste("Error: You don't provide matched X for outcome", i))
                             return(NULL)
                         } else if (length(tmp) != 1){
-                            warning(paste("Error: You provide different matched X for trait", i))
+                            warning(paste("Error: You provide different matched X for outcome", i))
                             return(NULL)
                         } else {
                             yx_dict[i] <- tmp
@@ -338,7 +338,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
         if ( !is.null(sumstat) ){
             if (is.data.frame(sumstat)){ sumstat <- list(sumstat) }
             if (!is.list(sumstat)){
-              warning("Error: Input sumstat must be the list containing summary level data for all traits!")
+              warning("Error: Input sumstat must be the list containing summary level data for all outcomes!")
               return(NULL)
             }
             # --- check if variants names in summary data
@@ -359,7 +359,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
           
           # if no LD input, set diagonal matrix to LD
           warning("Providing the LD for summary statistics data is highly recommended. ",
-                  "Without LD, only a single iteration will be performed under the assumption of one causal variant per trait. ",
+                  "Without LD, only a single iteration will be performed under the assumption of one causal variant per outcome. ",
                   "Additionally, the purity of CoS cannot be evaluated!")
           
           p.sumstat <- sapply(keep.snp.sumstat, length)
@@ -431,7 +431,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
             warning("Providing the sample size (n), or even a rough estimate of n, ",
                     "is highly recommended. Without n, the implicit assumption is ",
                     "n is large (Inf) and the effect sizes are small (close to zero).",
-                    "Trait ", paste(p_no, collapse = ","), " in sumstat don't contain 'n'!")
+                    "outcome ", paste(p_no, collapse = ","), " in sumstat don't contain 'n'!")
         }
           
         Z <- N_sumstat <- Var_y <- SeBhat <- vector(mode='list', length=length(sumstat))
@@ -500,20 +500,20 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
     min_variants <- min(sapply(keep.snps, length))
     if (min_variants < 100){
       warning("Warning message about the number of variants.\n",
-              "The smallest number of variants across traits is ", min_variants, " <100. ",
+              "The smallest number of variants across outcomes is ", min_variants, " <100. ",
               "If this is what you expected, this is not a problem.",
               "If this is not you expected, please check input data.")
     }
     if (length(overlapp_snps)<=1){
-      warning("Error: No or only 1 overlapping variants were found across all traits, colocalization cannot be performed. ",
-           "Please verify the variant names across different traits.")
+      warning("Error: No or only 1 overlapping variants were found across all outcomes, colocalization cannot be performed. ",
+           "Please verify the variant names across different outcomes.")
       return(NULL)
     } else if ( (length(overlapp_snps)/mean_variants)<0.1 ){
       warning("Warning message about the overlapped variants.\n",
-              "The average number of variants across traits is ", mean_variants, 
+              "The average number of variants across outcomes is ", mean_variants, 
               ". But only ", length(overlapp_snps), " number of variants overlapped (<10%).\n",
               "If this is what you expected, this is not a problem.\n",
-              "If this is not you expected, please check if the variant name matched across traits.")
+              "If this is not you expected, please check if the variant name matched across outcomes.")
     }
     cb_data <- colocboost_init_data(X = X, Y = Y, dict_YX = yx_dict,
                                     Z = Z, LD = LD, N_sumstat = N_sumstat, dict_sumstatLD = sumstatLD_dict,
@@ -550,7 +550,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                                    coloc_thres = coloc_thres,
                                    LD_obj = LD_obj,
                                    target_idx = target_idx,
-                                   traits_names = traits_names)
+                                   outcome_names = outcome_names)
 
     # --- post-processing of the colocboost updates
     message("Starting post-hoc analyses and results summary.")

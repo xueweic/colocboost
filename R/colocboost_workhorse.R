@@ -33,7 +33,7 @@ colocboost_workhorse <- function(cb_data,
                                  coloc_thres = 0.1,
                                  LD_obj = FALSE,
                                  target_idx = NULL,
-                                 traits_names = NULL){
+                                 outcome_names = NULL){
 
 
     if (class(cb_data) != "colocboost"){
@@ -56,7 +56,7 @@ colocboost_workhorse <- function(cb_data,
                                           multicorrection_cut = multicorrection_cut,
                                           func_multicorrection = func_multicorrection,
                                           LD_obj = LD_obj,
-                                          traits_names = traits_names,
+                                          outcome_names = outcome_names,
                                           target_idx = target_idx)
     
     
