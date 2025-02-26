@@ -403,7 +403,9 @@ boost_check_update_jk_target <- function(cb_model, cb_model_para, cb_data,
           # ---- first, check LD between jk_target and jk_each based on target LD
           ld <-  sapply(jk_each[-pp_target], function(jki){
             get_LD_jk1_jk2(jk_target, jki, 
+                           X = cb_data$data[[X_dict[pp_target]]]$X, 
                            XtX = cb_data$data[[X_dict[pp_target]]]$XtX,
+                           N = cb_data$data[[X_dict[pp_target]]]$N,
                            remain_jk = 1:cb_model_para$P)
           })
           # ----- second, if within the same LD buddies, select the following variants

@@ -50,7 +50,7 @@ colocboost_init_data <- function(X, Y, dict_YX,
         dict <- dict_sumstatLD
     }
     if (target_variables & !is.null(target_idx)){
-        if (target_idx > length(keep.variables)){
+        if (target_idx > length(dict)){
           stop("Target outcome index is over the total number of outcomes! please check!")
         }
         keep.variable.names <- keep.variables[[dict[target_idx]]]
@@ -355,7 +355,16 @@ colocboost_init_para <- function(cb_data, cb_model,tau=0.01,
     pos_stop <- which(stop_null >= multicorrection_cut)
     update_y = rep(1, L)
     if (length(pos_stop) != 0){ update_y[pos_stop] <- 0 } else {pos_stop = NULL}
-    if (!is.null(outcome_names)){ outcome_names = outcome_names } else {outcome_names = paste0("Y", 1:L)}
+    
+    if (!is.null(outcome_names)){ 
+      if (length(outcome_names)!=L){
+        warning(paste("There are", L, "outcomes inputed, but only", length(outcome_names), "provided.",
+                      "Using default outcome_names as Y1,...,YL."))
+        outcome_names = paste0("Y", 1:L)
+      } else {
+        outcome_names = outcome_names
+      }
+    } else {outcome_names = paste0("Y", 1:L)}
 
     cb_model_para = list("L" = L,
                          "P" = P,
