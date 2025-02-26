@@ -2,21 +2,21 @@
 
 
 
-colocboost_posthoc_noncoloc <- function(cb_obj_single,
-                                        coverage = 0.95,
-                                        check_null = 0.1,
-                                        check_null_method = "profile",
-                                        dedup = TRUE,
-                                        overlap = TRUE,
-                                        squared = FALSE,
-                                        n_purity = 100,
-                                        min_abs_corr = 0.5,
-                                        median_abs_corr = NULL,
-                                        between_cluster = 0.8,
-                                        between_purity = 0.5,
-                                        weaker_ucos = TRUE,
-                                        tol = 1e-9){
-
+colocboost_posthoc_ucos <- function(cb_obj_single,
+                                    coverage = 0.95,
+                                    check_null = 0.1,
+                                    check_null_method = "profile",
+                                    dedup = TRUE,
+                                    overlap = TRUE,
+                                    squared = FALSE,
+                                    n_purity = 100,
+                                    min_abs_corr = 0.5,
+                                    median_abs_corr = NULL,
+                                    between_cluster = 0.8,
+                                    between_purity = 0.5,
+                                    weaker_ucos = TRUE,
+                                    tol = 1e-9){
+  
     if (class(cb_obj_single) != "colocboost"){
         stop("Input must from colocboost function!")}
 
@@ -28,7 +28,7 @@ colocboost_posthoc_noncoloc <- function(cb_obj_single,
     temp <- as.matrix(weights)
     if (sum(temp) == 0){
 
-        ll = list("csets" = NULL,
+        ll = list("ucos" = NULL,
                   "evidence_strength" = NULL,
                   "requested_coverage" = coverage)
         pip_av = rep(0, cc$P)
@@ -43,7 +43,7 @@ colocboost_posthoc_noncoloc <- function(cb_obj_single,
         confidence_sets = list(unique(confidence_sets))
 
         # ----- null filtering
-        res_temp <- check_null_post(cb_obj_single, confidence_sets, coloc_traits=1,
+        res_temp <- check_null_post(cb_obj_single, confidence_sets, coloc_outcomes=1,
                                     check_null=check_null,
                                     check_null_method = check_null_method,
                                     weaker_ucos = weaker_ucos)
@@ -62,7 +62,7 @@ colocboost_posthoc_noncoloc <- function(cb_obj_single,
         if (length(confidence_sets) != 0){
             pos <- confidence_sets[[1]]
             if (!is.null(cb_data$data[[1]]$XtX)){
-                pos <- match(pos, setdiff(1:cb_model_para$P, cb_data$data[[1]]$snp_miss))
+                pos <- match(pos, setdiff(1:cb_model_para$P, cb_data$data[[1]]$variable_miss))
             }
             purity = matrix(get_purity(pos, X=cb_data$data[[1]]$X, Xcorr=cb_data$data[[1]]$XtX,
                                        N=cb_data$data[[1]]$N, n=n_purity),1,3)
@@ -78,14 +78,14 @@ colocboost_posthoc_noncoloc <- function(cb_obj_single,
                 evidence_strength = evidence_strength
                 cs_change <- cs_change
                 purity = purity
-                row_names = "CS1"
+                row_names = "ucos1"
                 names(confidence_sets) = row_names
                 rownames(purity) = row_names
 
                 # --- report pip
                 pip_av <- weights
 
-                ll = list("csets" = confidence_sets,
+                ll = list("ucos" = confidence_sets,
                           "purity" = purity,
                           "evidence_strength" = evidence_strength,
                           "requested_coverage" = coverage,
@@ -93,14 +93,14 @@ colocboost_posthoc_noncoloc <- function(cb_obj_single,
                           "avWeight" = as.matrix(avWeight))
 
             } else {
-                ll = list("csets" = NULL,
+                ll = list("ucos" = NULL,
                           "evidence_strength" = NULL,
                           "requested_coverage" = coverage)
                 pip_av = rep(0, cb_model_para$P)
             }
 
         } else {
-            ll = list("csets" = NULL,
+            ll = list("ucos" = NULL,
                       "evidence_strength" = NULL,
                       "requested_coverage" = coverage)
             pip_av = rep(0, cb_model_para$P)
@@ -132,7 +132,7 @@ colocboost_posthoc_noncoloc <- function(cb_obj_single,
                                      X=cb_data$data[[1]]$X,Xcorr=cb_data$data[[1]]$XtX,
                                      N=cb_data$data[[1]]$N, n=n_purity, coverage = coverage,
                                      min_abs_corr = min_abs_corr, median_abs_corr = median_abs_corr,
-                                     miss_idx = cb_data$data[[1]]$snp_miss)
+                                     miss_idx = cb_data$data[[1]]$variable_miss)
             if (length(check_purity) != 0){
                 w = w[check_purity]
                 weight_cluster = weight_cluster[,check_purity]
@@ -169,7 +169,7 @@ colocboost_posthoc_noncoloc <- function(cb_obj_single,
             }))
 
             # ----- null filtering
-            res_temp <- check_null_post(cb_obj_single, confidence_sets, coloc_traits=1,
+            res_temp <- check_null_post(cb_obj_single, confidence_sets, coloc_outcomes=1,
                                         check_null=check_null,
                                         check_null_method = check_null_method,
                                         weaker_ucos = weaker_ucos)
@@ -235,7 +235,7 @@ colocboost_posthoc_noncoloc <- function(cb_obj_single,
                         res <- get_between_purity(cset1, cset2, X = cb_data$data[[1]]$X,
                                                   Xcorr = cb_data$data[[1]]$XtX,
                                                   N = cb_data$data[[1]]$N,
-                                                  miss_idx = cb_data$data[[1]]$snp_miss,
+                                                  miss_idx = cb_data$data[[1]]$variable_miss,
                                                   P = cb_model_para$P)
                         min_between[i.between, j.between] <- min_between[j.between, i.between] <- res[1]
                         max_between[i.between, j.between] <- max_between[j.between, i.between] <- res[2]
@@ -289,7 +289,7 @@ colocboost_posthoc_noncoloc <- function(cb_obj_single,
             for(ee in 1:length(confidence_sets)){
                 pos <- confidence_sets[[ee]]
                 if (!is.null(cb_data$data[[1]]$XtX)){
-                    pos <- match(pos, setdiff(1:cb_model_para$P, cb_data$data[[1]]$snp_miss))
+                    pos <- match(pos, setdiff(1:cb_model_para$P, cb_data$data[[1]]$variable_miss))
                 }
                 purity =
                     rbind(purity,
@@ -310,7 +310,7 @@ colocboost_posthoc_noncoloc <- function(cb_obj_single,
                 cs_change <- cs_change[is_pure, , drop = FALSE]
                 avWeight <- as.matrix(avWeight[,is_pure])
                 purity = purity[is_pure,]
-                row_names = paste0("CS",is_pure)
+                row_names = paste0("ucos",is_pure)
                 names(confidence_sets) = row_names
                 rownames(purity) = row_names
 
@@ -320,7 +320,7 @@ colocboost_posthoc_noncoloc <- function(cb_obj_single,
 
                 # Re-order CS list and purity rows based on purity.
                 ordering = order(purity[,1],decreasing = TRUE)
-                ll = list("csets" = confidence_sets[ordering],
+                ll = list("ucos" = confidence_sets[ordering],
                           "purity" = purity[ordering,],
                           "evidence_strength" = evidence_strength[ordering],
                           "requested_coverage" = coverage,
@@ -328,21 +328,21 @@ colocboost_posthoc_noncoloc <- function(cb_obj_single,
                           "avWeight" = as.matrix(avWeight[,ordering]))
 
             } else {
-                ll = list("csets" = NULL,
+                ll = list("ucos" = NULL,
                           "evidence_strength" = NULL,
                           "requested_coverage" = coverage)
                 pip_av = rep(0, cb_model_para$P)
             }
 
         } else {
-            ll = list("csets" = NULL,
+            ll = list("ucos" = NULL,
                       "evidence_strength" = NULL,
                       "requested_coverage" = coverage)
             pip_av = rep(0, cb_model_para$P)
         }
     }
 
-    out <- list("csets" = ll, "pip_av" = pip_av)
+    out <- list("ucos" = ll, "pip_av" = pip_av)
     return(out)
 
 }

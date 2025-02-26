@@ -1,18 +1,4 @@
 
-get_avWeigth <- function(cb_model, coloc_traits, update, pos.coloc, name_weight=FALSE){
-    
-    avWeight <- lapply(coloc_traits, function(i){
-        pos <- which(update[i,] != 0)
-        weight <- cb_model[[i]]$weights_path[match(pos.coloc, pos), ]
-    })
-    avWeight <- do.call(cbind, avWeight)
-    if (name_weight) {
-        colnames(avWeight) <- paste0("trait", coloc_traits)
-    }
-    return(avWeight)
-    
-}
-
 
 get_integrated_weight <- function(avWeight, func_intw = "fun_R", alpha = 1.5){
     
@@ -37,24 +23,10 @@ get_in_csets <- function(weights, coverage = 0.95){
     
 }
 
-get_max_profile <- function(cb_obj, check_null_max=0.02, check_null_method = "profile"){
-  for (i in 1:cb_obj$cb_model_para$L){
-    cb <- cb_obj$cb_model[[i]]
-    scaling_factor <- if(!is.null(cb_obj$cb_data$data[[i]]$N)) cb_obj$cb_data$data[[i]]$N-1 else 1
-    if (check_null_method == "profile"){
-      cb$check_null_max <- 1000*check_null_max / scaling_factor
-    } else {
-      cb$check_null_max <- check_null_max
-    }
-    cb_obj$cb_model[[i]] <- cb
-  }
-    return(cb_obj)
-}
-
 
 check_null_post <- function(cb_obj, 
                             coloc_sets_temp,
-                            coloc_traits,
+                            coloc_outcomes,
                             check_null = 0.1,
                             check_null_method = "profile",
                             weaker_ucos = TRUE){
@@ -138,7 +110,7 @@ check_null_post <- function(cb_obj,
     max_change <- matrix(0, nrow = length(coloc_sets_temp), ncol = cb_obj$cb_model_para$L)
     for (i in 1:length(coloc_sets_temp)){
         cs_variants <- as.numeric(unlist(coloc_sets_temp[[i]]))
-        for (j in coloc_traits){
+        for (j in coloc_outcomes){
             cs_beta <- cb_obj$cb_model[[j]]$beta
             cs_beta[cs_variants] <- 0
             X_dict <- cb_data$dict[j]
@@ -147,7 +119,7 @@ check_null_post <- function(cb_obj,
                 cs_profile <- get_profile(cs_beta, X = cb_data$data[[X_dict]]$X, Y = cb_data$data[[j]]$Y, 
                                           XtX = cb_data$data[[X_dict]]$XtX, XtY = cb_data$data[[j]]$XtY, 
                                           YtY = cb_data$data[[j]]$YtY, N = cb_data$data[[j]]$N, 
-                                          miss_idx = cb_data$data[[j]]$snp_miss)
+                                          miss_idx = cb_data$data[[j]]$variable_miss)
                 last_profile <- extract_last(cb_obj$cb_model[[j]]$profile_loglike_each)
                 change <- abs(cs_profile - last_profile) 
                 # - add hoc
@@ -162,14 +134,14 @@ check_null_post <- function(cb_obj,
                 res <- update_res(X = cb_data$data[[X_dict]]$X, Y = cb_data$data[[j]]$Y, 
                                   XtX = cb_data$data[[X_dict]]$XtX, XtY = cb_data$data[[j]]$XtY, 
                                   N = cb_data$data[[j]]$N, cs_beta,
-                                  miss_idx = cb_data$data[[j]]$snp_miss)
+                                  miss_idx = cb_data$data[[j]]$variable_miss)
                 cs_obj <- get_cs_obj(cs_beta, res, cb_obj$cb_model_para$tau, cb_obj$cb_model_para$func_prior, 
                                      cb_obj$cb_model_para$lambda, adj_dep = adj_dep,
                                      LD_obj = cb_obj$cb_model_para$LD_obj,
                                      X = cb_data$data[[X_dict]]$X, N = cb_data$data[[j]]$N, 
                                      XtX = cb_data$data[[X_dict]]$XtX, XtY = cb_data$data[[X_dict]]$XtY, 
                                      YtY = cb_data$data[[X_dict]]$YtY,
-                                     miss_idx = cb_data$data[[j]]$snp_miss)
+                                     miss_idx = cb_data$data[[j]]$variable_miss)
                 last_obj <- min(cb_obj$cb_model[[j]]$obj_path)
                 change <- abs(cs_obj - last_obj) 
                 if (length(cb_obj$cb_model[[j]]$obj_path)==1){
@@ -285,16 +257,6 @@ get_n_cluster <- function(hc, Sigma, m=ncol(Sigma), between_cluster = 0.8){
                 "Qmodularity" = Q))
 }
 
-
-### Function for check cs for each weight
-w_cs <- function(w, coverage = 0.95){
-    n <- sum(cumsum(sort(w,decreasing = TRUE)) < coverage) + 1
-    o <- order(w,decreasing = TRUE)
-    result = rep(0,length(w))
-    result[o[1:n]] = 1
-    return(result)
-}
-
 w_purity <- function(weights, X=NULL, Xcorr=NULL, N = NULL, n = 100, coverage = 0.95, 
                      min_abs_corr = 0.5, median_abs_corr = NULL, miss_idx = NULL){
     
@@ -313,22 +275,6 @@ w_purity <- function(weights, X=NULL, Xcorr=NULL, N = NULL, n = 100, coverage = 
         is_pure = which(tmp_purity[1,] >= min_abs_corr | tmp_purity[3,] >= median_abs_corr)
     }
     return(is_pure)
-}
-
-
-
-check_two_overlap_sets <- function(total, i, j){
-    t1 <- total[[i]]
-    t2 <- total[[j]]
-    if (t1 != "ONE" & t2 != "ONE"){
-        return(ifelse(t1>t2, i, j))
-    } else if (t1 == "ONE" & t2 != "ONE"){
-        return(i)
-    } else if (t1 != "ONE" & t2 == "ONE"){
-        return(j)
-    } else if (t1 == "ONE" & t2 == "ONE"){
-        return(sample(c(i,j), 1))
-    }
 }
 
 
@@ -372,31 +318,6 @@ get_between_purity = function (pos1, pos2, X=NULL, Xcorr=NULL, N = NULL, miss_id
 
 
 
-# Function to merge overlapping sets
-merge_sets <- function(vec) {
-    split_lists <- lapply(vec, function(x) as.numeric(unlist(strsplit(x, ";"))))
-    result <- list()
-    while (length(split_lists) > 0) {
-        current <- split_lists[[1]]
-        split_lists <- split_lists[-1]
-        repeat {
-            overlap_index <- NULL
-            for (i in seq_along(split_lists)) {
-                if (length(intersect(current, split_lists[[i]])) > 0) {
-                    overlap_index <- i
-                    break
-                }
-            }
-            if (!is.null(overlap_index)) {
-                current <- union(current, split_lists[[overlap_index]])
-                split_lists <- split_lists[-overlap_index]
-            } else {
-                break
-            }
-        }
-        result <- c(result, list(paste(sort(current), collapse = ";")))
-    }
-    return(result)
-}
+
 
 

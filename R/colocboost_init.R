@@ -32,10 +32,10 @@ colocboost_inits <- function() {
 colocboost_init_data <- function(X, Y, dict_YX,
                                  Z, LD, N_sumstat, dict_sumstatLD,
                                  Var_y, SeBhat,
-                                 keep.snps = NULL,
+                                 keep.variables = NULL,
                                  target_idx = NULL,
-                                 target_variants = TRUE,
-                                 overlap_varaints = FALSE,
+                                 target_variables = TRUE,
+                                 overlap_variables = FALSE,
                                  intercept=TRUE, standardize=TRUE,
                                  residual_correlation = NULL){
 
@@ -49,25 +49,25 @@ colocboost_init_data <- function(X, Y, dict_YX,
     } else if (is.null(dict_YX) & !is.null(dict_sumstatLD)){
         dict <- dict_sumstatLD
     }
-    if (target_variants & !is.null(target_idx)){
-        if (target_idx > length(keep.snps)){
+    if (target_variables & !is.null(target_idx)){
+        if (target_idx > length(keep.variables)){
           stop("Target outcome index is over the total number of outcomes! please check!")
         }
-        keep.snp.names <- keep.snps[[dict[target_idx]]]
-        if (overlap_varaints){
-          keep.tmp <- lapply(keep.snps[-dict[target_idx]], function(tm){
-            intersect(keep.snp.names, tm)
+        keep.variable.names <- keep.variables[[dict[target_idx]]]
+        if (overlap_variables){
+          keep.tmp <- lapply(keep.variables[-dict[target_idx]], function(tm){
+            intersect(keep.variable.names, tm)
           })
-          keep.snp.names <- Reduce(union, keep.tmp)
+          keep.variable.names <- Reduce(union, keep.tmp)
         }
     } else {
-      if (overlap_varaints){
-        keep.snp.names <- Reduce(intersect, keep.snps)
+      if (overlap_variables){
+        keep.variable.names <- Reduce(intersect, keep.variables)
       } else {
-        keep.snp.names <- Reduce(union, keep.snps)
+        keep.variable.names <- Reduce(union, keep.variables)
       }
     }
-    cb_data$snp.names <- keep.snp.names
+    cb_data$variable.names <- keep.variable.names
     flag <- 1
     # if individual: X, Y
     if (!is.null(X) & !is.null(Y)){
@@ -83,7 +83,7 @@ colocboost_init_data <- function(X, Y, dict_YX,
             tmp <- list("X" = NULL,
                         "Y" = scale(Y[[i]], center = intercept, scale = standardize),
                         "N" = length(Y[[i]]),
-                        "snp_miss" = NULL)
+                        "variable_miss" = NULL)
             x_tmp <- X[[dict_YX[i]]]
             change_x <- if(dict_YX_final[i] == i) TRUE else FALSE
             # - if sample different
@@ -104,14 +104,14 @@ colocboost_init_data <- function(X, Y, dict_YX,
 
             }
             # - if missing X - FIXME
-            snp.name <- keep.snps[[dict_YX[i]]]
-            if (length(snp.name) != length(keep.snp.names)){
-                x_extend <- matrix(0, nrow = nrow(x_tmp), ncol = length(keep.snp.names),
-                                   dimnames = list(rownames(x_tmp), keep.snp.names))
-                snp.tmp <- intersect(keep.snp.names, snp.name)
-                pos <- match(snp.tmp, keep.snp.names)
-                tmp$snp_miss <- setdiff(1:length(keep.snp.names), pos)
-                poss <- match(snp.tmp, snp.name)
+            variable.name <- keep.variables[[dict_YX[i]]]
+            if (length(variable.name) != length(keep.variable.names)){
+                x_extend <- matrix(0, nrow = nrow(x_tmp), ncol = length(keep.variable.names),
+                                   dimnames = list(rownames(x_tmp), keep.variable.names))
+                variable.tmp <- intersect(keep.variable.names, variable.name)
+                pos <- match(variable.tmp, keep.variable.names)
+                tmp$variable_miss <- setdiff(1:length(keep.variable.names), pos)
+                poss <- match(variable.tmp, variable.name)
                 x_extend[,pos] <- x_tmp[,poss]
                 x_tmp <- x_extend
             }
@@ -142,53 +142,53 @@ colocboost_init_data <- function(X, Y, dict_YX,
                         "XtY" = NULL,
                         "YtY" = NULL,
                         "N" = N_sumstat[[i]],
-                        "snp_miss" = NULL)
+                        "variable_miss" = NULL)
 
             flag1 <- dict_sumstatLD[i]+ind_idx
             # check LD
             if (dict_sumstatLD[i] == i){
 
-                # --- final rank: keep.snp.names (N > M) N / M
-                # --- current list: final_snps (M = M1 n M2)  <- LD (M1 x M1), Z (M2 x 1) >> LD (M x M)
-                # - intersect snps
-                tmp_snps <- intersect(keep.snps[[flag1]], colnames(LD[[i]]))
-                pos.final <- sort(match(tmp_snps, keep.snp.names))
-                final_snps <- keep.snp.names[pos.final] # keep the same rank with keep.snp.names
-                # - check missing SNPs
-                tmp$snp_miss <- setdiff(1:length(keep.snp.names), pos.final)
+                # --- final rank: keep.variable.names (N > M) N / M
+                # --- current list: final_variables (M = M1 n M2)  <- LD (M1 x M1), Z (M2 x 1) >> LD (M x M)
+                # - intersect variables
+                tmp_variables <- intersect(keep.variables[[flag1]], colnames(LD[[i]]))
+                pos.final <- sort(match(tmp_variables, keep.variable.names))
+                final_variables <- keep.variable.names[pos.final] # keep the same rank with keep.variable.names
+                # - check missing variables
+                tmp$variable_miss <- setdiff(1:length(keep.variable.names), pos.final)
                 # - set 0 to LD
-                pos.LD <- match(final_snps, colnames(LD[[i]]))
+                pos.LD <- match(final_variables, colnames(LD[[i]]))
                 # LD_sparse <- as(LD[[i]], "sparseMatrix")
                 # LD_tmp <- LD_sparse[pos.LD, pos.LD]
                 LD_tmp <- LD[[i]][pos.LD, pos.LD]
 
             } else {
 
-                snp_i <- keep.snps[[flag1]]
-                snp_LD <- keep.snps[[dict_sumstatLD[i]+ind_idx]]
-                if (length(which(is.na(match(snp_i, snp_LD)))) != 0){
-                    # - intersect snps
-                    tmp_snps <- intersect(keep.snps[[flag]], colnames(LD[[dict_sumstatLD[i]]]))
-                    pos.final <- sort(match(tmp_snps, keep.snp.names))
-                    final_snps <- keep.snp.names[pos.final] # keep the same rank with keep.snp.names
-                    # - check missing SNPs
-                    tmp$snp_miss <- setdiff(1:length(keep.snp.names), pos.final)
+                variable_i <- keep.variables[[flag1]]
+                variable_LD <- keep.variables[[dict_sumstatLD[i]+ind_idx]]
+                if (length(which(is.na(match(variable_i, variable_LD)))) != 0){
+                    # - intersect variables
+                    tmp_variables <- intersect(keep.variables[[flag]], colnames(LD[[dict_sumstatLD[i]]]))
+                    pos.final <- sort(match(tmp_variables, keep.variable.names))
+                    final_variables <- keep.variable.names[pos.final] # keep the same rank with keep.variable.names
+                    # - check missing variables
+                    tmp$variable_miss <- setdiff(1:length(keep.variable.names), pos.final)
                     # - set 0 to LD
-                    pos.LD <- match(final_snps, colnames(LD[[dict_sumstatLD[i]]]))
+                    pos.LD <- match(final_variables, colnames(LD[[dict_sumstatLD[i]]]))
                     LD_tmp <- LD[[dict_sumstatLD[i]]][pos.LD, pos.LD]
 
                     # - need to change LD
                     dict_sumstatLD[i] <- i
 
                 } else {
-                    tmp$snp_miss <- cb_data$data[[dict_sumstatLD[i]+n_ind]]$snp_miss
+                    tmp$variable_miss <- cb_data$data[[dict_sumstatLD[i]+n_ind]]$variable_miss
                     LD_tmp <- NULL
                 }
             }
 
             # - set 0 to Z
-            Z_extend <- rep(0, length(keep.snp.names)) # N
-            pos.z <- match(final_snps, keep.snps[[flag1]]) # M <- M2
+            Z_extend <- rep(0, length(keep.variable.names)) # N
+            pos.z <- match(final_variables, keep.variables[[flag1]]) # M <- M2
             Z_extend[pos.final] <- Z[[i]][pos.z]
 
             # - organize data
@@ -294,7 +294,7 @@ colocboost_init_model <- function(cb_data,
                                            N = data_each$N, YtY = data_each$YtY,
                                            XtX = cb_data$data[[X_dict]]$XtX,
                                            beta_k = tmp$beta,
-                                           miss_idx = data_each$snp_miss)
+                                           miss_idx = data_each$variable_miss)
         # - initial z-score between X and residual based on correlation
         tmp$z <- get_z(tmp$correlation, n=data_each$N, tmp$res)
         tmp$z_univariate <- tmp$z
@@ -303,7 +303,7 @@ colocboost_init_model <- function(cb_data,
         if (P <= 1){
           multiple_correction <- 1
         } else {
-          multiple_correction <- get_multiple_correction(z=tmp$z, miss_idx = data_each$snp_miss, 
+          multiple_correction <- get_multiple_correction(z=tmp$z, miss_idx = data_each$variable_miss, 
                                                          func_multicorrection = func_multicorrection, 
                                                          ash_prior = ash_prior,
                                                          p.adjust.methods = p.adjust.methods)
@@ -344,7 +344,7 @@ colocboost_init_para <- function(cb_data, cb_model,tau=0.01,
     #################  initialization #######################################
     # - sample size
     N <- sapply(cb_data$data, function(dt) dt$N)
-    # - number of SNPs
+    # - number of variables
     P <- if (!is.null(cb_data$data[[1]]$X)) ncol(cb_data$data[[1]]$X) else length(cb_data$data[[1]]$XtY)
     # - number of outcomes
     L <- length(cb_data$data)
@@ -372,7 +372,7 @@ colocboost_init_para <- function(cb_data, cb_model,tau=0.01,
                          "LD_obj" = LD_obj,
                          "real_update_jk" = c(),
                          "outcome_names" = outcome_names,
-                         "variables" = cb_data$snp.names,
+                         "variables" = cb_data$variable.names,
                          "target_idx" = target_idx)
     class(cb_model_para) = "colocboost"
 

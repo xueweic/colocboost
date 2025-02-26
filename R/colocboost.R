@@ -14,51 +14,51 @@
 #' that may arise from small sample sizes or discrepancies in minor allele frequencies (MAF) across different confidence sets.
 #'
 #' @section Input Data:
-#' @param X A list of genotype matrices for different traits, or a single matrix if all traits share the same genotypes.
-#'          Each matrix should have column names, if sample sizes and variants possibly differing across matrices.
-#' @param Y A list of vectors of traits or an N by L matrix if it is considered for the same X and multiple traits.
+#' @param X A list of genotype matrices for different outcomes, or a single matrix if all outcomes share the same genotypes.
+#'          Each matrix should have column names, if sample sizes and variables possibly differing across matrices.
+#' @param Y A list of vectors of outcomes or an N by L matrix if it is considered for the same X and multiple outcomes.
 #' @param sumstat A list of data.frames of summary statistics.
 #'                  The coloumns of data.frame should include either \code{z} or \code{beta}/\code{sebeta}.
 #'                  \code{n} is the sample size for the summary statistics, it is highly recommendation to provide.
-#'                  \code{variant} is required if sumstat for different traits do not have the same number of variants.
+#'                  \code{variant} is required if sumstat for different outcomes do not have the same number of variables.
 #'                  \code{var_y} is the variance of phenotype (default is 1 meaning that the Y is in the \dQuote{standarized} scale).
 #' @param LD A list of correlation matrix indicating the LD matrix for each genotype. It also could be a single matrix if all sumstats were
 #'           obtained from the same gentoypes.
-#' @param dict_YX A L by 2 matrix of dictionary for \code{X} and \code{Y} if there exist subsets of traits corresponding to the same X matrix.
-#'                  The first column should be 1:L for L traits. The second column should be the index of \code{X} corresponding to the trait.
+#' @param dict_YX A L by 2 matrix of dictionary for \code{X} and \code{Y} if there exist subsets of outcomes corresponding to the same X matrix.
+#'                  The first column should be 1:L for L outcomes. The second column should be the index of \code{X} corresponding to the outcome.
 #'                  The innovation: do not provide the same matrix in \code{X} to reduce the computational burden.
-#' @param dict_sumstatLD A L by 2 matrix of dictionary for \code{sumstat} and \code{LD} if there exist subsets of traits corresponding to the same sumstat.
+#' @param dict_sumstatLD A L by 2 matrix of dictionary for \code{sumstat} and \code{LD} if there exist subsets of outcomes corresponding to the same sumstat.
 #'                  The first column should be 1:L for L sumstat The second column should be the index of \code{LD} corresponding to the sumstat.
 #'                  The innovation: do not provide the same matrix in \code{LD} to reduce the computational burden.
-#' @param outcome_names The names of traits, which has the same order for Y.
-#' @param target_idx The index of the target trait if perform targeted ColocBoost
-#' @param effect_est Matrix of snp regression coefficients (i.e. regression beta values) in the genomic region
+#' @param outcome_names The names of outcomes, which has the same order for Y.
+#' @param target_idx The index of the target outcome if perform targeted ColocBoost
+#' @param effect_est Matrix of variable regression coefficients (i.e. regression beta values) in the genomic region
 #' @param effect_se Matrix of standard errors associated with the beta values
 #' @param effect_n A scalar or a vector of sample sizes for estimating regression coefficients. Highly recommendated!
-#' @param target_variants If \code{target_variants = TRUE}, only consider the variants exsit in the target trait.
-#' @param overlap_varaints If \code{overlap_varaints = TRUE}, only perform colocalization in the overlapped region.
+#' @param target_variables If \code{target_variables = TRUE}, only consider the variables exsit in the target outcome.
+#' @param overlap_variables If \code{overlap_variables = TRUE}, only perform colocalization in the overlapped region.
 #' @param intercept If \code{intercept = TRUE}, the intercept is fitted. Setting \code{intercept = FALSE} is generally not recommended.
-#' @param standardize If \code{standardize = TRUE}, standardize the columns of genotype and traits to unit variance.
+#' @param standardize If \code{standardize = TRUE}, standardize the columns of genotype and outcomes to unit variance.
 #' 
 #' @section Model Parameters
-#' @param M The maximum number of gradient boosting iterations. If the number of traits are large, it will be automatically increased to a larger number.
+#' @param M The maximum number of gradient boosting iterations. If the number of outcomes are large, it will be automatically increased to a larger number.
 #' @param stop_thresh The stop criterion for overall profile loglikelihood function.
 #' @param step The minimum step size (learning rate) for updating in each iteration.
 #' @param decayrate The decayrate for step size. If the objective function is large at the early iterations,
 #'                  we need to have the higher step size to improve the computational efficiency.
 #' @param tau The smooth parameter for proximity adaptive smoothing weights for the best update jk-star.
-#' @param prioritize_jkstar When \code{prioritize_jkstar = TRUE}, the selected traits will prioritize best update j_k^star in SEC.
+#' @param prioritize_jkstar When \code{prioritize_jkstar = TRUE}, the selected outcomes will prioritize best update j_k^star in SEC.
 #' @param func_compare The criterion when we update jk-star in SEC (default is "min_max").
-#' @param jk_equiv_cor The LD cutoff between overall best update jk-star and marginal best update jk-l for lth trait
-#' @param jk_equiv_loglik The change of loglikelihood cutoff between overall best update jk-star and marginal best update jk-l for lth trait
-#' @param coloc_thres The cutoff of checking if the best update jk-star is the potential causal variant for trait l if jk-l is not similar to jk-star (used in Delayed SEC).
+#' @param jk_equiv_cor The LD cutoff between overall best update jk-star and marginal best update jk-l for lth outcome
+#' @param jk_equiv_loglik The change of loglikelihood cutoff between overall best update jk-star and marginal best update jk-l for lth outcome
+#' @param coloc_thres The cutoff of checking if the best update jk-star is the potential causal variable for outcome l if jk-l is not similar to jk-star (used in Delayed SEC).
 #' @param lambda The ratio [0,1] for z^2 and z in fun_prior simplex, defult is 0.5
-#' @param lambda_target The ratio for z^2 and z in fun_prior simplex for the target trait, default is 1
+#' @param lambda_target The ratio for z^2 and z in fun_prior simplex for the target outcome, default is 1
 #' @param func_prior The data-drive local association simplex \eqn{\delta} for smoothing the weights. Default is "LD_z2z" is the elastic net for z-score and also weighted by LD.
 #' @param func_multicorrection The alternative method to check the stop criteria. When \code{func_multicorrection = "lfdr"}, boosting iterations will be stopped
-#'                      if the local FDR for all variants are greater than \code{lfsr_max}.
+#'                      if the local FDR for all variables are greater than \code{lfsr_max}.
 #' @param stop_null The cutoff of nominal p-value when \code{func_multicorrection = "Z"}.
-#' @param multicorrection_max The cutoff of the smallest FDR for pre-filtering the traits when \code{func_multicorrection = "lfdr"} or \code{func_multicorrection = "lfsr"}.
+#' @param multicorrection_max The cutoff of the smallest FDR for pre-filtering the outcomes when \code{func_multicorrection = "lfdr"} or \code{func_multicorrection = "lfsr"}.
 #' @param multicorrection_cut The cutoff of the smallest FDR for stop criteria when \code{func_multicorrection = "lfdr"} or \code{func_multicorrection = "lfsr"}.
 #' 
 #' @section Post-processing Parameters
@@ -75,16 +75,16 @@
 #'                          a CS will only be removed if it fails both filters. Default set to NULL but it is recommended to set it to 0.8 in practice.
 #' @param between_purity Minimum absolute correlation allowed to merge multiple colocalized sets. The default is 0.8 corresponding to a stringent threshold
 #'                          to merge colocalized sets, which may resulting in a huge set.
-#' @param tol A small, non-negative number specifying the convergence tolerance for checking the overlap of the variants in different sets.
-#' @param merging When \code{merging = TRUE}, the sets for only one trait will be merged if passed the \code{between_purity}.
+#' @param tol A small, non-negative number specifying the convergence tolerance for checking the overlap of the variables in different sets.
+#' @param merging When \code{merging = TRUE}, the sets for only one outcome will be merged if passed the \code{between_purity}.
 #' @param coverage_singlew A number between 0 and 1 specifying the weight in each SEC (default is 0.8).
-#' @param func_intw The integrated weight method. The default is "fun_R", indicating the same log-scale for different colocalized traits.
-#' @param alpha The strenght to integrate weight from differnt traits, default is 1.5
+#' @param func_intw The integrated weight method. The default is "fun_R", indicating the same log-scale for different colocalized outcomes.
+#' @param alpha The strenght to integrate weight from differnt outcomes, default is 1.5
 #' @param ash_prior The prior distribution for calculating lfsr when \code{func_multicorrection = "lfsr"}.
 #' @param p.adjust.methods The adjusted pvalue method in stats:p.adj  when \code{func_multicorrection = "fdr"}
 #' @param check_null The cut off value for change conditional objective function. Default is 0.1.
 #' @param check_null_method The metric to check the null sets. Default is "profile"
-#' @param check_null_max The smallest value of change of profile loglikelihood for each trait.
+#' @param check_null_max The smallest value of change of profile loglikelihood for each outcome.
 #' @param residual_correlation The residual correlation based on the sample overlap, it is diagonal if it is NULL.
 #' @param weaker_ucos If \code{weaker_ucos = TRUE}, consider the weaker single effect due to coupling effects
 #' @param LD_obj When \code{LD_obj = FALSE}, objective fuunction doesn't include LD information.
@@ -95,7 +95,7 @@
 #'
 #' \item{cos_summary}{A summary table for colocalization events.}
 #' \item{cos_details}{A object with all information for colocalization results.}
-#' \item{vcp}{The variant colocalized probability for each variant.}
+#' \item{vcp}{The variable colocalized probability for each variable.}
 #' \item{data_info}{A object with detailed information from input data}
 #'
 #' @export
@@ -110,8 +110,8 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                        dict_sumstatLD = NULL, # sumstat index for 1st column, LD index for 2nd column
                        outcome_names = NULL, # the names of outcomes
                        ###### - HyPrColoc input
-                       effect_est = NULL, # same as HyPrColoc, beta hat matrix: with rowname of snp names
-                       effect_se = NULL, # same as HyPrColoc, sebeta hat matrix with rowname of snp names
+                       effect_est = NULL, # same as HyPrColoc, beta hat matrix: with rowname of variable names
+                       effect_se = NULL, # same as HyPrColoc, sebeta hat matrix with rowname of variable names
                        effect_n = NULL,
 
                        ###### - fixed argument - ###########
@@ -135,7 +135,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                        between_cluster = 0.8, # only one cluster if all weights correlations bigger than this cut off
                        dedup = TRUE, # if remove the duplicate csets in the post-processing
                        overlap = TRUE, # if remove the overlapped csets
-                       n_purity = 100, # the number of variants in purity
+                       n_purity = 100, # the number of variables in purity
                        min_abs_corr = 0.5, # the cut off value of purity in each cset
                        median_abs_corr = NULL,
                        between_purity = 0.8, # minimum LD between two csets
@@ -150,8 +150,8 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                        func_multicorrection = "lfdr",
                        # --- add-hoc
                        target_idx = NULL, # important now for sumstat
-                       target_variants = TRUE,
-                       overlap_varaints = FALSE,
+                       target_variables = TRUE,
+                       overlap_variables = FALSE,
                        stop_null = 1,
                        multicorrection_max = 1,
                        multicorrection_cut = 1,
@@ -216,16 +216,16 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                 }
             })
         }
-        # --- check if SNPs in individual data
+        # --- check if variables in individual data
         p.ind <- unique(sapply(X, ncol))
         if (length(p.ind) != 1){
-            snp.tmp <- sapply(X, function(xx){if (!is.null(colnames(xx))) TRUE else FALSE})
-            if (!all(snp.tmp)){
-                warning("Error: X matrices do not have the same number of SNPs. Provide SNP names to the colnames of X matrix.")
+            variable.tmp <- sapply(X, function(xx){if (!is.null(colnames(xx))) TRUE else FALSE})
+            if (!all(variable.tmp)){
+                warning("Error: X matrices do not have the same number of variables. Provide variable names to the colnames of X matrix.")
                 return(NULL)
             }
         }
-        keep.snp.individual <- lapply(X, colnames)
+        keep.variable.individual <- lapply(X, colnames)
         if (!is.list(X) & !is.list(Y)){
             warning("Error: Input X and Y must be the list containing genotype matrics and all phenotype vectors!")
             return(NULL)
@@ -261,7 +261,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                 }
             }
         }
-        # keep.snp.individual <- lapply(yx_dict, function(i) keep.snp.individual[[i]] )
+        # keep.variable.individual <- lapply(yx_dict, function(i) keep.variable.individual[[i]] )
         if (any(sapply(X, anyNA))) {
             warning("Error: Input X must not contain missing values.")
             return(NULL)
@@ -298,7 +298,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                 }
             }
         }
-    } else {yx_dict <- keep.snp.individual <- NULL}
+    } else {yx_dict <- keep.variable.individual <- NULL}
 
     # - check summary-level data
     if ( (!is.null(sumstat)) | (!is.null(effect_est) & !is.null(effect_se)) ){
@@ -309,18 +309,18 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                 warning("Error: effect_est and effect_se should be the same dimension! Please check!")
                 return(NULL)
             }
-            variants <- rownames(effect_est)
+            variables <- rownames(effect_est)
             effect_est <- as.matrix(effect_est)
             effect_se <- as.matrix(effect_se)
-            if (is.null(variants)){
-              variants <- paste0("variant_", 1:nrow(effect_est))
+            if (is.null(variables)){
+              variables <- paste0("variant_", 1:nrow(effect_est))
             }
             sumstat <- list()
             for (sum_iy in 1:ncol(effect_est)){
                 sumstat_y <- data.frame(
                     "beta" = effect_est[, sum_iy],
                     "sebeta" = effect_se[, sum_iy],
-                    "variant" = variants
+                    "variant" = variables
                 )
                 if (!is.null(effect_n)){
                     if (length(effect_n)==1){
@@ -341,36 +341,36 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
               warning("Error: Input sumstat must be the list containing summary level data for all outcomes!")
               return(NULL)
             }
-            # --- check if variants names in summary data
-            snp.tmp <- sapply(sumstat, function(xx){ if (("variant" %in% colnames(xx))){ TRUE } else { FALSE } })
-            if (!all(snp.tmp)){
-                warning("sumstat do not contain variants names. Assigning default names as 'variant_1, ..., variant_P'. ",
-                        "Recommend to provide variants names to the column named 'variant'.")
+            # --- check if variables names in summary data
+            variable.tmp <- sapply(sumstat, function(xx){ if (("variant" %in% colnames(xx))){ TRUE } else { FALSE } })
+            if (!all(variable.tmp)){
+                warning("sumstat do not contain variables names. Assigning default names as 'variant_1, ..., variant_P'. ",
+                        "Recommend to provide variables names to the column named 'variant'.")
                 sumstat <- lapply(sumstat, function(xx){
                     if (!("variant" %in% colnames(xx))){ xx$variant <- paste0("variant_", 1:nrow(xx)) }
                     return(xx)
                 })
             }
         }
-        keep.snp.sumstat <- lapply(sumstat, function(xx){ xx$variant})
+        keep.variable.sumstat <- lapply(sumstat, function(xx){ xx$variant})
         
         # --- check input of LD
         if (is.null(LD)){
           
           # if no LD input, set diagonal matrix to LD
           warning("Providing the LD for summary statistics data is highly recommended. ",
-                  "Without LD, only a single iteration will be performed under the assumption of one causal variant per outcome. ",
+                  "Without LD, only a single iteration will be performed under the assumption of one causal variable per outcome. ",
                   "Additionally, the purity of CoS cannot be evaluated!")
           
-          p.sumstat <- sapply(keep.snp.sumstat, length)
+          p.sumstat <- sapply(keep.variable.sumstat, length)
           p.unique <- unique(p.sumstat)
           if (length(p.unique)==1){
               ld <- diag(1, nrow = p.unique)
-              colnames(ld) <- rownames(ld) <- keep.snp.sumstat[[1]]
+              colnames(ld) <- rownames(ld) <- keep.variable.sumstat[[1]]
               LD <- list(ld)
               sumstatLD_dict <- rep(1, length(sumstat))
           } else {
-              LD <- lapply(keep.snp.sumstat, function(sn){
+              LD <- lapply(keep.variable.sumstat, function(sn){
                   ld <- diag(1, nrow = length(sn))
                   colnames(ld) <- rownames(ld) <- sn
                   return(ld)
@@ -491,37 +491,37 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
           Z[[i.summstat]] <- z
         }
     } else {
-        Z <- N_sumstat <- Var_y <- SeBhat <- sumstatLD_dict <- keep.snp.sumstat <- NULL
+        Z <- N_sumstat <- Var_y <- SeBhat <- sumstatLD_dict <- keep.variable.sumstat <- NULL
     }
     # - initial colocboost object
-    keep.snps <- c(keep.snp.individual, keep.snp.sumstat)
-    overlapp_snps <- Reduce("intersect", keep.snps)
-    mean_variants <- mean(sapply(keep.snps, length))
-    min_variants <- min(sapply(keep.snps, length))
-    if (min_variants < 100){
-      warning("Warning message about the number of variants.\n",
-              "The smallest number of variants across outcomes is ", min_variants, " <100. ",
+    keep.variables <- c(keep.variable.individual, keep.variable.sumstat)
+    overlapped_variables <- Reduce("intersect", keep.variables)
+    mean_variables <- mean(sapply(keep.variables, length))
+    min_variables <- min(sapply(keep.variables, length))
+    if (min_variables < 100){
+      warning("Warning message about the number of variables.\n",
+              "The smallest number of variables across outcomes is ", min_variables, " <100. ",
               "If this is what you expected, this is not a problem.",
               "If this is not you expected, please check input data.")
     }
-    if (length(overlapp_snps)<=1){
-      warning("Error: No or only 1 overlapping variants were found across all outcomes, colocalization cannot be performed. ",
-           "Please verify the variant names across different outcomes.")
+    if (length(overlapped_variables)<=1){
+      warning("Error: No or only 1 overlapping variables were found across all outcomes, colocalization cannot be performed. ",
+           "Please verify the variable names across different outcomes.")
       return(NULL)
-    } else if ( (length(overlapp_snps)/mean_variants)<0.1 ){
-      warning("Warning message about the overlapped variants.\n",
-              "The average number of variants across outcomes is ", mean_variants, 
-              ". But only ", length(overlapp_snps), " number of variants overlapped (<10%).\n",
+    } else if ( (length(overlapped_variables)/mean_variables)<0.1 ){
+      warning("Warning message about the overlapped variables.\n",
+              "The average number of variables across outcomes is ", mean_variables, 
+              ". But only ", length(overlapped_variables), " number of variables overlapped (<10%).\n",
               "If this is what you expected, this is not a problem.\n",
-              "If this is not you expected, please check if the variant name matched across outcomes.")
+              "If this is not you expected, please check if the variable name matched across outcomes.")
     }
     cb_data <- colocboost_init_data(X = X, Y = Y, dict_YX = yx_dict,
                                     Z = Z, LD = LD, N_sumstat = N_sumstat, dict_sumstatLD = sumstatLD_dict,
                                     Var_y = Var_y, SeBhat = SeBhat,
-                                    keep.snps = keep.snps,
+                                    keep.variables = keep.variables,
                                     target_idx = target_idx,
-                                    target_variants = target_variants,
-                                    overlap_varaints = overlap_varaints,
+                                    target_variables = target_variables,
+                                    overlap_variables = overlap_variables,
                                     intercept = intercept,
                                     standardize = standardize,
                                     residual_correlation = residual_correlation)
@@ -573,10 +573,6 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                                     merging =  merging,
                                     tol = tol,
                                     output_level = output_level)
-
-    # -- new get function: change coverage 95% to 99.9999%, same csets -> report purity matrix, warning and remove!
-    # -- change 95% to 75%, less SNPs in each csets.
-    # colocboost -> report cset1 based on 95% -> for this cset1
 
     return(cb_output)
 }

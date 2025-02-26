@@ -11,7 +11,7 @@ The \code{colocboost_get_methods} functions access basic properties inferences f
 }
 \details{
 The following functions are included in this set:
-\code{get_summary_table} get the colocalization summary table with or without the specific traits.
+\code{get_summary_table} get the colocalization summary table with or without the specific outcomes.
 
 These functions are not exported individually and are accessed via \code{colocboost_get_methods}.
 }

@@ -63,3 +63,4 @@ src/Makevars
 /pixi.lock
 .pixi
 /pixi.toml
+inst/doc

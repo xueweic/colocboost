@@ -11,7 +11,7 @@ colocboost(
   LD = NULL,
   dict_YX = NULL,
   dict_sumstatLD = NULL,
-  traits_names = NULL,
+  outcome_names = NULL,
   effect_est = NULL,
   effect_se = NULL,
   effect_n = NULL,
@@ -45,8 +45,8 @@ colocboost(
   func_prior = "LD_z2z",
   func_multicorrection = "lfdr",
   target_idx = NULL,
-  target_variants = TRUE,
-  overlap_varaints = FALSE,
+  target_variables = TRUE,
+  overlap_variables = FALSE,
   stop_null = 1,
   multicorrection_max = 1,
   multicorrection_cut = 1,
@@ -62,37 +62,37 @@ colocboost(
 )
 }
 \arguments{
-\item{X}{A list of genotype matrices for different traits, or a single matrix if all traits share the same genotypes.
-Each matrix should have column names, if sample sizes and variants possibly differing across matrices.}
+\item{X}{A list of genotype matrices for different outcomes, or a single matrix if all outcomes share the same genotypes.
+Each matrix should have column names, if sample sizes and variables possibly differing across matrices.}
 
-\item{Y}{A list of vectors of traits or an N by L matrix if it is considered for the same X and multiple traits.}
+\item{Y}{A list of vectors of outcomes or an N by L matrix if it is considered for the same X and multiple outcomes.}
 
 \item{sumstat}{A list of data.frames of summary statistics.
 The coloumns of data.frame should include either \code{z} or \code{beta}/\code{sebeta}.
 \code{n} is the sample size for the summary statistics, it is highly recommendation to provide.
-\code{variant} is required if sumstat for different traits do not have the same number of variants.
+\code{variant} is required if sumstat for different outcomes do not have the same number of variables.
 \code{var_y} is the variance of phenotype (default is 1 meaning that the Y is in the \dQuote{standarized} scale).}
 
 \item{LD}{A list of correlation matrix indicating the LD matrix for each genotype. It also could be a single matrix if all sumstats were
 obtained from the same gentoypes.}
 
-\item{dict_YX}{A L by 2 matrix of dictionary for \code{X} and \code{Y} if there exist subsets of traits corresponding to the same X matrix.
-The first column should be 1:L for L traits. The second column should be the index of \code{X} corresponding to the trait.
+\item{dict_YX}{A L by 2 matrix of dictionary for \code{X} and \code{Y} if there exist subsets of outcomes corresponding to the same X matrix.
+The first column should be 1:L for L outcomes. The second column should be the index of \code{X} corresponding to the outcome.
 The innovation: do not provide the same matrix in \code{X} to reduce the computational burden.}
 
-\item{dict_sumstatLD}{A L by 2 matrix of dictionary for \code{sumstat} and \code{LD} if there exist subsets of traits corresponding to the same sumstat.
+\item{dict_sumstatLD}{A L by 2 matrix of dictionary for \code{sumstat} and \code{LD} if there exist subsets of outcomes corresponding to the same sumstat.
 The first column should be 1:L for L sumstat The second column should be the index of \code{LD} corresponding to the sumstat.
 The innovation: do not provide the same matrix in \code{LD} to reduce the computational burden.}
 
-\item{traits_names}{The names of traits, which has the same order for Y.}
+\item{outcome_names}{The names of outcomes, which has the same order for Y.}
 
-\item{effect_est}{Matrix of snp regression coefficients (i.e. regression beta values) in the genomic region}
+\item{effect_est}{Matrix of variable regression coefficients (i.e. regression beta values) in the genomic region}
 
 \item{effect_se}{Matrix of standard errors associated with the beta values}
 
 \item{effect_n}{A scalar or a vector of sample sizes for estimating regression coefficients. Highly recommendated!}
 
-\item{M}{The maximum number of gradient boosting iterations. If the number of traits are large, it will be automatically increased to a larger number.}
+\item{M}{The maximum number of gradient boosting iterations. If the number of outcomes are large, it will be automatically increased to a larger number.}
 
 \item{stop_thresh}{The stop criterion for overall profile loglikelihood function.}
 
@@ -103,19 +103,19 @@ we need to have the higher step size to improve the computational efficiency.}
 
 \item{tau}{The smooth parameter for proximity adaptive smoothing weights for the best update jk-star.}
 
-\item{prioritize_jkstar}{When \code{prioritize_jkstar = TRUE}, the selected traits will prioritize best update j_k^star in SEC.}
+\item{prioritize_jkstar}{When \code{prioritize_jkstar = TRUE}, the selected outcomes will prioritize best update j_k^star in SEC.}
 
 \item{func_compare}{The criterion when we update jk-star in SEC (default is "min_max").}
 
-\item{jk_equiv_cor}{The LD cutoff between overall best update jk-star and marginal best update jk-l for lth trait}
+\item{jk_equiv_cor}{The LD cutoff between overall best update jk-star and marginal best update jk-l for lth outcome}
 
-\item{jk_equiv_loglik}{The change of loglikelihood cutoff between overall best update jk-star and marginal best update jk-l for lth trait}
+\item{jk_equiv_loglik}{The change of loglikelihood cutoff between overall best update jk-star and marginal best update jk-l for lth outcome}
 
-\item{coloc_thres}{The cutoff of checking if the best update jk-star is the potential causal variant for trait l if jk-l is not similar to jk-star (used in Delayed SEC).}
+\item{coloc_thres}{The cutoff of checking if the best update jk-star is the potential causal variable for outcome l if jk-l is not similar to jk-star (used in Delayed SEC).}
 
 \item{intercept}{If \code{intercept = TRUE}, the intercept is fitted. Setting \code{intercept = FALSE} is generally not recommended.}
 
-\item{standardize}{If \code{standardize = TRUE}, standardize the columns of genotype and traits to unit variance.}
+\item{standardize}{If \code{standardize = TRUE}, standardize the columns of genotype and outcomes to unit variance.}
 
 \item{coverage}{A number between 0 and 1 specifying the \dQuote{coverage} of the estimated colocalization confidence sets (CoS) (default is 0.95).}
 
@@ -138,34 +138,34 @@ a CS will only be removed if it fails both filters. Default set to NULL but it i
 \item{between_purity}{Minimum absolute correlation allowed to merge multiple colocalized sets. The default is 0.8 corresponding to a stringent threshold
 to merge colocalized sets, which may resulting in a huge set.}
 
-\item{tol}{A small, non-negative number specifying the convergence tolerance for checking the overlap of the variants in different sets.}
+\item{tol}{A small, non-negative number specifying the convergence tolerance for checking the overlap of the variables in different sets.}
 
-\item{merging}{When \code{merging = TRUE}, the sets for only one trait will be merged if passed the \code{between_purity}.}
+\item{merging}{When \code{merging = TRUE}, the sets for only one outcome will be merged if passed the \code{between_purity}.}
 
 \item{coverage_singlew}{A number between 0 and 1 specifying the weight in each SEC (default is 0.8).}
 
 \item{lambda}{The ratio \link{0,1} for z^2 and z in fun_prior simplex, defult is 0.5}
 
-\item{lambda_target}{The ratio for z^2 and z in fun_prior simplex for the target trait, default is 1}
+\item{lambda_target}{The ratio for z^2 and z in fun_prior simplex for the target outcome, default is 1}
 
-\item{func_intw}{The integrated weight method. The default is "fun_R", indicating the same log-scale for different colocalized traits.}
+\item{func_intw}{The integrated weight method. The default is "fun_R", indicating the same log-scale for different colocalized outcomes.}
 
-\item{alpha}{The strenght to integrate weight from differnt traits, default is 1.5}
+\item{alpha}{The strenght to integrate weight from differnt outcomes, default is 1.5}
 
 \item{func_prior}{The data-drive local association simplex \eqn{\delta} for smoothing the weights. Default is "LD_z2z" is the elastic net for z-score and also weighted by LD.}
 
 \item{func_multicorrection}{The alternative method to check the stop criteria. When \code{func_multicorrection = "lfdr"}, boosting iterations will be stopped
-if the local FDR for all variants are greater than \code{lfsr_max}.}
+if the local FDR for all variables are greater than \code{lfsr_max}.}
 
-\item{target_idx}{The index of the target trait if perform targeted ColocBoost}
+\item{target_idx}{The index of the target outcome if perform targeted ColocBoost}
 
-\item{target_variants}{If \code{target_variants = TRUE}, only consider the variants exsit in the target trait.}
+\item{target_variables}{If \code{target_variables = TRUE}, only consider the variables exsit in the target outcome.}
 
-\item{overlap_varaints}{If \code{overlap_varaints = TRUE}, only perform colocalization in the overlapped region.}
+\item{overlap_variables}{If \code{overlap_variables = TRUE}, only perform colocalization in the overlapped region.}
 
 \item{stop_null}{The cutoff of nominal p-value when \code{func_multicorrection = "Z"}.}
 
-\item{multicorrection_max}{The cutoff of the smallest FDR for pre-filtering the traits when \code{func_multicorrection = "lfdr"} or \code{func_multicorrection = "lfsr"}.}
+\item{multicorrection_max}{The cutoff of the smallest FDR for pre-filtering the outcomes when \code{func_multicorrection = "lfdr"} or \code{func_multicorrection = "lfsr"}.}
 
 \item{multicorrection_cut}{The cutoff of the smallest FDR for stop criteria when \code{func_multicorrection = "lfdr"} or \code{func_multicorrection = "lfsr"}.}
 
@@ -177,7 +177,7 @@ if the local FDR for all variants are greater than \code{lfsr_max}.}
 
 \item{check_null_method}{The metric to check the null sets. Default is "profile"}
 
-\item{check_null_max}{The smallest value of change of profile loglikelihood for each trait.}
+\item{check_null_max}{The smallest value of change of profile loglikelihood for each outcome.}
 
 \item{residual_correlation}{The residual correlation based on the sample overlap, it is diagonal if it is NULL.}
 
@@ -193,7 +193,7 @@ A \code{"colocboost"} object with some or all of the following elements:
 
 \item{cos_summary}{A summary table for colocalization events.}
 \item{cos_details}{A object with all information for colocalization results.}
-\item{vcp}{The variant colocalized probability for each variant.}
+\item{vcp}{The variable colocalized probability for each variable.}
 \item{data_info}{A object with detailed information from input data}
 }
 \description{

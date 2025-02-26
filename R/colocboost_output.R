@@ -25,7 +25,7 @@ get_data_info <- function(cb_obj){
     n_outcome <- cb_obj$cb_model_para$L
     n_variables <- cb_obj$cb_model_para$P
     analysis_outcome <- cb_obj$cb_model_para$outcome_names
-    variables <- cb_obj$cb_data$snp.names
+    variables <- cb_obj$cb_data$variable.names
     target_outcome <- NULL
     is_target <- rep(FALSE, n_outcome)
     if (!is.null(cb_obj$cb_model_para$target_idx)){
@@ -82,32 +82,30 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL){
 
 
     ### ----- Define the colocalization results
-    coloc_sets <- coloc_out$csets
+    coloc_sets <- coloc_out$cos
     if (length(coloc_sets)!=0){
 
         # - colocalized outcomes
         analysis_outcome <- cb_obj$cb_model_para$outcome_names
         coloc_outcome_index <- coloc_outcome <- list()
         colocset_names <- c()
-        for (i in 1:length(coloc_out$csets)){
-            cc <- coloc_out$avWeight[[i]]
-            tmp_names <- colnames(cc)
-            coloc_outcome_index[[i]] <- as.numeric(gsub("[^0-9.]+", "", tmp_names))
+        for (i in 1:length(coloc_out$cos)){
+            coloc_outcome_index[[i]] <- coloc_out$coloc_outcomes[[i]]
             coloc_outcome[[i]] <- analysis_outcome[coloc_outcome_index[[i]]]
             colocset_names[i] <- paste0("cos", i, ":", paste0(paste0("y", coloc_outcome_index[[i]]), collapse = "_"))
-            if (grepl("Merge", names(coloc_sets)[i])) {
-              colocset_names[i] <- paste0(colocset_names[i], ":merge")
+            if (grepl("merged", names(coloc_sets)[i])) {
+              colocset_names[i] <- paste0(colocset_names[i], ":merged")
             }
         }
         names(coloc_outcome) <- names(coloc_outcome_index) <- colocset_names
         coloc_outcomes <- list("outcome_index" = coloc_outcome_index, "outcome_name" = coloc_outcome)
 
         # - colocalized sets for variables
-        coloc_csets_snpidx <- coloc_out$csets
-        coloc_csets_snpnames <- lapply(coloc_csets_snpidx, function(coloc_tmp){ cb_obj$cb_model_para$variables[coloc_tmp] })
-        coloc_csets_snpidx <- lapply(coloc_csets_snpnames, function(snp) match(snp, data_info$variables))
-        names(coloc_csets_snpidx) <- names(coloc_csets_snpnames) <- colocset_names
-        coloc_csets_original <- list("cos_index" = coloc_csets_snpidx, "cos_variables" = coloc_csets_snpnames)
+        coloc_csets_variableidx <- coloc_out$cos
+        coloc_csets_variablenames <- lapply(coloc_csets_variableidx, function(coloc_tmp){ cb_obj$cb_model_para$variables[coloc_tmp] })
+        coloc_csets_variableidx <- lapply(coloc_csets_variablenames, function(variable) match(variable, data_info$variables))
+        names(coloc_csets_variableidx) <- names(coloc_csets_variablenames) <- colocset_names
+        coloc_csets_original <- list("cos_index" = coloc_csets_variableidx, "cos_variables" = coloc_csets_variablenames)
 
         # - colocalized set cs_change
         cs_change <- coloc_out$cs_change
@@ -130,19 +128,19 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL){
         coloc_csets <- list("cos_index" = cos_re_idx, "cos_variables" = cos_re_var)
         
         # - hits variables in each csets
-        coloc_hits <- coloc_hits_snpnames <- coloc_hits_names <- c()
+        coloc_hits <- coloc_hits_variablenames <- coloc_hits_names <- c()
         for (i in 1:length(int_weight)){
             inw <- int_weight[[i]]
             pp <- which(inw == max(inw))
             coloc_hits <- c(coloc_hits, pp)
-            coloc_hits_snpnames <- c(coloc_hits_snpnames, data_info$variables[pp])
+            coloc_hits_variablenames <- c(coloc_hits_variablenames, data_info$variables[pp])
             if (length(pp)==1){
                 coloc_hits_names <- c(coloc_hits_names, names(int_weight)[i])
             } else {
                 coloc_hits_names <- c(coloc_hits_names, paste0(names(int_weight)[i], ".", 1:length(pp)))
             }
         }
-        coloc_hits <- data.frame("top_index" = coloc_hits, "top_variables" = coloc_hits_snpnames) 
+        coloc_hits <- data.frame("top_index" = coloc_hits, "top_variables" = coloc_hits_variablenames) 
         rownames(coloc_hits) <- coloc_hits_names
 
         # - purity
@@ -168,7 +166,7 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL){
                         res[[flag]] <- get_between_purity(cset1, cset2, X = cb_obj$cb_data$data[[X_dict]]$X,
                                                           Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
                                                           N = cb_obj$cb_data$data[[ii]]$N,
-                                                          miss_idx = cb_obj$cb_data$data[[ii]]$snp_miss,
+                                                          miss_idx = cb_obj$cb_data$data[[ii]]$variable_miss,
                                                           P = cb_obj$cb_model_para$P)
                         flag <- flag + 1
                     }
@@ -195,27 +193,27 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL){
                               "cos_outcomes_delta" = cs_change)
         
         
-        # - missing snp and warning message
-        missing_snps_idx <- Reduce(union, lapply(cb_obj$cb_data$data,function(cb) cb$snp_miss ))
-        missing_snps <- cb_obj$cb_model_para$variables[missing_snps_idx]
-        cos_missing_snps_idx <-  lapply(coloc_csets_original$cos_variables, function(snp){
-          missing <- intersect(snp, missing_snps)
+        # - missing variable and warning message
+        missing_variables_idx <- Reduce(union, lapply(cb_obj$cb_data$data,function(cb) cb$variable_miss ))
+        missing_variables <- cb_obj$cb_model_para$variables[missing_variables_idx]
+        cos_missing_variables_idx <-  lapply(coloc_csets_original$cos_variables, function(variable){
+          missing <- intersect(variable, missing_variables)
           if (length(missing)!=0){
             match(missing, data_info$variables)
           } else { NULL }
         })
-        cos_missing_snps <- lapply(cos_missing_snps_idx, function(snp){if(!is.null(snp)){data_info$variables[snp]} else {NULL}})
-        warning_needed <- any(!sapply(cos_missing_snps, is.null))
+        cos_missing_variables <- lapply(cos_missing_variables_idx, function(variable){if(!is.null(variable)){data_info$variables[variable]} else {NULL}})
+        warning_needed <- any(!sapply(cos_missing_variables, is.null))
         if (warning_needed){
-           is_missing <- which(!sapply(cos_missing_snps, is.null))
-           cos_missing_snps_idx <- cos_missing_snps_idx[is_missing]
-           cos_missing_snps <- cos_missing_snps[is_missing]
-           cos_missing_vcp <- lapply(cos_missing_snps_idx, function(idx){ vcp[idx] })
-           warning_message <- paste("CoS", paste(names(cos_missing_snps_idx), collapse = ","),
+           is_missing <- which(!sapply(cos_missing_variables, is.null))
+           cos_missing_variables_idx <- cos_missing_variables_idx[is_missing]
+           cos_missing_variables <- cos_missing_variables[is_missing]
+           cos_missing_vcp <- lapply(cos_missing_variables_idx, function(idx){ vcp[idx] })
+           warning_message <- paste("CoS", paste(names(cos_missing_variables_idx), collapse = ","),
                                     "contains missing variables in at least one outcome.",
                                     "The missing variables will cause the ~0 VCP scores.")
-           cos_warnings <- list("cos_missing_info" = list("index" = cos_missing_snps_idx,
-                                                          "variables" = cos_missing_snps,
+           cos_warnings <- list("cos_missing_info" = list("index" = cos_missing_variables_idx,
+                                                          "variables" = cos_missing_variables,
                                                           "vcp" = cos_missing_vcp),
                                 "warning_message" = warning_message)
            coloc_results$cos_warnings <- cos_warnings
@@ -225,7 +223,7 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL){
         coloc_results <- NULL
         vcp <- NULL
     }
-    return(list("coloc_results"=coloc_results, "vcp"=vcp))
+    return(list("cos_results"=coloc_results, "vcp"=vcp))
 
 }
 
@@ -335,20 +333,20 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
 
     # - sets
     if (!is.null(past_out)){
-        out_single <- past_out$single
+        out_ucos <- past_out$ucos
         # - single sets
-        if (!is.null(out_single$csets_each)){
-            out_single$csets_each <- lapply(out_single$csets_each, function(cs){
+        if (!is.null(out_ucos$ucos_each)){
+            out_ucos$ucos_each <- lapply(out_ucos$ucos_each, function(cs){
                 match(cb_model_para$variables[cs], variables)
             })
-            out_single$avW_csets_each <- out_single$avW_csets_each[ordered,,drop=FALSE]
+            out_ucos$avW_ucos_each <- out_ucos$avW_ucos_each[ordered,,drop=FALSE]
             
             # - re-orginize specific results
             analysis_outcome <- cb_obj$cb_model_para$outcome_names
             specific_outcome_index <- specific_outcome <- list()
             specific_cs_names <- c()
-            for (i in 1:length(out_single$csets_each)){
-              cc <- out_single$avW_csets_each[,i,drop=FALSE] 
+            for (i in 1:length(out_ucos$ucos_each)){
+              cc <- out_ucos$avW_ucos_each[,i,drop=FALSE] 
               tmp_names <- colnames(cc)
               specific_outcome_index[[i]] <- as.numeric(gsub(".*Y([0-9]+).*", "\\1", tmp_names))
               specific_outcome[[i]] <- analysis_outcome[specific_outcome_index[[i]]]
@@ -358,14 +356,14 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
             specific_outcomes <- list("outcome_index" = specific_outcome_index, "outcome_name" = specific_outcome)
             
             # - specific sets for variables
-            specific_cs_snpidx <- out_single$csets_each
-            specific_cs_snpnames <- lapply(specific_cs_snpidx, function(specific_tmp){ cb_obj$cb_model_para$variables[specific_tmp] })
-            specific_cs_snpidx <- lapply(specific_cs_snpnames, function(snp) match(snp, variables))
-            names(specific_cs_snpidx) <- names(specific_cs_snpnames) <- specific_cs_names
-            specific_css <- list("ucos_index" = specific_cs_snpidx, "ucos_variables" = specific_cs_snpnames)
+            specific_cs_variableidx <- out_ucos$ucos_each
+            specific_cs_variablenames <- lapply(specific_cs_variableidx, function(specific_tmp){ cb_obj$cb_model_para$variables[specific_tmp] })
+            specific_cs_variableidx <- lapply(specific_cs_variablenames, function(variable) match(variable, variables))
+            names(specific_cs_variableidx) <- names(specific_cs_variablenames) <- specific_cs_names
+            specific_css <- list("ucos_index" = specific_cs_variableidx, "ucos_variables" = specific_cs_variablenames)
             
             # - specific set cs_change
-            cs_change <- out_single$change_obj_each
+            cs_change <- out_ucos$change_obj_each
             rownames(cs_change) <- specific_cs_names
             colnames(cs_change) <- analysis_outcome
             index_change <- as.data.frame(which(cs_change != 0, arr.ind = TRUE))
@@ -374,28 +372,28 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
             cs_change <- data.frame("ucos_outcome" = change_outcomes, "ucos_delta" = change_values)
             
             # - ucos_weight
-            specific_w <- lapply(1:ncol(out_single$avW_csets_each), function(ii) out_single$avW_csets_each[,ii,drop=FALSE])
+            specific_w <- lapply(1:ncol(out_ucos$avW_ucos_each), function(ii) out_ucos$avW_ucos_each[,ii,drop=FALSE])
             names(specific_w) <- specific_cs_names
             
             # - hits variables in each csets
             cs_hits <- sapply(1:length(specific_w), function(jj){ inw=specific_w[[jj]]; sample(which(inw == max(inw)),1) })
-            cs_hits_snpnames <- sapply(cs_hits, function(ch) variables[ch] )
-            specific_cs_hits <- data.frame("top_index" = cs_hits, "top_variables" = cs_hits_snpnames)   # save
+            cs_hits_variablenames <- sapply(cs_hits, function(ch) variables[ch] )
+            specific_cs_hits <- data.frame("top_index" = cs_hits, "top_variables" = cs_hits_variablenames)   # save
             rownames(specific_cs_hits) <- specific_cs_names
             
             # - purity
-            nucos <- length(out_single$csets_each)
+            nucos <- length(out_ucos$ucos_each)
             if (nucos >= 2){
               empty_matrix <- matrix(NA, nucos, nucos)
               colnames(empty_matrix) <- rownames(empty_matrix) <- specific_cs_names
               specific_cs_purity <- lapply(1:3, function(ii){
-                diag(empty_matrix) <- out_single$purity_each[,ii]
+                diag(empty_matrix) <- out_ucos$purity_each[,ii]
                 return(empty_matrix)
               })
               for (i in 1:(nucos-1)){
                 for (j in (i+1):nucos){
-                  cset1 <- out_single$csets_each[[i]]
-                  cset2 <- out_single$csets_each[[j]]
+                  cset1 <- out_ucos$ucos_each[[i]]
+                  cset2 <- out_ucos$ucos_each[[j]]
                   y.i <- specific_outcomes$outcome_index[[i]]
                   y.j <- specific_outcomes$outcome_index[[j]]
                   yy <- unique(y.i, y.j)
@@ -406,7 +404,7 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
                     res[[flag]] <- get_between_purity(cset1, cset2, X = cb_obj$cb_data$data[[X_dict]]$X,
                                                       Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
                                                       N = cb_obj$cb_data$data[[ii]]$N,
-                                                      miss_idx = cb_obj$cb_data$data[[ii]]$snp_miss,
+                                                      miss_idx = cb_obj$cb_data$data[[ii]]$variable_miss,
                                                       P = cb_obj$cb_model_para$P)
                     flag <- flag + 1
                   }
@@ -420,7 +418,7 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
               names(specific_cs_purity) <- c("min_abs_cor", "max_abs_cor", "median_abs_cor")
               
             } else {
-              specific_cs_purity <- out_single$purity_each
+              specific_cs_purity <- out_ucos$purity_each
               rownames(specific_cs_purity) <- specific_cs_names
             }
             
@@ -436,7 +434,7 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
               for (i in 1:ncos){
                 for (j in 1:nucos){
                   cset1 <- cos[[i]]
-                  cset2 <- specific_cs_snpidx[[j]]
+                  cset2 <- specific_cs_variableidx[[j]]
                   y.i <- cb_output$cos_details$cos_outcomes$outcome_index[[i]]
                   y.j <- specific_outcomes$outcome_index[[j]]
                   yy <- unique(y.i, y.j)
@@ -447,7 +445,7 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
                     res[[flag]] <- get_between_purity(cset1, cset2, X = cb_obj$cb_data$data[[X_dict]]$X,
                                                       Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
                                                       N = cb_obj$cb_data$data[[ii]]$N,
-                                                      miss_idx = cb_obj$cb_data$data[[ii]]$snp_miss,
+                                                      miss_idx = cb_obj$cb_data$data[[ii]]$variable_miss,
                                                       P = cb_obj$cb_model_para$P)
                     flag <- flag + 1
                   }
@@ -515,7 +513,7 @@ get_summary_table_fm <- function(cb_output, outcome_names = NULL, gene_name = NU
     summary_table <- as.data.frame(summary_table)
     summary_table[,1] <- cs_outcome[unlist(specific_cs$ucos_outcomes$outcome_index)]
     summary_table[,2] <- names(specific_cs$ucos$ucos_index)
-    summary_table[,3] <- as.numeric(diag(specific_cs$ucos_purity$min_abs_cor))
+    summary_table[,3] <- as.numeric(diag(as.matrix(specific_cs$ucos_purity$min_abs_cor)))
     summary_table[,4] <- unlist(sapply(specific_cs$ucos$ucos_variables, function(tmp) tmp[1]))    
     summary_table[,5] <- sapply(specific_cs$ucos$ucos_index, function(tmp) max(pip[tmp]))                                  
     summary_table[,6] <- as.numeric(sapply(specific_cs$ucos$ucos_index, length))

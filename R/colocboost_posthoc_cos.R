@@ -1,18 +1,18 @@
-colocboost_posthoc_coloc <- function(cb_obj,
-                                     coverage = 0.95,
-                                     func_intw = "fun_R",
-                                     alpha = 1.5,
-                                     check_null = 0.1,
-                                     check_null_method = "profile",
-                                     dedup = TRUE,
-                                     overlap = TRUE,
-                                     n_purity = 100,
-                                     min_abs_corr = 0.5,
-                                     coverage_singlew = 0.8,
-                                     median_abs_corr = NULL,
-                                     between_cluster = 0.8,
-                                     between_purity = 0.8,
-                                     tol = 1e-9){
+colocboost_posthoc_cos <- function(cb_obj,
+                                   coverage = 0.95,
+                                   func_intw = "fun_R",
+                                   alpha = 1.5,
+                                   check_null = 0.1,
+                                   check_null_method = "profile",
+                                   dedup = TRUE,
+                                   overlap = TRUE,
+                                   n_purity = 100,
+                                   min_abs_corr = 0.5,
+                                   coverage_singlew = 0.8,
+                                   median_abs_corr = NULL,
+                                   between_cluster = 0.8,
+                                   between_purity = 0.8,
+                                   tol = 1e-9){
 
     if (class(cb_obj) != "colocboost"){
         stop("Input must from colocboost function!")}
@@ -26,25 +26,25 @@ colocboost_posthoc_coloc <- function(cb_obj,
     pos.coloc <- which(colSums(update) > 1)
     if (length(pos.coloc) == 0){
 
-        ll = list("csets" = NULL,
+        ll = list("cos" = NULL,
                   "evidence_strength" = NULL,
                   "requested_coverage" = coverage)
 
     } else if (length(pos.coloc) == 1){
 
         # try pos.coloc = pos.coloc[15]
-        coloc_traits <- which(update[,pos.coloc] == 1)
-        avWeight <- get_avWeigth(cb_model, coloc_traits, update, pos.coloc, name_weight = T)
+        coloc_outcomes <- which(update[,pos.coloc] == 1)
+        avWeight <- get_avWeigth(cb_model, coloc_outcomes, update, pos.coloc, name_weight = T)
         
-        # - check purity for each trait
+        # - check purity for each outcome
         check_purity <- c()
-        for (iiii in 1:length(coloc_traits)){
-          X_dict <- cb_data$dict[coloc_traits[iiii]]
+        for (iiii in 1:length(coloc_outcomes)){
+          X_dict <- cb_data$dict[coloc_outcomes[iiii]]
           tmp <- w_purity(avWeight[,iiii,drop=FALSE],
                           X=cb_data$data[[X_dict]]$X,Xcorr=cb_data$data[[X_dict]]$XtX,
-                          N=cb_data$data[[coloc_traits[iiii]]]$N, n=n_purity, coverage = coverage_singlew,
+                          N=cb_data$data[[coloc_outcomes[iiii]]]$N, n=n_purity, coverage = coverage_singlew,
                           min_abs_corr = min_abs_corr, median_abs_corr = median_abs_corr,
-                          miss_idx = cb_data$data[[coloc_traits[iiii]]]$snp_miss)
+                          miss_idx = cb_data$data[[coloc_outcomes[iiii]]]$variable_miss)
           check_purity[iiii] <- length(tmp) == 1
         }
         if (sum(check_purity)<2){ 
@@ -52,13 +52,13 @@ colocboost_posthoc_coloc <- function(cb_obj,
         } else {
           pos_purity <- which(check_purity)
           avWeight <- avWeight[,pos_purity,drop=FALSE]
-          coloc_traits <- coloc_traits[pos_purity]
+          coloc_outcomes <- coloc_outcomes[pos_purity]
           weights <- get_integrated_weight(avWeight, func_intw = func_intw, alpha = alpha)
-          coloc_csets <- get_in_csets(weights, coverage = coverage)
-          evidence_strength <- sum(weights[coloc_csets[[1]]])
+          coloc_cos <- get_in_csets(weights, coverage = coverage)
+          evidence_strength <- sum(weights[coloc_cos[[1]]])
           
           # ----- null filtering
-          res_temp <- check_null_post(cb_obj, coloc_csets,coloc_traits,
+          res_temp <- check_null_post(cb_obj, coloc_cos, coloc_outcomes,
                                       check_null=check_null,
                                       check_null_method = check_null_method)
           cs_change <- res_temp$cs_change
@@ -66,17 +66,17 @@ colocboost_posthoc_coloc <- function(cb_obj,
         }
 
         if (length(is_non_null) == 0) {
-            ll = list("csets" = NULL,
+            ll = list("cos" = NULL,
                       "evidence_strength" = NULL,
                       "requested_coverage" = coverage)
         } else {
 
             purity = c()
-            pos <- as.numeric(unlist(coloc_csets))
-            for (i in coloc_traits){
+            pos <- as.numeric(unlist(coloc_cos))
+            for (i in coloc_outcomes){
                 X_dict <- cb_data$dict[i]
                 if (!is.null(cb_data$data[[X_dict]]$XtX)){
-                    pos <- match(pos, setdiff(1:cb_model_para$P, cb_data$data[[i]]$snp_miss))
+                    pos <- match(pos, setdiff(1:cb_model_para$P, cb_data$data[[i]]$variable_miss))
                 }
                 p_tmp <- matrix(get_purity(pos,X=cb_data$data[[X_dict]]$X,
                                            Xcorr=cb_data$data[[X_dict]]$XtX,
@@ -92,23 +92,23 @@ colocboost_posthoc_coloc <- function(cb_obj,
                 is_pure = (purity_all[,1] >= min_abs_corr | purity_all[,3] >= median_abs_corr)
             }
             if (!is_pure){
-                ll = list("csets" = NULL,
+                ll = list("cos" = NULL,
                           "evidence_strength" = NULL,
                           "requested_coverage" = coverage)
 
             } else {
-                row_names = "CS1"
-                names(coloc_csets) = row_names
+                row_names = "cos1"
+                names(coloc_cos) = row_names
                 rownames(purity_all) = row_names
-                coloc_traits <- list(coloc_traits)
+                coloc_outcomes <- list(coloc_outcomes)
 
-                ll = list("csets" = coloc_csets,
+                ll = list("cos" = coloc_cos,
                           "purity" = purity_all,
                           "evidence_strength" = evidence_strength,
                           "requested_coverage" = coverage,
                           "cs_change" = cs_change,
                           "avWeight" = list(avWeight),
-                          "coloc_traits" = coloc_traits)
+                          "coloc_outcomes" = coloc_outcomes)
             }
         }
 
@@ -126,26 +126,26 @@ colocboost_posthoc_coloc <- function(cb_obj,
         # - define coloc_sets
         coloc_sets <- avWeight_coloc_sets <-
             total_change_Loglik_coloc <- evidence_strength_coloc <-
-            cs_change_coloc <- coloc_traits_sets <- list()
+            cs_change_coloc <- coloc_outcomes_sets <- list()
         flag = 0
         for (i in 1:length(coloc_temp)){
             pos_temp_coloc_each <- pos_coloc_sets[[i]]
-            coloc_traits <- which(unlist(strsplit(names(coloc_temp)[i], ",")) == 1)
+            coloc_outcomes <- which(unlist(strsplit(names(coloc_temp)[i], ",")) == 1)
 
             # - if only one iteration for this coloc_set
             if (length(pos_temp_coloc_each) == 1){
 
-                avWeight <- get_avWeigth(cb_model, coloc_traits, update, pos.coloc[pos_temp_coloc_each], name_weight = T)
+                avWeight <- get_avWeigth(cb_model, coloc_outcomes, update, pos.coloc[pos_temp_coloc_each], name_weight = T)
                 
-                # - check purity for each trait
+                # - check purity for each outcome
                 check_purity <- c()
-                for (iiii in 1:length(coloc_traits)){
-                  X_dict <- cb_data$dict[coloc_traits[iiii]]
+                for (iiii in 1:length(coloc_outcomes)){
+                  X_dict <- cb_data$dict[coloc_outcomes[iiii]]
                   tmp <- w_purity(avWeight[,iiii,drop=FALSE],
                                   X=cb_data$data[[X_dict]]$X,Xcorr=cb_data$data[[X_dict]]$XtX,
-                                  N=cb_data$data[[coloc_traits[iiii]]]$N, n=n_purity, coverage = coverage_singlew,
+                                  N=cb_data$data[[coloc_outcomes[iiii]]]$N, n=n_purity, coverage = coverage_singlew,
                                   min_abs_corr = min_abs_corr, median_abs_corr = median_abs_corr,
-                                  miss_idx = cb_data$data[[coloc_traits[iiii]]]$snp_miss)
+                                  miss_idx = cb_data$data[[coloc_outcomes[iiii]]]$variable_miss)
                   check_purity[iiii] <- length(tmp) == 1
                 }
                 if (sum(check_purity)<2){ 
@@ -153,13 +153,13 @@ colocboost_posthoc_coloc <- function(cb_obj,
                 } else {
                   pos_purity <- which(check_purity)
                   avWeight <- avWeight[,pos_purity,drop=FALSE]
-                  coloc_traits <- coloc_traits[pos_purity]
+                  coloc_outcomes <- coloc_outcomes[pos_purity]
                   weights <- get_integrated_weight(avWeight, func_intw = func_intw, alpha = alpha)
-                  coloc_csets <- get_in_csets(weights, coverage = coverage)
-                  evidence_strength <- sum(weights[coloc_csets[[1]]])
+                  coloc_cos <- get_in_csets(weights, coverage = coverage)
+                  evidence_strength <- sum(weights[coloc_cos[[1]]])
                   
                   # ----- null filtering
-                  res_temp <- check_null_post(cb_obj, coloc_csets, coloc_traits,
+                  res_temp <- check_null_post(cb_obj, coloc_cos, coloc_outcomes,
                                               check_null=check_null,
                                               check_null_method = check_null_method)
                   
@@ -169,18 +169,18 @@ colocboost_posthoc_coloc <- function(cb_obj,
                 
                 if (length(is_non_null) > 0) {
                     flag <- flag + 1
-                    coloc_sets[[flag]] <- as.numeric(unlist(coloc_csets))
+                    coloc_sets[[flag]] <- as.numeric(unlist(coloc_cos))
                     total_change_Loglik_coloc[[flag]] <- "ONE"
                     avWeight_coloc_sets[[flag]] <- avWeight
                     evidence_strength_coloc[[flag]] <- evidence_strength
                     cs_change_coloc[[flag]] <- cs_change
-                    coloc_traits_sets[[flag]] <- coloc_traits
+                    coloc_outcomes_sets[[flag]] <- coloc_outcomes
                 }
 
 
             } else {
 
-                av <- lapply(coloc_traits, function(i){
+                av <- lapply(coloc_outcomes, function(i){
                     get_avWeigth(cb_model, i, update, pos.coloc[pos_temp_coloc_each])
                 })
                 weight_coloc <- do.call(cbind, av)
@@ -199,14 +199,14 @@ colocboost_posthoc_coloc <- function(cb_obj,
                     idx = which(t == 1)
                     w = LogLik_change[idx]
                     check_purity <- list()
-                    for (iiii in 1:length(coloc_traits)){
+                    for (iiii in 1:length(coloc_outcomes)){
                         weight_cluster <- t(av[[iiii]][idx,,drop=FALSE])
-                        X_dict <- cb_data$dict[coloc_traits[iiii]]
+                        X_dict <- cb_data$dict[coloc_outcomes[iiii]]
                         tmp <- w_purity(weight_cluster,
                                         X=cb_data$data[[X_dict]]$X,Xcorr=cb_data$data[[X_dict]]$XtX,
-                                        N=cb_data$data[[coloc_traits[iiii]]]$N, n=n_purity, coverage = coverage_singlew,
+                                        N=cb_data$data[[coloc_outcomes[iiii]]]$N, n=n_purity, coverage = coverage_singlew,
                                         min_abs_corr = min_abs_corr, median_abs_corr = median_abs_corr,
-                                        miss_idx = cb_data$data[[coloc_traits[iiii]]]$snp_miss)
+                                        miss_idx = cb_data$data[[coloc_outcomes[iiii]]]$variable_miss)
                         check_purity[[iiii]] <- tmp
                     }
                     # check_purity <- unique(as.numeric(check_purity))
@@ -217,12 +217,12 @@ colocboost_posthoc_coloc <- function(cb_obj,
                         weight_cluster = w_tmp[,check_purity]
                         avW = as.matrix(weight_cluster) %*% as.matrix(w) / sum(w)
                     } else {
-                        avW = rep(0,cb_model_para$P*length(coloc_traits))
+                        avW = rep(0,cb_model_para$P*length(coloc_outcomes))
                     }
                     return(avW)
                 })
                 avWeight = as.matrix(avWeight)
-                avWeight_each <- lapply(1:length(coloc_traits), function(x){
+                avWeight_each <- lapply(1:length(coloc_outcomes), function(x){
                     start <- (x-1)*cb_model_para$P+1
                     end <- x*cb_model_para$P
                     return(as.matrix(avWeight[c(start:end),]))
@@ -230,11 +230,11 @@ colocboost_posthoc_coloc <- function(cb_obj,
                 avWeight_coloc <- lapply(1:ncol(B), function(x){
                     a = lapply(avWeight_each, function(xx){xx[,x]})
                     a = do.call(cbind, a)
-                    colnames(a) <- paste0("trait", coloc_traits)
+                    colnames(a) <- paste0("outcome", coloc_outcomes)
                     return(a)
                 })
                 total_change = t(B) %*% as.matrix(LogLik_change) / colSums(B)
-                coloc_csets <- evidence_strength <- avWeight_csets <- list()
+                coloc_cos <- evidence_strength <- avWeight_csets <- list()
                 total_change_csets <- c()
                 fl <- 1
                 for (i.w in 1:length(avWeight_coloc)){
@@ -242,18 +242,18 @@ colocboost_posthoc_coloc <- function(cb_obj,
                     if (sum(w) != 0){
                         weights <- get_integrated_weight(w, func_intw = func_intw, alpha = alpha)
                         csets <- get_in_csets(weights, coverage = coverage)
-                        coloc_csets[[fl]] <- unlist(csets)
-                        evidence_strength[[fl]] <- sum(weights[coloc_csets[[fl]]])
+                        coloc_cos[[fl]] <- unlist(csets)
+                        evidence_strength[[fl]] <- sum(weights[coloc_cos[[fl]]])
                         avWeight_csets[[fl]] <- w
                         total_change_csets <- c(total_change_csets, total_change[i.w])
                         fl <- fl + 1
                     }
                 }
-                if (length(coloc_csets) != 0){
+                if (length(coloc_cos) != 0){
                     avWeight_coloc <- avWeight_csets
                     total_change <- total_change_csets
                     # ----- null filtering
-                    res_temp <- check_null_post(cb_obj, coloc_csets, coloc_traits,
+                    res_temp <- check_null_post(cb_obj, coloc_cos, coloc_outcomes,
                                                 check_null=check_null,
                                                 check_null_method = check_null_method)
                     cs_change <- res_temp$cs_change
@@ -261,19 +261,19 @@ colocboost_posthoc_coloc <- function(cb_obj,
                     avWeight_coloc <- avWeight_csets
 
                     if (length(is_non_null) > 0) {
-                        coloc_csets = coloc_csets[is_non_null]
+                        coloc_cos = coloc_cos[is_non_null]
                         evidence_strength = evidence_strength[is_non_null]
                         cs_change <- cs_change[is_non_null,]
                         avWeight_coloc <- avWeight_coloc[is_non_null]
                         total_change = total_change[is_non_null]
                         for (i.b in 1:length(is_non_null)){
                             flag <- flag + 1
-                            coloc_sets[[flag]] <- as.numeric(coloc_csets[[i.b]])
+                            coloc_sets[[flag]] <- as.numeric(coloc_cos[[i.b]])
                             total_change_Loglik_coloc[[flag]] <- total_change[i.b]
                             avWeight_coloc_sets[[flag]] <- avWeight_coloc[[i.b]]
                             evidence_strength_coloc[[flag]] <- evidence_strength[i.b]
                             cs_change_coloc[[flag]] <- cs_change[i.b,]
-                            coloc_traits_sets[[flag]] <- coloc_traits
+                            coloc_outcomes_sets[[flag]] <- coloc_outcomes
                         }
                     }
                 }
@@ -294,15 +294,15 @@ colocboost_posthoc_coloc <- function(cb_obj,
                                 is_overlap = c(is_overlap,
                                                check_two_overlap_sets(total_change_Loglik_coloc, i2, j))
                             } else {
-                                trait1 <- sort(colnames(avWeight_coloc_sets[[i2]]))
-                                trait2 <- sort(colnames(avWeight_coloc_sets[[j]]))
-                                if (identical(trait1, trait2)){
+                                outcome1 <- sort(colnames(avWeight_coloc_sets[[i2]]))
+                                outcome2 <- sort(colnames(avWeight_coloc_sets[[j]]))
+                                if (identical(outcome1, outcome2)){
                                     is_overlap = c(is_overlap,
                                                    check_two_overlap_sets(total_change_Loglik_coloc, i2, j))
                                 } else {
-                                    if (all(trait1 %in% trait2)){
+                                    if (all(outcome1 %in% outcome2)){
                                         is_overlap = c(is_overlap, i2)
-                                    } else if (all(trait2 %in% trait1)){
+                                    } else if (all(outcome2 %in% outcome1)){
                                         is_overlap = c(is_overlap, j)
                                     }
                                 }
@@ -317,7 +317,7 @@ colocboost_posthoc_coloc <- function(cb_obj,
                     cs_change_coloc <- cs_change_coloc[-is_overlap]
                     avWeight_coloc_sets <- avWeight_coloc_sets[-is_overlap]
                     total_change_Loglik_coloc <- total_change_Loglik_coloc[-is_overlap]
-                    coloc_traits_sets <- coloc_traits_sets[-is_overlap]
+                    coloc_outcomes_sets <- coloc_outcomes_sets[-is_overlap]
                 }
             }
         }
@@ -341,7 +341,7 @@ colocboost_posthoc_coloc <- function(cb_obj,
                             res[[i]] <- get_between_purity(cset1, cset2, X = cb_data$data[[X_dict]]$X,
                                                            Xcorr = cb_data$data[[X_dict]]$XtX,
                                                            N = cb_data$data[[i]]$N,
-                                                           miss_idx = cb_data$data[[i]]$snp_miss,
+                                                           miss_idx = cb_data$data[[i]]$variable_miss,
                                                            P = cb_model_para$P)
                         }
                         res <- Reduce(pmax, res)
@@ -361,7 +361,7 @@ colocboost_posthoc_coloc <- function(cb_obj,
                     potential_merged <- potential_merged[which(sapply(potential_merged, length) >= 2)]
                     coloc_sets_merged <- avWeight_merged <-
                         cs_change_merged <- evidence_strength_merged <-
-                        coloc_traits_merged <- list()
+                        coloc_outcomes_merged <- list()
                     is_merged <- c()
                     for (i.m in 1:length(potential_merged)){
                         temp_set <- as.numeric(potential_merged[[i.m]])
@@ -370,19 +370,19 @@ colocboost_posthoc_coloc <- function(cb_obj,
                         coloc_sets_merged <- c(coloc_sets_merged, list( unique(unlist(coloc_sets[temp_set])) ))
                         # refine avWeight
                         merged <- do.call(cbind, avWeight_coloc_sets[temp_set])
-                        unique_coloc_traits <- unique(colnames(merged))
-                        coloc_p_merged <- as.numeric(gsub("[^0-9.]+", "", unique_coloc_traits))
-                        coloc_traits_merged <- c(coloc_traits_merged,
+                        unique_coloc_outcomes <- unique(colnames(merged))
+                        coloc_p_merged <- as.numeric(gsub("[^0-9.]+", "", unique_coloc_outcomes))
+                        coloc_outcomes_merged <- c(coloc_outcomes_merged,
                                                  list(coloc_p_merged[order(coloc_p_merged)]))
-                        temp <- lapply(unique_coloc_traits, function(tt){
+                        temp <- lapply(unique_coloc_outcomes, function(tt){
                             pos <- which(colnames(merged) == tt)
                             tmp <- as.matrix(rowMeans(as.matrix(merged[, pos])))
                             colnames(tmp) <- tt
                             return(tmp)
                         })
                         temp <- do.call(cbind, temp)
-                        temp <- temp[,order(unique_coloc_traits)]
-                        # colnames(temp) <- unique_coloc_traits
+                        temp <- temp[,order(unique_coloc_outcomes)]
+                        # colnames(temp) <- unique_coloc_outcomes
                         avWeight_merged <- c(avWeight_merged, list(temp))
                         # refine cs_change
                         cs_change_merged <- c(cs_change_merged,
@@ -395,14 +395,14 @@ colocboost_posthoc_coloc <- function(cb_obj,
                     avWeight_sets_single <- avWeight_coloc_sets[-is_merged]
                     cs_change_single <- cs_change_coloc[-is_merged]
                     evidence_strength_single <- evidence_strength_coloc[-is_merged]
-                    coloc_traits_single <- coloc_traits_sets[-is_merged]
+                    coloc_outcomes_single <- coloc_outcomes_sets[-is_merged]
 
                     # --- combine merged and single
                     coloc_sets = c(coloc_sets_single, coloc_sets_merged)
                     evidence_strength_coloc = c(evidence_strength_single, evidence_strength_merged)
                     cs_change_coloc <- c(cs_change_single, cs_change_merged)
                     avWeight_coloc_sets <- c(avWeight_sets_single, avWeight_merged)
-                    coloc_traits_sets <- c(coloc_traits_single, coloc_traits_merged)
+                    coloc_outcomes_sets <- c(coloc_outcomes_single, coloc_outcomes_merged)
 
                 }
             }
@@ -412,13 +412,13 @@ colocboost_posthoc_coloc <- function(cb_obj,
         if (length(coloc_sets) != 0){
             purity = vector(mode='list', length=length(coloc_sets))
             for(ee in 1:length(coloc_sets)){
-                coloc_t <- coloc_traits_sets[[ee]]
+                coloc_t <- coloc_outcomes_sets[[ee]]
                 p_tmp <- c()
                 for (i3 in coloc_t){
                     pos <- coloc_sets[[ee]]
                     X_dict <- cb_data$dict[i3]
                     if (!is.null(cb_data$data[[X_dict]]$XtX)){
-                        pos <- match(pos, setdiff(1:cb_model_para$P, cb_data$data[[i3]]$snp_miss))
+                        pos <- match(pos, setdiff(1:cb_model_para$P, cb_data$data[[i3]]$variable_miss))
                     }
                     tmp <- matrix(get_purity(pos,X=cb_data$data[[X_dict]]$X,
                                              Xcorr=cb_data$data[[X_dict]]$XtX,
@@ -441,49 +441,49 @@ colocboost_posthoc_coloc <- function(cb_obj,
                 evidence_strength_coloc = unlist(evidence_strength_coloc[is_pure])
                 cs_change_coloc <- do.call(rbind, cs_change_coloc[is_pure])
                 avWeight_coloc_sets <- avWeight_coloc_sets[is_pure]
-                coloc_traits_sets <- coloc_traits_sets[is_pure]
+                coloc_outcomes_sets <- coloc_outcomes_sets[is_pure]
                 purity_all = purity_all[is_pure,]
-                row_names = paste0("CS",is_pure)
+                row_names = paste0("cos",is_pure)
                 names(coloc_sets) = row_names
                 rownames(purity_all) = row_names
                 rownames(cs_change_coloc) = row_names
 
 
                 if (length(coloc_sets) == 1){
-                    ll = list("csets" = coloc_sets,
+                    ll = list("cos" = coloc_sets,
                               "purity" = purity_all,
                               "evidence_strength" = evidence_strength_coloc,
                               "requested_coverage" = coverage,
                               "cs_change" = as.matrix(cs_change_coloc),
                               "avWeight" = avWeight_coloc_sets,
-                              "coloc_traits" = coloc_traits_sets)
+                              "coloc_outcomes" = coloc_outcomes_sets)
                 } else {
                     # Re-order CS list and purity rows based on purity.
                     ordering = order(purity_all[,1],decreasing = TRUE)
-                    ll = list("csets" = coloc_sets[ordering],
+                    ll = list("cos" = coloc_sets[ordering],
                               "purity" = purity_all[ordering,],
                               "evidence_strength" = evidence_strength_coloc[ordering],
                               "requested_coverage" = coverage,
                               "cs_change" = cs_change_coloc[ordering,],
                               "avWeight" = avWeight_coloc_sets[ordering],
-                              "coloc_traits" = coloc_traits_sets[ordering])
+                              "coloc_outcomes" = coloc_outcomes_sets[ordering])
                 }
 
 
             } else {
-                ll = list("csets" = NULL,
+                ll = list("cos" = NULL,
                           "evidence_strength" = NULL,
                           "requested_coverage" = coverage)
             }
 
         } else {
-            ll = list("csets" = NULL,
+            ll = list("cos" = NULL,
                       "evidence_strength" = NULL,
                       "requested_coverage" = coverage)
         }
 
     }
-    out <- list("csets" = ll)
+    out <- list("cos" = ll)
     return(out)
 
 }
