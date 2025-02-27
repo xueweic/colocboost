@@ -34,13 +34,13 @@ The following functions are included in the post-hoc analysis:
 
 Colocalization signal - \code{colocboost_posthoc_coloc} - identify the colocalized confidence sets and the corresponding causal configurations.
 
-Un-colocalization signal - \code{colocboost_posthoc_noncoloc} - identify the causal confidence sets for each trait only.
+Un-colocalization signal - \code{colocboost_posthoc_noncoloc} - identify the causal confidence sets for each outcome only.
 
 Add-hoc merging functions including
 
 \itemize{
 \item{merge_coloc_single}{merge the colocalized sets and the single causal set if pass the \code{between_purity}}
-\item{merge_single}{merge the single causal sets for different traits if pass the \code{between_purity}}
+\item{merge_single}{merge the single causal sets for different outcomes if pass the \code{between_purity}}
 }
 
 Refine of the colocalization sets (TO-DO-LIST)

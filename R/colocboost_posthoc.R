@@ -75,29 +75,29 @@ colocboost_posthoc <- function(cb_obj,
         }
         cb_obj <- get_max_profile(cb_obj, check_null_max=check_null_max, check_null_method = check_null_method)
         # --------- about colocalized confidence sets ---------------------------------
-        out_coloc <- colocboost_posthoc_coloc(cb_obj,
-                                              coverage = coverage,
-                                              func_intw = func_intw,
-                                              alpha = alpha,
-                                              check_null = check_null,
-                                              check_null_method = check_null_method,
-                                              dedup = dedup,
-                                              overlap = overlap,
-                                              n_purity = n_purity,
-                                              min_abs_corr = min_abs_corr,
-                                              coverage_singlew = coverage_singlew,
-                                              median_abs_corr = median_abs_corr,
-                                              between_cluster = between_cluster,
-                                              between_purity = between_purity,
-                                              tol = tol)
-
+        out_cos <- colocboost_posthoc_cos(cb_obj,
+                                          coverage = coverage,
+                                          func_intw = func_intw,
+                                          alpha = alpha,
+                                          check_null = check_null,
+                                          check_null_method = check_null_method,
+                                          dedup = dedup,
+                                          overlap = overlap,
+                                          n_purity = n_purity,
+                                          min_abs_corr = min_abs_corr,
+                                          coverage_singlew = coverage_singlew,
+                                          median_abs_corr = median_abs_corr,
+                                          between_cluster = between_cluster,
+                                          between_purity = between_purity,
+                                          tol = tol)
+        
         # --------- about non-colocalized confidence sets ---------------------------------
         L <- cb_obj$cb_model_para$L
         if (L == 1){ weaker_ucos = FALSE }
         update <- cb_obj$cb_model_para$update_status
-        csets_each <- list()
+        ucos_each <- list()
         change_obj_each <- purity_each <- vector(mode='list', length=L)
-        avWeight_csets_each <- single_trait <- c()
+        avWeight_ucos_each <- ucos_outcome <- c()
         for (i in 1:L){
             pos.each.single <- which((colSums(update) == 1) * (update[i,] == 1) + (update[i,] == -1) == 1)
             pos.each.all <- which(update[i,] != 0)
@@ -124,65 +124,65 @@ colocboost_posthoc <- function(cb_obj,
                     }
                 }
                 class(cb_obj_single) <- "colocboost"
-                out_each <- colocboost_posthoc_noncoloc(cb_obj_single,
-                                                        coverage = coverage,
-                                                        check_null = check_null,
-                                                        check_null_method = check_null_method,
-                                                        dedup = dedup,
-                                                        overlap = overlap,
-                                                        n_purity = n_purity,
-                                                        min_abs_corr = min_abs_corr,
-                                                        median_abs_corr = median_abs_corr,
-                                                        between_cluster = between_cluster,
-                                                        between_purity = between_purity,
-                                                        weaker_ucos = weaker_ucos,
-                                                        tol = tol)
-                aaa <- out_each$csets$csets
+                out_ucos_each <- colocboost_posthoc_ucos(cb_obj_single,
+                                                         coverage = coverage,
+                                                         check_null = check_null,
+                                                         check_null_method = check_null_method,
+                                                         dedup = dedup,
+                                                         overlap = overlap,
+                                                         n_purity = n_purity,
+                                                         min_abs_corr = min_abs_corr,
+                                                         median_abs_corr = median_abs_corr,
+                                                         between_cluster = between_cluster,
+                                                         between_purity = between_purity,
+                                                         weaker_ucos = weaker_ucos,
+                                                         tol = tol)
+                aaa <- out_ucos_each$ucos$ucos
                 if (length(aaa) != 0){
-                    single_trait <- c(single_trait, rep(i, length(aaa)))
+                    ucos_outcome <- c(ucos_outcome, rep(i, length(aaa)))
                     names(aaa) <- paste0("sets:","Y",i,":", names(aaa))
-                    csets_each <- c(csets_each, aaa)
-                    bbb <- out_each$csets$avWeight
+                    ucos_each <- c(ucos_each, aaa)
+                    bbb <- out_ucos_each$ucos$avWeight
                     colnames(bbb) <-  names(aaa)
-                    avWeight_csets_each <- cbind(avWeight_csets_each, bbb)
+                    avWeight_ucos_each <- cbind(avWeight_ucos_each, bbb)
                     temp <- matrix(0, ncol = L, nrow = length(aaa))
-                    temp[,i] <- as.numeric(unlist(out_each$csets$cs_change))
+                    temp[,i] <- as.numeric(unlist(out_ucos_each$ucos$cs_change))
                     rownames(temp) <- names(aaa)
                     change_obj_each[[i]] <- temp
-                    purity_tmp <- out_each$csets$purity
+                    purity_tmp <- out_ucos_each$ucos$purity
                     rownames(purity_tmp) <- names(aaa)
                     purity_each[[i]] <- purity_tmp
                 }
             }
         }
-        out_single <- list("csets_each" = csets_each,
-                           "avW_csets_each" = avWeight_csets_each,
-                           "change_obj_each" = as.data.frame(do.call(rbind, change_obj_each)),
-                           "purity_each" = as.data.frame(do.call(rbind, purity_each)),
-                           "single_trait" = single_trait)
+        out_ucos <- list("ucos_each" = ucos_each,
+                         "avW_ucos_each" = avWeight_ucos_each,
+                         "change_obj_each" = as.data.frame(do.call(rbind, change_obj_each)),
+                         "purity_each" = as.data.frame(do.call(rbind, purity_each)),
+                         "ucos_outcome" = ucos_outcome)
 
         # -------------------------- Post Processing --------------------------
-        # ----- Remove high correlated confident sets between colocsets and single sets
-        if ( length(out_coloc$csets$csets)!=0 & length(out_single$csets_each)!=0){
-            past_out <- merge_coloc_single(cb_obj, out_coloc, out_single, coverage = coverage,
-                                           min_abs_corr = min_abs_corr,tol = tol,
-                                           between_purity = between_purity)
-        } else if (length(out_coloc$csets$csets)!=0 & length(out_single$csets_each)==0) {
-            past_out <- list("single" = NULL, "coloc" = out_coloc)
-        } else if (length(out_coloc$csets$csets)==0 & length(out_single$csets_each)!=0){
-            past_out <- list("single" = out_single, "coloc" = NULL)
+        # ----- Remove high correlated confident sets between cos and ucos
+        if ( length(out_cos$cos$cos)!=0 & length(out_ucos$ucos_each)!=0){
+            past_out <- merge_cos_ucos(cb_obj, out_cos, out_ucos, coverage = coverage,
+                                       min_abs_corr = min_abs_corr,tol = tol,
+                                       between_purity = between_purity)
+        } else if (length(out_cos$cos$cos)!=0 & length(out_ucos$ucos_each)==0) {
+            past_out <- list("ucos" = NULL, "cos" = out_cos)
+        } else if (length(out_cos$cos$cos)==0 & length(out_ucos$ucos_each)!=0){
+            past_out <- list("ucos" = out_ucos, "cos" = NULL)
         } else {
-            past_out <- list("single" = NULL, "coloc" = NULL)
+            past_out <- list("ucos" = NULL, "cos" = NULL)
         }
-        # ----- Merge two single sets
-        if (length(past_out$single$csets_each) > 1){
+        # ----- Merge two ucos sets
+        if (length(past_out$ucos$ucos_each) > 1){
             if (merging) {
-                past_out <- merge_single(cb_obj, past_out,
-                                         min_abs_corr = min_abs_corr,
-                                         median_abs_corr = median_abs_corr,
-                                         n_purity = n_purity,
-                                         between_purity = between_purity,
-                                         tol = tol)
+                past_out <- merge_ucos(cb_obj, past_out,
+                                       min_abs_corr = min_abs_corr,
+                                       median_abs_corr = median_abs_corr,
+                                       n_purity = n_purity,
+                                       between_purity = between_purity,
+                                       tol = tol)
             }
         }
 
@@ -190,9 +190,9 @@ colocboost_posthoc <- function(cb_obj,
         # - colocalization results
         cb_obj$cb_model_para$alpha <- alpha
         cb_obj$cb_model_para$coverage <- coverage
-        coloc_results <- get_cos_details(cb_obj, coloc_out = past_out$coloc$csets, data_info = data_info)
-        cb_output <- list("vcp" = coloc_results$vcp,
-                          "cos_details" = coloc_results$coloc_results,
+        cos_results <- get_cos_details(cb_obj, coloc_out = past_out$cos$cos, data_info = data_info)
+        cb_output <- list("vcp" = cos_results$vcp,
+                          "cos_details" = cos_results$cos_results,
                           "data_info" = data_info)
         
         ### - extract summary table

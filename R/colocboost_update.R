@@ -3,7 +3,7 @@
 #' Joint boosting algorithm in ColocBoost
 #'
 #' @details
-#' The gradient boosting algorithm for multiple traits
+#' The gradient boosting algorithm for multiple outcomes
 #'
 #' @return colocboost object after gradient boosting update
 #' @export
@@ -15,7 +15,7 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data,
                               lambda_target = 1,
                               LD_obj = FALSE){
 
-    # - clear which trait need to be updated at which jk
+    # - clear which outcome need to be updated at which jk
     pos.update <- which(cb_model_para$update_temp$update_status != 0)
     target_idx <- cb_model_para$target_idx
 
@@ -28,7 +28,7 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data,
 
         ########## BEGIN: MAIN CALCULATION ###################
 
-        # - calucalate LD between update_jk and other SNPs
+        # - calucalate LD between update_jk and other variables
         if (update_jk %in% unlist(cb_model[[i]]$jk)){
             pos <- which( unlist(cb_model[[i]]$jk) == update_jk )
             ld_jk <- cb_model[[i]]$ld_jk[pos,]
@@ -38,7 +38,7 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data,
                                  X = cb_data$data[[X_dict]]$X,
                                  XtX = cb_data$data[[X_dict]]$XtX,
                                  N = cb_data$data[[i]]$N,
-                                 remain_idx = setdiff(1:cb_model_para$P, cb_data$data[[i]]$snp_miss),
+                                 remain_idx = setdiff(1:cb_model_para$P, cb_data$data[[i]]$variable_miss),
                                  P = cb_model_para$P)
             cb_model[[i]]$ld_jk <- rbind(cb_model[[i]]$ld_jk, ld_jk)
         }
@@ -46,13 +46,13 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data,
 
         # - calculate delta
         if (is.null(target_idx)){
-            lambda_trait <- lambda
+            lambda_outcome <- lambda
         } else {
-            lambda_trait <- ifelse(i==target_idx, lambda_target, lambda)
+            lambda_outcome <- ifelse(i==target_idx, lambda_target, lambda)
         }
         delta <- boost_KL_delta(z = cb_model[[i]]$z,
                                 ld_feature = ld_feature, adj_dep = adj_dep,
-                                func_prior = func_prior, lambda = lambda_trait)
+                                func_prior = func_prior, lambda = lambda_outcome)
         
         x_tmp <- cb_data$data[[X_dict]]$X
         scaling_factor <- if (!is.null(cb_data$data[[i]]$N)) (cb_data$data[[i]]$N - 1) else 1
@@ -62,8 +62,8 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data,
           cb_model[[i]]$res / scaling_factor
         }
         obj_ld <- if (LD_obj) ld_feature else rep(1, length(ld_feature))
-        if (length(cb_data$data[[i]]$snp_miss)!=0){
-            obj_ld[cb_data$data[[i]]$snp_miss] <- 0
+        if (length(cb_data$data[[i]]$variable_miss)!=0){
+            obj_ld[cb_data$data[[i]]$variable_miss] <- 0
         }
         exp_term <- adj_dep * obj_ld * (abs(cov_Xtr))
         # - calculate individual objective function
@@ -105,10 +105,10 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data,
             # - summary statistics
             xtx <- cb_data$data[[X_dict]]$XtX
             cb_model[[i]]$res <- rep(0, cb_model_para$P)
-            if (length(cb_data$data[[i]]$snp_miss)!=0){
-                beta <- cb_model[[i]]$beta[-cb_data$data[[i]]$snp_miss]
-                xty <- cb_data$data[[i]]$XtY[-cb_data$data[[i]]$snp_miss]
-                cb_model[[i]]$res[-cb_data$data[[i]]$snp_miss] <- xty - scaling_factor * xtx %*% beta
+            if (length(cb_data$data[[i]]$variable_miss)!=0){
+                beta <- cb_model[[i]]$beta[-cb_data$data[[i]]$variable_miss]
+                xty <- cb_data$data[[i]]$XtY[-cb_data$data[[i]]$variable_miss]
+                cb_model[[i]]$res[-cb_data$data[[i]]$variable_miss] <- xty - scaling_factor * xtx %*% beta
             } else {
                 beta <- cb_model[[i]]$beta
                 xty <- cb_data$data[[i]]$XtY
@@ -183,19 +183,19 @@ boost_KL_delta <- function(z, ld_feature, adj_dep,
 boost_check_stop <- function(cb_model, cb_model_para, pos_stop,
                              multicorrection_max = 1){
 
-    # - check the iteration for the stop trait (pos_stop has the same jk with original data)
+    # - check the iteration for the stop outcome (pos_stop has the same jk with original data)
     iter_each <- sapply(pos_stop, function(i){ length(cb_model[[i]]$obj_path)-1 })
     lfsr_each <- sapply(pos_stop, function(i) cb_model[[i]]$stop_null < multicorrection_max)
     pos_need_more <- which(iter_each <= 10 & lfsr_each)
 
     # pos_need_more <- which(iter_each <= 10)
     if (length(pos_need_more) == 0){
-        # --- stop all pos_stop traits
+        # --- stop all pos_stop outcomes
         cb_model_para$update_y[pos_stop] <- 0
         cb_model_para$true_stop <- pos_stop
         cb_model_para$need_more <- NULL
     } else {
-        # keep boosting for trait with <= 10 iterations
+        # keep boosting for outcome with <= 10 iterations
         update_need_more <- pos_stop[pos_need_more]
         cb_model_para$need_more <- update_need_more
         for (i in update_need_more){
@@ -208,7 +208,7 @@ boost_check_stop <- function(cb_model, cb_model_para, pos_stop,
             cb_model[[i]]$step <- cb_model[[i]]$step*0.5
         }
 
-        # stop update for trait with > 10 iterations
+        # stop update for outcome with > 10 iterations
         if (length(pos_need_more) != length(pos_stop)){
             pos_true_stop <- pos_stop[-pos_need_more]
             cb_model_para$true_stop <- pos_true_stop
@@ -247,19 +247,19 @@ boost_obj_last <- function(cb_data, cb_model, cb_model_para,
                                X = cb_data$data[[X_dict]]$X,
                                XtX = cb_data$data[[X_dict]]$XtX,
                                N = cb_data$data[[i]]$N,
-                               remain_idx = setdiff(1:cb_model_para$P, cb_data$data[[i]]$snp_miss),
+                               remain_idx = setdiff(1:cb_model_para$P, cb_data$data[[i]]$variable_miss),
                                P = cb_model_para$P)
             ld_feature <- sqrt(abs(ld_jk))
 
             # - calculate delta
             if (is.null(target_idx)){
-                lambda_trait <- lambda
+                lambda_outcome <- lambda
             } else {
-                lambda_trait <- ifelse(i==target_idx, lambda_target, lambda)
+                lambda_outcome <- ifelse(i==target_idx, lambda_target, lambda)
             }
             delta <- boost_KL_delta(z = cb_model[[i]]$z,
                                     ld_feature = ld_feature, adj_dep = adj_dep,
-                                    func_prior = func_prior, lambda = lambda_trait)
+                                    func_prior = func_prior, lambda = lambda_outcome)
             
             x_tmp <- cb_data$data[[X_dict]]$X
             scaling_factor <- if (!is.null(cb_data$data[[i]]$N)) (cb_data$data[[i]]$N - 1) else 1
@@ -270,8 +270,8 @@ boost_obj_last <- function(cb_data, cb_model, cb_model_para,
             }
 
             obj_ld <- if (LD_obj) ld_feature else rep(1, length(ld_feature))
-            if (length(cb_data$data[[i]]$snp_miss)!=0){
-                obj_ld[cb_data$data[[i]]$snp_miss] <- 0
+            if (length(cb_data$data[[i]]$variable_miss)!=0){
+                obj_ld[cb_data$data[[i]]$variable_miss] <- 0
             }
             exp_term <- adj_dep * obj_ld * (abs(cov_Xtr))
             # - calculate individual objective function

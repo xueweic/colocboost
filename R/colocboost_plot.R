@@ -2,8 +2,8 @@
 
 colocboost_plot <- function(cb_output, y = "log10p", 
                             gene_name = NULL,
-                            trait_idx = NULL, 
-                            trait_names = NULL,
+                            outcome_idx = NULL, 
+                            outcome_names = NULL,
                             plot_cols = 2,
                             pos = NULL,
                             plot_cs_idx = NULL,
@@ -12,13 +12,13 @@ colocboost_plot <- function(cb_output, y = "log10p",
                             show_hits = FALSE,
                             show_cos_to_uncoloc = FALSE,
                             show_cos_to_uncoloc_idx = NULL,
-                            show_cos_to_uncoloc_trait = NULL,
+                            show_cos_to_uncoloc_outcome = NULL,
                             points_color = "grey80", cos_color = NULL,
                             ylim_each = TRUE, 
-                            trait_legend_pos = "top",
-                            trait_legend_size = 1.2,
+                            outcome_legend_pos = "top",
+                            outcome_legend_size = 1.2,
                             cos_legend_pos = "bottomleft",
-                            show_snp = FALSE,
+                            show_variable = FALSE,
                             lab_style = c(2, 1),
                             axis_style = c(2, 1),
                             title_style = c(2.5, 2), 
@@ -30,20 +30,20 @@ colocboost_plot <- function(cb_output, y = "log10p",
     # get cb_plot_input data from colocboost results
     cb_plot_input <- get_input_plot(cb_output, plot_cs_idx = plot_cs_idx, 
                                     variant_coord = variant_coord,
-                                    trait_names = trait_names,
+                                    outcome_names = outcome_names,
                                     show_cos_to_uncoloc = show_cos_to_uncoloc,
                                     show_cos_to_uncoloc_idx = show_cos_to_uncoloc_idx,
-                                    show_cos_to_uncoloc_trait = show_cos_to_uncoloc_trait)
+                                    show_cos_to_uncoloc_outcome = show_cos_to_uncoloc_outcome)
     # get initial set up of plot
     cb_plot_init <- plot_initial(cb_plot_input, y = y, points_color = points_color, cos_color = cos_color,
                                  ylim_each = ylim_each, gene_name = gene_name,
-                                 trait_legend_pos = trait_legend_pos, trait_legend_size = trait_legend_size,
+                                 outcome_legend_pos = outcome_legend_pos, outcome_legend_size = outcome_legend_size,
                                  cos_legend_pos = cos_legend_pos,
-                                 show_snp = show_snp, lab_style = lab_style, axis_style = axis_style,
+                                 show_variable = show_variable, lab_style = lab_style, axis_style = axis_style,
                                  title_style = title_style, ... )
     
     colocboost_plot_basic = function (cb_plot_input, cb_plot_init,
-                                      trait_idx = NULL, pos = NULL,
+                                      outcome_idx = NULL, pos = NULL,
                                       plot_cols = 2, 
                                       add_vertical = FALSE, add_vertical_idx = NULL, 
                                       show_hits = TRUE, 
@@ -64,45 +64,45 @@ colocboost_plot <- function(cb_output, y = "log10p",
       args$cex.lab = cb_plot_init$lab_size
       args$font.lab = cb_plot_init$lab_face
       # - change position
-      cb_plot_init$trait_legend_pos <- switch(cb_plot_init$trait_legend_pos,
+      cb_plot_init$outcome_legend_pos <- switch(cb_plot_init$outcome_legend_pos,
                                               "right" = 4, "left" = 2, "top" = 3,"bottom" = 1)
       
       # - begin plotting
       coloc_cos <- cb_plot_input$cos
-      traits <- cb_plot_input$traits
-      if (is.null(trait_idx)){
+      outcomes <- cb_plot_input$outcomes
+      if (is.null(outcome_idx)){
         if (is.null(coloc_cos)){
-          # - no colocalized effects, draw all traits in this region
-          if (length(cb_plot_input$traits)==1){
-            message("There is no fine-mapped causal effect in this region!. Showing margianl for this trait!")
+          # - no colocalized effects, draw all outcomes in this region
+          if (length(cb_plot_input$outcomes)==1){
+            message("There is no fine-mapped causal effect in this region!. Showing margianl for this outcome!")
           } else {
-            message("There is no colocalization in this region!. Showing margianl for all traits!")
+            message("There is no colocalization in this region!. Showing margianl for all outcomes!")
           }
-          trait_idx <- 1:length(y)
+          outcome_idx <- 1:length(y)
         } else {
           n.coloc <- length(coloc_cos)
           coloc_index <- cb_plot_input$coloc_index
-          trait_idx <- Reduce(union, coloc_index)
+          outcome_idx <- Reduce(union, coloc_index)
         }
-        if (!is.null(cb_plot_input$target_trait)){
-          p_target <- grep(cb_plot_input$target_trait, traits)
+        if (!is.null(cb_plot_input$target_outcome)){
+          p_target <- grep(cb_plot_input$target_outcome, outcomes)
           include_target <- sapply(cb_plot_input$coloc_index, function(ci){ p_target %in% ci })
           if (any(include_target)){
             coloc_index <- cb_plot_input$coloc_index[order(include_target == "FALSE")]
             coloc_index <- Reduce(union, coloc_index)
-            trait_idx <- c(p_target, setdiff(coloc_index, p_target))
+            outcome_idx <- c(p_target, setdiff(coloc_index, p_target))
           }
         }
       }
-      if(length(trait_idx)==1){plot_cols=1}
-      nrow <- ceiling( length(trait_idx) / plot_cols )
+      if(length(outcome_idx)==1){plot_cols=1}
+      nrow <- ceiling( length(outcome_idx) / plot_cols )
       if (!is.null(cb_plot_init$xtext)){bottom = 6} else {bottom=2}
       if (!is.null(cb_plot_init$title)){
         par(mfrow=c(nrow, plot_cols), mar=c(bottom,5,2,1), oma = c(0, 0, 3, 0))
       } else {
         par(mfrow=c(nrow, plot_cols), mar=c(bottom,5,2,1), oma = c(0, 0, 1, 0))
       }
-      for (iy in trait_idx){
+      for (iy in outcome_idx){
         args$y = y[[iy]]
         args$ylim = c(0, cb_plot_init$ymax[iy])
         if (!is.null(cb_plot_init$xtext)){
@@ -113,22 +113,22 @@ colocboost_plot <- function(cb_output, y = "log10p",
         } else {
           do.call(plot, args)
         }
-        mtext(traits[iy], side = cb_plot_init$trait_legend_pos, line = 0.2, adj = 0.5,
-              cex = cb_plot_init$trait_legend_size, font = 1)
+        mtext(outcomes[iy], side = cb_plot_init$outcome_legend_pos, line = 0.2, adj = 0.5,
+              cex = cb_plot_init$outcome_legend_size, font = 1)
         if (add_vertical){
           for (iii in 1:length(add_vertical_idx)){
             abline(v = add_vertical_idx[iii], col = '#E31A1C', lwd = 1.5, lty = 'dashed')
           }
         }
         
-        # mark variants in CoS to colocalized traits
+        # mark variables in CoS to colocalized outcomes
         if (!is.null(coloc_cos)){
           n.coloc <- length(coloc_cos)
           coloc_index <- cb_plot_input$coloc_index
           legend_text = list(col = vector())
           legend_text$col = head(cb_plot_init$col, n.coloc)
           
-          # check which coloc set for this trait
+          # check which coloc set for this outcome
           p.coloc <- sapply(coloc_index, function(idx) sum(idx==iy)!=0 )
           p.coloc <- which(p.coloc)
           coloc_cos.idx <- coloc_cos[p.coloc]
@@ -147,15 +147,15 @@ colocboost_plot <- function(cb_output, y = "log10p",
             }
           }
           
-          # mark variants in CoS to uncolocalized traits
+          # mark variables in CoS to uncolocalized outcomes
           uncoloc <- cb_plot_input$uncoloc
           if (!is.null(uncoloc)){
-            p.uncoloc <- sapply(uncoloc$trait_to_uncoloc, function(idx) sum(idx==iy)!=0 )
+            p.uncoloc <- sapply(uncoloc$outcome_to_uncoloc, function(idx) sum(idx==iy)!=0 )
             p.uncoloc <- which(p.uncoloc)
             texts <- shape_col <- texts_col <- c()
             for (i.uncoloc in p.uncoloc){
-              uncoloc_trait <- uncoloc$trait_to_uncoloc[[i.uncoloc]]
-              if (iy %in% uncoloc_trait){
+              uncoloc_outcome <- uncoloc$outcome_to_uncoloc[[i.uncoloc]]
+              if (iy %in% uncoloc_outcome){
                 # add the points with specific color
                 cs <- as.numeric(uncoloc$cos_to_uncoloc[[i.uncoloc]])
                 x0 <- intersect(args$x, cs)
@@ -182,7 +182,7 @@ colocboost_plot <- function(cb_output, y = "log10p",
     }
     
     colocboost_plot_basic(cb_plot_input, cb_plot_init, pos = pos,
-                          trait_idx = trait_idx, plot_cols = plot_cols, 
+                          outcome_idx = outcome_idx, plot_cols = plot_cols, 
                           add_vertical = add_vertical, add_vertical_idx = add_vertical_idx, 
                           show_hits = show_hits, 
                           ...)
@@ -193,56 +193,56 @@ colocboost_plot <- function(cb_output, y = "log10p",
 
 # get input data for cb_plot
 get_input_plot <- function(cb_output, plot_cs_idx = NULL, variant_coord = FALSE,
-                           trait_names = NULL,
+                           outcome_names = NULL,
                            show_cos_to_uncoloc = FALSE,
                            show_cos_to_uncoloc_idx = NULL,
-                           show_cos_to_uncoloc_trait = NULL){
-  # redefined trait names
-  if (!is.null(trait_names)){
-      cb_output$data_info$traits_info$traits_names <- trait_names
-      names(cb_output$data_info$z) <- trait_names
+                           show_cos_to_uncoloc_outcome = NULL){
+  # redefined outcome names
+  if (!is.null(outcome_names)){
+      cb_output$data_info$outcome_info$outcome_names <- outcome_names
+      names(cb_output$data_info$z) <- outcome_names
   }
   
   # extract results from colocboost
-  analysis_trait <- cb_output$data_info$traits_info$traits_names
-  target_idx <- which(cb_output$data_info$traits_info$is_target)
+  analysis_outcome <- cb_output$data_info$outcome_info$outcome_names
+  target_idx <- which(cb_output$data_info$outcome_info$is_target)
   if ( length(target_idx)!=0 ){
-      target_trait <- analysis_trait[target_idx]
-  } else { target_trait <- NULL }
+      target_outcome <- analysis_outcome[target_idx]
+  } else { target_outcome <- NULL }
   # extract z-scores
-  snps <- cb_output$data_info$variants
+  variables <- cb_output$data_info$variables
   Z <- cb_output$data_info$z
     
   # if finemapping
-  if (cb_output$data_info$n_trait==1){
-      cb_output$cos_details$cos$cos_variants <- cb_output$ucos_details$ucos$ucos_variants
+  if (cb_output$data_info$n_outcomes==1){
+      cb_output$cos_details$cos$cos_variables <- cb_output$ucos_details$ucos$ucos_variables
       cb_output$cos_details$cos$cos_index <- cb_output$ucos_details$ucos$ucos_index
-      cb_output$cos_details$cos_top_variants <- cb_output$ucos_details$ucos_top_variants
-      cb_output$cos_details$cos_traits <- cb_output$ucos_details$ucos_traits
-      if (!is.null(cb_output$cos_details$cos$cos_variants)){
+      cb_output$cos_details$cos_top_variables <- cb_output$ucos_details$ucos_top_variables
+      cb_output$cos_details$cos_outcomes <- cb_output$ucos_details$ucos_outcomes
+      if (!is.null(cb_output$cos_details$cos$cos_variables)){
           cb_output$cos_details$cos_vcp <- cb_output$ucos_details$ucos_weight
       }
       
   }
   # extract coloc_cos
-  coloc_snps <- cb_output$cos_details$cos$cos_variants
+  coloc_variables <- cb_output$cos_details$cos$cos_variables
   coloc_cos <- cb_output$cos_details$cos$cos_index
-  coloc_index <- cb_output$cos_details$cos_traits$trait_index
-  # top_variants
+  coloc_index <- cb_output$cos_details$cos_outcomes$outcome_index
+  # top_variables
   coloc_hits <- lapply(names(coloc_cos), function(cn){
-    p <- grep(cn, rownames(cb_output$cos_details$cos_top_variants))
-    cb_output$cos_details$cos_top_variants$top_index[p]
+    p <- grep(cn, rownames(cb_output$cos_details$cos_top_variables))
+    cb_output$cos_details$cos_top_variables$top_index[p]
   })
   names(coloc_hits) <- names(coloc_cos)
   if (!is.null(coloc_cos)){
-    # extract vcp each trait
-    vcp <- lapply(1:length(analysis_trait), function(iy){
+    # extract vcp each outcome
+    vcp <- lapply(1:length(analysis_outcome), function(iy){
         pos <- which(sapply(coloc_index, function(idx) iy %in% idx))
         if (length(pos)!=0){
           w <- do.call(cbind, cb_output$cos_details$cos_vcp[pos])
           return(1-apply(1-w, 1, prod))
         } else {
-          return(rep(0, length(snps)))
+          return(rep(0, length(variables)))
         }
     })
     ncos <- length(cb_output$cos_details$cos$cos_index)
@@ -254,34 +254,34 @@ get_input_plot <- function(cb_output, plot_cs_idx = NULL, variant_coord = FALSE,
       }
       select_cs <- plot_cs_idx
     }
-    coloc_snps <- coloc_snps[select_cs]
+    coloc_variables <- coloc_variables[select_cs]
     coloc_cos <- coloc_cos[select_cs]
     coloc_index <- coloc_index[select_cs]
     coloc_hits <- coloc_hits[select_cs]
   } else {
-    if (cb_output$data_info$n_trait==1){
+    if (cb_output$data_info$n_outcomes==1){
       warnings("No fine-mapped causal effects in this region!")
     } else {
       warnings("No colocalized effects in this region!")
     }
     coloc_index <- NULL
-    vcp <- rep(0, cb_output$data_info$n_variants)
+    vcp <- rep(0, cb_output$data_info$n_variables)
   }
   # extract x axis
   if (variant_coord){
-    snp.info <- do.call(rbind, lapply(snps, function(snp)strsplit(snp, ":")[[1]]))
-    chrom <- as.numeric(sapply(snp.info[,1], function(ss) strsplit(ss, "chr")[[1]][2]))
+    variable.info <- do.call(rbind, lapply(variables, function(variable)strsplit(variable, ":")[[1]]))
+    chrom <- as.numeric(sapply(variable.info[,1], function(ss) strsplit(ss, "chr")[[1]][2]))
     x <- data.frame("chrom" = chrom,
-                    "pos" = as.numeric(snp.info[,2]))
+                    "pos" = as.numeric(variable.info[,2]))
     coloc_cos <- lapply(coloc_cos, function(cos) x$pos[cos])
     coloc_hits <- lapply(coloc_hits, function(cos) x$pos[cos])
   } else {
     x <- data.frame("chrom" = NA,
-                    "pos" = c(1:length(snps)))
+                    "pos" = c(1:length(variables)))
   }
-  plot_input <- list("traits" = analysis_trait,
-                     "target_trait" = target_trait,
-                     "variants" = snps,
+  plot_input <- list("outcomes" = analysis_outcome,
+                     "target_outcome" = target_outcome,
+                     "variables" = variables,
                      "x" = x,
                      "Zscores" = Z,
                      "vcp" = vcp,
@@ -289,60 +289,60 @@ get_input_plot <- function(cb_output, plot_cs_idx = NULL, variant_coord = FALSE,
                      "cos_hits" = coloc_hits,
                      "coloc_index" = coloc_index)
   
-  # check if plot cos to uncolocalized trait
+  # check if plot cos to uncolocalized outcome
   if (show_cos_to_uncoloc & !is.null(coloc_cos)){
       if (is.null(show_cos_to_uncoloc_idx)){
         cos_to_uncoloc <- coloc_cos
         cos_idx_to_uncoloc <- 1:length(coloc_index)
-        if (is.null(show_cos_to_uncoloc_trait)){
-          warning("Show all CoSs to uncolocalized traits.")
-          trait_to_uncoloc <- lapply(coloc_index, function(cidx){ setdiff(1:length(analysis_trait), cidx) })
+        if (is.null(show_cos_to_uncoloc_outcome)){
+          warning("Show all CoSs to uncolocalized outcomes.")
+          outcome_to_uncoloc <- lapply(coloc_index, function(cidx){ setdiff(1:length(analysis_outcome), cidx) })
         } else {
-          warning("Show all CoSs to uncolocalized traits ", paste(show_cos_to_uncoloc_trait, collapse = ","))
-          trait_to_uncoloc <- lapply(coloc_index, function(cidx){ setdiff(show_cos_to_uncoloc_trait, cidx) })
+          warning("Show all CoSs to uncolocalized outcomes ", paste(show_cos_to_uncoloc_outcome, collapse = ","))
+          outcome_to_uncoloc <- lapply(coloc_index, function(cidx){ setdiff(show_cos_to_uncoloc_outcome, cidx) })
         }
       } else {
         if (show_cos_to_uncoloc_idx > length(coloc_cos)){
           warning("There are only ", length(coloc_cos), " CoS in this region. ",
                   "Cannot show the ordered ", paste(show_cos_to_uncoloc_idx, collapse = ","), 
                   " CoS, which does not exist")
-          trait_to_uncoloc <- cos_to_uncoloc <- cos_idx_to_uncoloc <- NULL
+          outcome_to_uncoloc <- cos_to_uncoloc <- cos_idx_to_uncoloc <- NULL
         } else {
           cos_idx_to_uncoloc <- show_cos_to_uncoloc_idx
           cos_to_uncoloc <- coloc_cos[show_cos_to_uncoloc_idx]
-          if (is.null(show_cos_to_uncoloc_trait)){
+          if (is.null(show_cos_to_uncoloc_outcome)){
             warning("Show the ordered ", paste(cos_idx_to_uncoloc, collapse = ","), 
-                    " CoS for all uncolocalized traits.")
-            trait_to_uncoloc <- sapply(show_cos_to_uncoloc_idx, function(idx){
-              l <- list(setdiff(1:length(analysis_trait), coloc_index[[idx]]))
+                    " CoS for all uncolocalized outcomes.")
+            outcome_to_uncoloc <- sapply(show_cos_to_uncoloc_idx, function(idx){
+              l <- list(setdiff(1:length(analysis_outcome), coloc_index[[idx]]))
               names(l) <- names(coloc_index[idx])
               return(l)
             })
           } else {
             warning("Show the ordered ", paste(cos_idx_to_uncoloc, collapse = ","), 
-                    " CoS for traits ", paste(show_cos_to_uncoloc_trait, collapse = ","))
-            trait_to_uncoloc <- sapply(show_cos_to_uncoloc_idx, function(idx){
-              l <- list(setdiff(show_cos_to_uncoloc_trait, coloc_index[[idx]]))
+                    " CoS for outcomes ", paste(show_cos_to_uncoloc_outcome, collapse = ","))
+            outcome_to_uncoloc <- sapply(show_cos_to_uncoloc_idx, function(idx){
+              l <- list(setdiff(show_cos_to_uncoloc_outcome, coloc_index[[idx]]))
               names(l) <- names(coloc_index[idx])
               return(l)
             })
           }
         }
       }
-      if (!is.null(trait_to_uncoloc)){
-        cos_uncoloc_texts <- rep("Uncolocalized effect", length(trait_to_uncoloc))
+      if (!is.null(outcome_to_uncoloc)){
+        cos_uncoloc_texts <- rep("Uncolocalized effect", length(outcome_to_uncoloc))
       } else {
         cos_uncoloc_texts <- NULL
       }
-      draw_uncoloc <- sapply(trait_to_uncoloc, length)!=0
+      draw_uncoloc <- sapply(outcome_to_uncoloc, length)!=0
       if (any(draw_uncoloc)){
         pos <- which(draw_uncoloc)
-        trait_to_uncoloc <- trait_to_uncoloc[pos]
+        outcome_to_uncoloc <- outcome_to_uncoloc[pos]
         cos_to_uncoloc <- cos_to_uncoloc[pos]
         cos_idx_to_uncoloc <- cos_idx_to_uncoloc[pos]
         cos_uncoloc_texts <- cos_uncoloc_texts[pos]
       }
-      uncoloc <- list("trait_to_uncoloc" = trait_to_uncoloc,
+      uncoloc <- list("outcome_to_uncoloc" = outcome_to_uncoloc,
                       "cos_to_uncoloc" = cos_to_uncoloc,
                       "cos_idx_to_uncoloc" = cos_idx_to_uncoloc,
                       "cos_uncoloc_texts" = cos_uncoloc_texts)
@@ -357,10 +357,10 @@ get_input_plot <- function(cb_output, plot_cs_idx = NULL, variant_coord = FALSE,
 plot_initial <- function(cb_plot_input, y = "log10p", 
                          points_color = "grey80", cos_color = NULL,
                          ylim_each = TRUE, gene_name = NULL,
-                         trait_legend_size = 1.5,
-                         trait_legend_pos = "right",
+                         outcome_legend_size = 1.5,
+                         outcome_legend_pos = "right",
                          cos_legend_pos = "bottomleft",
-                         show_snp = FALSE,
+                         show_variable = FALSE,
                          lab_style = c(2, 1),
                          axis_style = c(1, 1),
                          title_style = c(2.5, 2), 
@@ -392,12 +392,12 @@ plot_initial <- function(cb_plot_input, y = "log10p",
   } else if (y == "vcp"){
     plot_data <- cb_plot_input$vcp
     ylab = "VCP"
-    if (length(cb_plot_input$traits)==1){ ylab = "PIP" }
+    if (length(cb_plot_input$outcomes)==1){ ylab = "PIP" }
     args$ylim <- c(0,1)
   } else {
     stop("Invalid y value! Choose from 'z' or 'z_original'")
   }
-  if (!exists("xlab", args)) args$xlab = "variants"
+  if (!exists("xlab", args)) args$xlab = "variables"
   if (!exists("ylab", args)) args$ylab = ylab
   args$lab_size <- as.numeric(lab_style[1])
   args$lab_face <- lab_style[2]
@@ -410,9 +410,9 @@ plot_initial <- function(cb_plot_input, y = "log10p",
   # - set x-axis and y-axis
   args$x <- cb_plot_input$x$pos
   args$y <- plot_data
-  if (show_snp){
+  if (show_variable){
     args$xaxt = "n"
-    args$xtext = cb_plot_input$variants
+    args$xtext = cb_plot_input$variables
   } 
   args$axis_size <- as.numeric(axis_style[1])
   args$axis_face <- axis_style[2]
@@ -433,14 +433,14 @@ plot_initial <- function(cb_plot_input, y = "log10p",
   args$ymax = ymax
   
   # - set legend text position and format
-  args$trait_legend_pos <- trait_legend_pos
-  args$trait_legend_size <- trait_legend_size
-  if (trait_legend_pos == "right"){
-    args$trait_legend_angle = 90
-  } else if (trait_legend_pos == "left") {
-    args$trait_legend_angle = 270
+  args$outcome_legend_pos <- outcome_legend_pos
+  args$outcome_legend_size <- outcome_legend_size
+  if (outcome_legend_pos == "right"){
+    args$outcome_legend_angle = 90
+  } else if (outcome_legend_pos == "left") {
+    args$outcome_legend_angle = 270
   } else {
-    args$trait_legend_angle = 0
+    args$outcome_legend_angle = 0
   }
   
   if (!(cos_legend_pos %in% c("bottomright", "bottom", "bottomleft", "left",

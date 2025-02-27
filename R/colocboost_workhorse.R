@@ -4,11 +4,11 @@
 #' @details
 #' The following functions are included in the gradient boosting iterations:
 #'
-#' Step 1: `boost_check_update_jk` selection scheme to choose traits need to be updated in each iteration.
+#' Step 1: `colocboost_check_update_jk` selection scheme to choose outcomes need to be updated in each iteration.
 #'
-#' Step 2: `boost_joint` core function of the proximity smoothed gradient boosting update.
+#' Step 2: `colocboost_update` core function of the proximity smoothed gradient boosting update.
 #'
-#' Step 3: check the stop criteria for each trait.
+#' Step 3: check the stop criteria for each outcome.
 #'
 #' @export
 colocboost_workhorse <- function(cb_data,
@@ -63,21 +63,21 @@ colocboost_workhorse <- function(cb_data,
 
     if (is.null(M)){M <- cb_model_para$L*200}
     cb_model_para$M <- M
-    # - if multicorrection value > multicorrection cutoff for some traits, we will not update them.
+    # - if multicorrection value > multicorrection cutoff for some outcomes, we will not update them.
     if (!is.null(cb_model_para$true_stop)){
         if (sum(cb_model_para$update_y == 1) == 0){
-          # - if all traits do not have signals, STOP
+          # - if all outcomes do not have signals, STOP
           message(paste("Using multiple correction method :", func_multicorrection,
-                        ". Stop ColocBoost since the no traits", target_idx, "have signals!"))
+                        ". Stop ColocBoost since the no outcomes", target_idx, "have signals!"))
         } else {
           message(paste("Using multiple correction method :", func_multicorrection,
-                        ". Trait", paste(cb_model_para$true_stop, collapse = ", "), 
+                        ". Outcome", paste(cb_model_para$true_stop, collapse = ", "), 
                         "for all variants are greater than",
                         multicorrection_cut, ". Will not update it!"))
         }
         if (!is.null(target_idx) & (M!= 1)){
             if (sum(cb_model_para$true_stop==target_idx)!=0){
-              message(paste("Stop ColocBoost since the target trait", target_idx, "do not have signals!"))
+              message(paste("Stop ColocBoost since the target outcome", target_idx, "do not have signals!"))
               cb_model_para$update_y <- 0
             }
         }
@@ -91,7 +91,7 @@ colocboost_workhorse <- function(cb_data,
     }
     if (M==1){
       # single effect with or without LD matrix
-      message("Running colocboost with assumption of one causal per trait!")
+      message("Running colocboost with assumption of one causal per outcome!")
       cb_obj <- colocboost_one_causal(cb_model, cb_model_para, cb_data,
                                       jk_equiv_cor = jk_equiv_cor,
                                       jk_equiv_loglik = jk_equiv_loglik,
@@ -103,14 +103,14 @@ colocboost_workhorse <- function(cb_data,
                                       LD_obj = LD_obj)
     } else {
       
-        # - add more iterations for more traits
+        # - add more iterations for more outcomes
         for (m in 1:M){
           
           if (sum(cb_model_para$update_y == 1) == 0){
             break;
           } else {
             
-            # step 1: check which traits need to be updated at which variant
+            # step 1: check which outcomes need to be updated at which variant
             cb_model_para <- colocboost_check_update_jk(cb_model, cb_model_para, cb_data,
                                                         prioritize_jkstar = prioritize_jkstar,
                                                         jk_equiv_cor = jk_equiv_cor,
@@ -118,7 +118,7 @@ colocboost_workhorse <- function(cb_data,
                                                         func_compare = func_compare,
                                                         coloc_thres = coloc_thres)
             
-            # step 2: gradient boosting for the updated traits
+            # step 2: gradient boosting for the updated outcomes
             cb_model <- colocboost_update(cb_model, cb_model_para, cb_data,
                                           tau = tau,
                                           decayrate = decayrate,
@@ -140,7 +140,7 @@ colocboost_workhorse <- function(cb_data,
             pos_rtr_stop <- which(sum_cor == 0)
             if (length(pos_rtr_stop)!=0){
               cb_model_para$update_y[pos.update[pos_rtr_stop]] <- 0
-              message(paste("Boosting iterations for trait", paste(pos.update[pos_rtr_stop], collapse = ", "),
+              message(paste("Boosting iterations for outcome", paste(pos.update[pos_rtr_stop], collapse = ", "),
                             "stop since rtr < 0 or max(correlation) > 1 after", m, "iterations!",
                             "Results for this locus are not stable, please check if mismatch between sumstat and LD!",
                             "See details in website."))
@@ -156,13 +156,13 @@ colocboost_workhorse <- function(cb_data,
                 stop1 = abs(cb_model[[i]]$profile_loglike_each[M_i] - cb_model[[i]]$profile_loglike_each[M_i-1]) /
                   cb_model[[i]]$profile_loglike_each[M_i-1]  < cb_model[[i]]$stop_thresh
                 # stop2 = tail(abs(diff(cb_model[[i]]$obj_path)), n=1) < cb_model[[i]]$stop_thresh
-                multiple_correction <- get_multiple_correction(z=cb_model[[i]]$z, miss_idx = cb_data$data[[i]]$snp_miss, 
+                multiple_correction <- get_multiple_correction(z=cb_model[[i]]$z, miss_idx = cb_data$data[[i]]$variable_miss, 
                                                                func_multicorrection = func_multicorrection, 
                                                                ash_prior = ash_prior,
                                                                p.adjust.methods = p.adjust.methods)
                 cb_model[[i]]$multi_correction <- multiple_correction
                 stop2 = all(multiple_correction >= cb_model[[i]]$stop_null)
-                # -- to ensure if some traits do not update previously
+                # -- to ensure if some outcomes do not update previously
                 if (length(cb_model[[i]]$profile_loglike_each) >= 2){
                   stop[i] <- (stop1 | stop2) # (stop2 | stop3) # (stop1 | stop2 | stop3)
                 } else {
@@ -177,7 +177,7 @@ colocboost_workhorse <- function(cb_data,
             if (all(length(stop)==1 & stop)){
               cb_model_para$update_y = 0
               if (cb_model_para$L == 1){
-                message(paste("Boosting iterations for trait 1 converge after", m, "iterations!"))
+                message(paste("Boosting iterations for outcome 1 converge after", m, "iterations!"))
               } 
             } else {
               if (all(!stop[pos.update])){
@@ -186,12 +186,12 @@ colocboost_workhorse <- function(cb_data,
                 
               } else {
                 
-                pos_stop <- which(stop) # which trait reach the stop criterion
+                pos_stop <- which(stop) # which outcome reach the stop criterion
                 ttmp <- boost_check_stop(cb_model, cb_model_para, pos_stop,
                                          multicorrection_max = multicorrection_max)
                 cb_model_para <- ttmp$cb_model_para
                 cb_model <- ttmp$cb_model
-                # - if there is some traits need stop
+                # - if there is some outcomes need stop
                 if (!is.null(cb_model_para$true_stop)){
                   ####### ---------------------------------------------
                   # calculate objective function of Y for the last iteration.
@@ -202,18 +202,18 @@ colocboost_workhorse <- function(cb_data,
                                              lambda_target = lambda_target)
                   if ( !is.null(target_idx) ){
                     if (target_idx %in% cb_model_para$true_stop){
-                      message(paste("Boosting iterations for target trait", target_idx,
+                      message(paste("Boosting iterations for target outcome", target_idx,
                                     "converge after", m, "iterations!"))
                       if (length(setdiff(cb_model_para$true_stop, target_idx))!=0){
-                        message(paste("Boosting iterations for trait", paste(setdiff(cb_model_para$true_stop, target_idx), collapse = ", "),
+                        message(paste("Boosting iterations for outcome", paste(setdiff(cb_model_para$true_stop, target_idx), collapse = ", "),
                                       "converge after", m, "iterations!"))
                       }
                     } else {
-                      message(paste("Boosting iterations for trait", paste(cb_model_para$true_stop, collapse = ", "),
+                      message(paste("Boosting iterations for outcome", paste(cb_model_para$true_stop, collapse = ", "),
                                     "converge after", m, "iterations!"))
                     }
                   } else {
-                    message(paste("Boosting iterations for trait", paste(cb_model_para$true_stop, collapse = ", "),
+                    message(paste("Boosting iterations for outcome", paste(cb_model_para$true_stop, collapse = ", "),
                                   "converge after", m, "iterations!"))
                   }
                 }
@@ -271,7 +271,7 @@ cb_model_update <- function(cb_data, cb_model, cb_model_para){
                            N = data_each$N, YtY = data_each$YtY,
                            XtX = cb_data$data[[X_dict]]$XtX,
                            beta_k = model_each$beta,
-                           miss_idx = data_each$snp_miss)
+                           miss_idx = data_each$variable_miss)
     cb_model[[i]]$correlation <- tmp
     cb_model[[i]]$z <- get_z(tmp, n=data_each$N, model_each$res)
     

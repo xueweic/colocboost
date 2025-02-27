@@ -150,7 +150,7 @@ boost_check_update_jk_notarget <- function(cb_model, cb_model_para, cb_data,
                                                 YtY = data_update[[ii]]$YtY,
                                                 XtY = data_update[[ii]]$XtY,
                                                 beta_k = model_update[[ii]]$beta,
-                                                miss_idx = data_update[[ii]]$snp_miss)
+                                                miss_idx = data_update[[ii]]$variable_miss)
                 })
                 change_res_each <- as.numeric(unlist(change_res_each))
 
@@ -231,7 +231,7 @@ boost_check_update_jk_notarget <- function(cb_model, cb_model_para, cb_data,
                                                 YtY = data_update[[ii]]$YtY,
                                                 XtY = data_update[[ii]]$XtY,
                                                 beta_k = model_update[[ii]]$beta,
-                                                miss_idx = data_update[[ii]]$snp_miss)
+                                                miss_idx = data_update[[ii]]$variable_miss)
                 })
                 change_res_each <- as.numeric(unlist(change_res_each))
 
@@ -278,7 +278,7 @@ boost_check_update_jk_notarget <- function(cb_model, cb_model_para, cb_data,
                                                 YtY = data_update[[ii]]$YtY,
                                                 XtY = data_update[[ii]]$XtY,
                                                 beta_k = model_update[[ii]]$beta,
-                                                miss_idx = data_update[[ii]]$snp_miss)
+                                                miss_idx = data_update[[ii]]$variable_miss)
                 })
                 change_res_each <- as.numeric(unlist(change_res_each))
                 change_res_each_jk <- change_res_each[pos] # R*
@@ -398,19 +398,21 @@ boost_check_update_jk_target <- function(cb_model, cb_model_para, cb_data,
         
         # - if jk_target missing in all other traits
         data_update = cb_data$data[pos.update]
-        snp_missing <- Reduce("intersect", lapply(data_update[-pp_target], function(d) d$snp_miss ))
-        if (jk_target %in% snp_missing){
+        variable_missing <- Reduce("intersect", lapply(data_update[-pp_target], function(d) d$variable_miss ))
+        if (jk_target %in% variable_missing){
           # ---- first, check LD between jk_target and jk_each based on target LD
           ld <-  sapply(jk_each[-pp_target], function(jki){
             get_LD_jk1_jk2(jk_target, jki, 
+                           X = cb_data$data[[X_dict[pp_target]]]$X, 
                            XtX = cb_data$data[[X_dict[pp_target]]]$XtX,
+                           N = cb_data$data[[X_dict[pp_target]]]$N,
                            remain_jk = 1:cb_model_para$P)
           })
           # ----- second, if within the same LD buddies, select the following variants
           if (max(ld)>jk_equiv_cor){
             cor_target <- abs_cor_vals_each[, pp_target]
             order_cor <- order(cor_target, decreasing = TRUE)
-            jk_target_tmp <- setdiff(order_cor, snp_missing)[1]
+            jk_target_tmp <- setdiff(order_cor, variable_missing)[1]
             # ----- third, if picked variant within the same LD buddies
             ld_tmp <- get_LD_jk1_jk2(jk_target, jk_target_tmp, 
                                      XtX = cb_data$data[[X_dict[pp_target]]]$XtX,
@@ -507,7 +509,7 @@ boost_check_update_jk_target <- function(cb_model, cb_model_para, cb_data,
                 jk <- which(abs_cor_vals == max(abs_cor_vals))
                 jk <- ifelse(length(jk) == 1, jk, sample(jk,1))
                 # - if jk is missing in target trait, we will prioritize jk_target
-                target_trait_missing <- cb_data$data[[pos.update[pp_target]]]$snp_miss
+                target_trait_missing <- cb_data$data[[pos.update[pp_target]]]$variable_miss
                 if (jk %in% target_trait_missing) {jk = jk_target}
                 update_jk[1] <- jk
                 if (prioritize_jkstar){
@@ -564,7 +566,7 @@ check_jk_jkeach <- function(jk, jk_each,
   judge <- c()
   for (i in 1:length(jk_each)){
     
-    if ( !(jk%in%data_update[[i]]$snp_miss) & !(jk_each[i]%in%data_update[[i]]$snp_miss) ){
+    if ( !(jk%in%data_update[[i]]$variable_miss) & !(jk_each[i]%in%data_update[[i]]$variable_miss) ){
       
       change_log_jk <- model_update[[i]]$change_loglike[jk]
       change_log_jkeach <- model_update[[i]]$change_loglike[jk_each[i]]
@@ -573,7 +575,7 @@ check_jk_jkeach <- function(jk, jk_each,
                                 X = cb_data$data[[X_dict[i]]]$X,
                                 XtX = cb_data$data[[X_dict[i]]]$XtX,
                                 N = data_update[[i]]$N,
-                                remain_jk = setdiff(1:length(model_update[[i]]$res), data_update[[i]]$snp_miss))
+                                remain_jk = setdiff(1:length(model_update[[i]]$res), data_update[[i]]$variable_miss))
       judge[i] <- (change_each <= jk_equiv_loglik) & (abs(LD_temp) >= jk_equiv_cor)
       
     } else { judge[i] <- FALSE }
@@ -602,14 +604,14 @@ check_pair_jkeach <- function(jk_each,
       if (j != i){
         jk_j <- jk_each[j]
         
-        if ( !(jk_i%in%data_update[[i]]$snp_miss) & !(jk_j%in%data_update[[i]]$snp_miss) ){
+        if ( !(jk_i%in%data_update[[i]]$variable_miss) & !(jk_j%in%data_update[[i]]$variable_miss) ){
           change_log_jk_j <- model_update[[i]]$change_loglike[jk_j]
           change_each <- abs(change_log_jk_i-change_log_jk_j)
           LD_temp <- get_LD_jk1_jk2(jk_i, jk_j,
                                     X = cb_data$data[[X_dict[i]]]$X,
                                     XtX = cb_data$data[[X_dict[i]]]$XtX,
                                     N = data_update[[i]]$N,
-                                    remain_jk = setdiff(1:length(model_update[[i]]$res), data_update[[i]]$snp_miss))
+                                    remain_jk = setdiff(1:length(model_update[[i]]$res), data_update[[i]]$variable_miss))
           change_each_pair[i,j] <- (change_each <= jk_equiv_loglik) & (abs(LD_temp) >= jk_equiv_cor)
         } else {
           change_each_pair[i,j] <- FALSE
