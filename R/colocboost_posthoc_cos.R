@@ -186,7 +186,7 @@ colocboost_posthoc_cos <- function(cb_obj,
                 weight_coloc <- do.call(cbind, av)
 
                 # Hierachical Clustering iteration based on sequenced weights
-                cormat = cor(t(weight_coloc))
+                cormat = get_cormat(t(weight_coloc))
                 hc = hclust(as.dist(1-cormat))
                 n_cluster = get_n_cluster(hc, cormat, between_cluster = between_cluster)$n_cluster
                 index = cutree(hc,n_cluster)

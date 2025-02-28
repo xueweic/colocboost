@@ -114,7 +114,7 @@ colocboost_posthoc_ucos <- function(cb_obj_single,
         LogLik_change = abs(diff(cb_model[[1]]$profile_loglike_each))
 
         # Hierachical Clustering iteration based on weights
-        cormat = cor(t(weights))
+        cormat = get_cormat(t(weights))
         hc = hclust(as.dist(1-cormat))
         n_cluster = get_n_cluster(hc, cormat, between_cluster = between_cluster)$n_cluster
         # n_cluster = 6

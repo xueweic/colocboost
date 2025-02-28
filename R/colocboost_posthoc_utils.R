@@ -74,9 +74,9 @@ merge_cos_ucos <- function(cb_obj, out_cos, out_ucos, coverage = 0.95,
                     out_cos$cos$avWeight[[i]] <-  out_cos$cos$avWeight[[i]][,pos_name]
                     change_obj_coloc_i <- change_obj_coloc[i,]
                     change_obj_each_j <- change_obj_each[j,]
-                     out_cos$cos$cs_change[i,] <- pmax(change_obj_coloc_i, change_obj_each_j)
-                    coloc_outcome <- c(coloc_outcome, fine_outcome)
-                     out_cos$cos$coloc_outcomes[[i]] <- coloc_outcome
+                    out_cos$cos$cs_change[i,] <- pmax(change_obj_coloc_i, change_obj_each_j)
+                    coloc_outcome <- sort(c(coloc_outcome, fine_outcome))
+                    out_cos$cos$coloc_outcomes[[i]] <- coloc_outcome
                 }
 
             }
@@ -168,21 +168,22 @@ merge_ucos <- function(cb_obj, past_out,
         is_merged <- c()
         for (i.m in 1:length(potential_merged)){
             temp_set <- as.numeric(potential_merged[[i.m]])
-            is_merged <- c(is_merged, temp_set)
-            # define merged set
-            coloc_sets_merged <- c(coloc_sets_merged, list( unique(unlist(ucos_each[temp_set])) ))
             # refine avWeight
             merged <-  out_ucos$avW_ucos_each[, temp_set]
             unique_coloc_outcomes <- as.numeric(gsub(".*Y(\\d+).*", "\\1", colnames(merged)))
+            if (length(unique(unique_coloc_outcomes))==1) next
+            # define merged set
+            coloc_sets_merged <- c(coloc_sets_merged, list( unique(unlist(ucos_each[temp_set])) ))
             colnames(merged) <- paste0("outcome", unique_coloc_outcomes)
             coloc_outcomes_merged <- c(coloc_outcomes_merged,
-                                     list(unique(unique_coloc_outcomes[order(unique_coloc_outcomes)])))
+                                       list(unique(sort(unique_coloc_outcomes))))
             # colnames(temp) <- unique_coloc_outcomes
             avWeight_merged <- c(avWeight_merged, list(merged))
             # refine cs_change
             change_cs_tmp <- change_obj_each[temp_set, , drop = FALSE]
             cs_change_merged <- c(cs_change_merged,
                                   list(apply(change_cs_tmp, 2, max)))
+            is_merged <- c(is_merged, temp_set)
         }
 
         if (length(is_merged) != 0){

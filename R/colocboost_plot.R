@@ -6,7 +6,8 @@ colocboost_plot <- function(cb_output, y = "log10p",
                             outcome_names = NULL,
                             plot_cols = 2,
                             pos = NULL,
-                            plot_cs_idx = NULL,
+                            plot_cos_idx = NULL,
+                            # plot_target = FALSE
                             variant_coord = FALSE,
                             show_coloc = TRUE,
                             show_hits = FALSE,
@@ -28,7 +29,7 @@ colocboost_plot <- function(cb_output, y = "log10p",
                     
   
     # get cb_plot_input data from colocboost results
-    cb_plot_input <- get_input_plot(cb_output, plot_cs_idx = plot_cs_idx, 
+    cb_plot_input <- get_input_plot(cb_output, plot_cos_idx = plot_cos_idx, 
                                     variant_coord = variant_coord,
                                     outcome_names = outcome_names,
                                     show_cos_to_uncoloc = show_cos_to_uncoloc,
@@ -192,7 +193,7 @@ colocboost_plot <- function(cb_output, y = "log10p",
 
 
 # get input data for cb_plot
-get_input_plot <- function(cb_output, plot_cs_idx = NULL, variant_coord = FALSE,
+get_input_plot <- function(cb_output, plot_cos_idx = NULL, variant_coord = FALSE,
                            outcome_names = NULL,
                            show_cos_to_uncoloc = FALSE,
                            show_cos_to_uncoloc_idx = NULL,
@@ -246,13 +247,13 @@ get_input_plot <- function(cb_output, plot_cs_idx = NULL, variant_coord = FALSE,
         }
     })
     ncos <- length(cb_output$cos_details$cos$cos_index)
-    if (is.null(plot_cs_idx)){
+    if (is.null(plot_cos_idx)){
       select_cs <- 1:ncos
     } else {
-      if (length(setdiff(plot_cs_idx, c(1:ncos)))!=0){
-        stop("please check plot_cs_idx!")
+      if (length(setdiff(plot_cos_idx, c(1:ncos)))!=0){
+        stop("please check plot_cos_idx!")
       }
-      select_cs <- plot_cs_idx
+      select_cs <- plot_cos_idx
     }
     coloc_variables <- coloc_variables[select_cs]
     coloc_cos <- coloc_cos[select_cs]

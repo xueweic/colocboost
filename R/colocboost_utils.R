@@ -23,6 +23,19 @@ get_in_csets <- function(weights, coverage = 0.95){
     
 }
 
+# - Fast calculate correlation matrix
+get_cormat <- function(X, intercepte = FALSE){
+  X = t(X)
+  # Center each variable
+  if (!intercepte){
+    X = X - rowMeans(X)
+  }
+  # Standardize each variable
+  X = X / sqrt(rowSums(X^2))
+  # Calculate correlations
+  cr = tcrossprod(X)
+  return(cr)
+}
 
 check_null_post <- function(cb_obj, 
                             coloc_sets_temp,
@@ -189,7 +202,7 @@ get_purity = function (pos, X=NULL, Xcorr=NULL, N = NULL, n = 100) {
         if (is.null(Xcorr)) {
             X_sub = X[,pos]
             X_sub = as.matrix(X_sub)
-            corr <- suppressWarnings({cor(X_sub)})
+            corr <- suppressWarnings({get_cormat(X_sub)})
             corr[which(is.na(corr))] = 0
             value = abs(get_upper_tri(corr))
         } else {
