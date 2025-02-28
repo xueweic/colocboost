@@ -44,22 +44,24 @@ colocboost_posthoc <- function(cb_obj,
   
     # - data information
     data_info <- get_data_info(cb_obj)
+    model_info <- get_model_info(cb_obj, outcome_names = data_info$outcome_info$outcome_names)
     if (data_info$n_outcomes == 1 & output_level == 1){ output_level = 2 }
     if (cb_obj$cb_model_para$num_updates == 1){
         cb_output <- list("cos_summary" = NULL,
                           "vcp" = NULL,
                           "cos_details" = NULL,
-                          "data_info" = data_info)
+                          "data_info" = data_info,
+                          "model_info" = model_info)
         # - save model and all coloc and single information for diagnostic
         if (output_level != 1){
             tmp <- get_full_output(cb_obj = cb_obj, past_out = NULL, variables = NULL)
             if (output_level == 2){
                 cb_output$ucos_details = tmp$ucos_detials
-                cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "ucos_details")]
+                cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "model_info", "ucos_details")]
             } else {
                 cb_output$ucos_details = tmp$ucos_detials
                 cb_output$diagnostic_details = tmp[-1]
-                cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "ucos_details", "diagnostic_details")]
+                cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "model_info", "ucos_details", "diagnostic_details")]
             }
             if (data_info$n_outcome == 1){
               cb_output <- list("ucos_summary" = NULL, "pip" = NULL,
@@ -193,24 +195,25 @@ colocboost_posthoc <- function(cb_obj,
         cos_results <- get_cos_details(cb_obj, coloc_out = past_out$cos$cos, data_info = data_info)
         cb_output <- list("vcp" = cos_results$vcp,
                           "cos_details" = cos_results$cos_results,
-                          "data_info" = data_info)
+                          "data_info" = data_info,
+                          "model_info" = model_info)
         
         ### - extract summary table
         target_idx <- cb_obj$cb_model_para$target_idx
         summary_table <- get_cos_summary(cb_output, target_outcome = data_info$outcome_info$outcome_names[target_idx])
         cb_output <- c(cb_output, list(cos_summary = summary_table))
-        cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info")]
+        cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "model_info")]
 
         # - save model and all coloc and single information for diagnostic
         if (output_level != 1){
           tmp <- get_full_output(cb_obj = cb_obj, past_out = past_out, variables = data_info$variables, cb_output = cb_output)
           if (output_level == 2){
             cb_output <- c(cb_output, list("ucos_details" = tmp$ucos_details))
-            cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "ucos_details")]
+            cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "model_info", "ucos_details")]
           } else {
             cb_output <- c(cb_output, list("ucos_details" = tmp$ucos_details))
             cb_output$diagnostic_details = tmp[-1]
-            cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "ucos_details", "diagnostic_details")]
+            cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "model_info", "ucos_details", "diagnostic_details")]
           }
           # - if fine-boost, the summary table will be the summary of finemapping
           if (data_info$n_outcomes == 1){

@@ -227,6 +227,37 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL){
 
 }
 
+#' @noRd
+#' @keywords cb_post_inference
+get_model_info <- function(cb_obj, outcome_names = NULL){
+  
+  if (is.null(outcome_names)){
+    data_info <- get_data_info(cb_obj)
+    outcome_names <- data_info$outcome_info$outcome_names
+  }
+  
+  profile_loglik <- cb_obj$cb_model_para$profile_loglike
+  n_updates <- cb_obj$cb_model_para$num_updates
+  model_coveraged <- cb_obj$cb_model_para$coveraged
+  jk_update <- cb_obj$cb_model_para$real_update_jk
+  outcome_proximity_obj <- lapply(cb_obj$cb_model, function(cb) cb$obj_path)
+  outcome_coupled_obj <- lapply(cb_obj$cb_model, function(cb) cb$obj_single)
+  outcome_profile_loglik <- lapply(cb_obj$cb_model, function(cb) cb$profile_loglike_each)
+  names(outcome_proximity_obj) <- names(outcome_coupled_obj) <-
+    names(outcome_profile_loglik) <- outcome_names
+  ll <- list("model_coveraged" = model_coveraged,
+             "n_updates" = n_updates,
+             "profile_loglik" = profile_loglik,
+             "outcome_profile_loglik" = outcome_profile_loglik,
+             "outcome_proximity_obj" = outcome_proximity_obj,
+             "outcome_coupled_obj" = outcome_coupled_obj,
+             "jk_update" = jk_update)
+  return(ll)
+  
+}
+
+
+
 #' @rdname colocboost_get_methods
 #' @title Extract colocalization summary table
 #'

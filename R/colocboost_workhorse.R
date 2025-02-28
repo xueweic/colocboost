@@ -101,6 +101,7 @@ colocboost_workhorse <- function(cb_data,
                                       lambda = lambda,
                                       lambda_target = lambda_target,
                                       LD_obj = LD_obj)
+      cb_obj$cb_model_para$coveraged = "one_causal"
     } else {
       
         # - add more iterations for more outcomes
@@ -224,7 +225,7 @@ colocboost_workhorse <- function(cb_data,
             message(paste("Boosting at", m, "iterations, still updating."))
           }
         }
-        cb_model_para$converged = TRUE
+        
         cb_model_para$num_updates = m
         for (i in 1:length(cb_model)){ cb_model[[i]]$obj_path <- as.numeric(unlist(cb_model[[i]]$obj_path[-1]))}
         for (i in 1:length(cb_model)){ cb_model[[i]]$obj_single <- as.numeric(unlist(cb_model[[i]]$obj_single[-1]))}
@@ -241,7 +242,7 @@ colocboost_workhorse <- function(cb_data,
                                      lambda = lambda,
                                      lambda_target = lambda_target)
           warning(paste("COLOC-BOOST updates did not converge in", M, "iterations; checkpoint at last iteration"))
-          cb_model_para$converged = FALSE
+          cb_model_para$coveraged = FALSE
         }
         
         
