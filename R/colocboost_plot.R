@@ -7,14 +7,14 @@ colocboost_plot <- function(cb_output, y = "log10p",
                             plot_cols = 2,
                             pos = NULL,
                             plot_cos_idx = NULL,
-                            # plot_target = FALSE
+                            plot_target_only = FALSE,
                             variant_coord = FALSE,
                             show_coloc = TRUE,
                             show_hits = FALSE,
                             show_cos_to_uncoloc = FALSE,
                             show_cos_to_uncoloc_idx = NULL,
                             show_cos_to_uncoloc_outcome = NULL,
-                            points_color = "grey80", cos_color = NULL,
+                            points_color = "grey90", cos_color = NULL,
                             ylim_each = TRUE, 
                             outcome_legend_pos = "top",
                             outcome_legend_size = 1.2,
@@ -30,6 +30,7 @@ colocboost_plot <- function(cb_output, y = "log10p",
   
     # get cb_plot_input data from colocboost results
     cb_plot_input <- get_input_plot(cb_output, plot_cos_idx = plot_cos_idx, 
+                                    plot_target_only = plot_target_only,
                                     variant_coord = variant_coord,
                                     outcome_names = outcome_names,
                                     show_cos_to_uncoloc = show_cos_to_uncoloc,
@@ -138,13 +139,13 @@ colocboost_plot <- function(cb_output, y = "log10p",
             cs <- as.numeric(coloc_cos[[i.cs]])
             x0 <- intersect(args$x, cs)
             y1 = args$y[match(x0, args$x)]
-            points(x0,y1, pch = 21, bg = legend_text$col[i.cs], col = NA, cex = 1.5,lwd = 2.5)
+            points(x0,y1, pch = 21, bg = legend_text$col[i.cs], col = NA, cex = 2.5, lwd = 2.5)
             if (show_hits){
               # add the hits points with "red"
               cs_hits <- as.numeric(cb_plot_input$cos_hits[[i.cs]])
               x_hits <- intersect(args$x, cs_hits)
               y_hits = args$y[match(x_hits, args$x)]
-              points(x_hits, y_hits, pch = 21, bg=legend_text$col[i.cs], col = "#E31A1C", cex = 2, lwd = 3)
+              points(x_hits, y_hits, pch = 21, bg=legend_text$col[i.cs], col = "#E31A1C", cex = 3, lwd = 3)
             }
           }
           
@@ -193,7 +194,9 @@ colocboost_plot <- function(cb_output, y = "log10p",
 
 
 # get input data for cb_plot
-get_input_plot <- function(cb_output, plot_cos_idx = NULL, variant_coord = FALSE,
+get_input_plot <- function(cb_output, plot_cos_idx = NULL, 
+                           plot_target_only = FALSE,
+                           variant_coord = FALSE,
                            outcome_names = NULL,
                            show_cos_to_uncoloc = FALSE,
                            show_cos_to_uncoloc_idx = NULL,
@@ -210,6 +213,9 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL, variant_coord = FALSE
   if ( length(target_idx)!=0 ){
       target_outcome <- analysis_outcome[target_idx]
   } else { target_outcome <- NULL }
+  # check if target cos
+  target_cos <- cb_output$cos_summary$cos_id[cb_output$cos_summary$target_outcome!=FALSE]
+  if_target <- !is.na(match(names(cb_output$cos_details$cos$cos_variables), target_cos))
   # extract z-scores
   variables <- cb_output$data_info$variables
   Z <- cb_output$data_info$z
@@ -223,6 +229,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL, variant_coord = FALSE
       if (!is.null(cb_output$cos_details$cos$cos_variables)){
           cb_output$cos_details$cos_vcp <- cb_output$ucos_details$ucos_weight
       }
+      if_target <- rep(TRUE, length(cb_output$cos_details$cos$cos_variables))
       
   }
   # extract coloc_cos
@@ -247,14 +254,22 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL, variant_coord = FALSE
         }
     })
     ncos <- length(cb_output$cos_details$cos$cos_index)
-    if (is.null(plot_cos_idx)){
-      select_cs <- 1:ncos
-    } else {
-      if (length(setdiff(plot_cos_idx, c(1:ncos)))!=0){
-        stop("please check plot_cos_idx!")
+    
+    select_cs <- 1:ncos
+    if (plot_target_only){
+      if (sum(if_target)==0){
+        message("No target CoS, draw all CoS.")
+      } else {
+        select_cs <- which(if_target)
       }
-      select_cs <- plot_cos_idx
-    }
+    } else {
+      if (!is.null(plot_cos_idx)){
+        if (length(setdiff(plot_cos_idx, c(1:ncos)))!=0){
+          stop("please check plot_cos_idx!")
+        }
+        select_cs <- plot_cos_idx
+      }
+    } 
     coloc_variables <- coloc_variables[select_cs]
     coloc_cos <- coloc_cos[select_cs]
     coloc_index <- coloc_index[select_cs]
@@ -356,7 +371,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL, variant_coord = FALSE
 
 
 plot_initial <- function(cb_plot_input, y = "log10p", 
-                         points_color = "grey80", cos_color = NULL,
+                         points_color = "grey90", cos_color = NULL,
                          ylim_each = TRUE, gene_name = NULL,
                          outcome_legend_size = 1.5,
                          outcome_legend_pos = "right",
@@ -373,10 +388,20 @@ plot_initial <- function(cb_plot_input, y = "log10p",
   # - set background point color and cos color pools
   args$bg <- points_color
   if (is.null(cos_color)){
-    cos_color <- c("dodgerblue2", "#6A3D9A", "#FF7F00", "#FB9A99", "#33A02C",
-                   "#A6CEE3",  "gold1", "#01665E","#FDBF6F", "#CAB2D6", "#B2DF8A", 
-                   "#8C510A", "#BF812D", "#DFC27D", "#F6E8C3", "#01665E",
-                   "#35978F", "#80CDC1", "#C7EAE5", "#003C30")
+    # cos_color <- c("dodgerblue2", "#6A3D9A", "#FF7F00", "#FB9A99", "#33A02C",
+    #                "#A6CEE3",  "gold1", "#01665E","#FDBF6F", "#CAB2D6", "#B2DF8A", 
+    #                "#8C510A", "#BF812D", "#DFC27D", "#F6E8C3", "#01665E",
+    #                "#35978F", "#80CDC1", "#C7EAE5", "#003C30")
+    # cos_color <- c("#1B9E77", "#D95F02", "#7570B3", "#1F78B4", "#66A61E", 
+    #                "#E6AB02", "#A6761D", "#666666", "#E7298A", "#B2182B", 
+    #                "#D73027", "#4575B4", "#313695", "#542788", "#74ADD1",
+    #                "#F46D43", "#4DAF4A", "#984EA3", "#FF7F00", "#A50F15")
+    cos_color <- c("#377EB8", "#E69F00", "#33A02C", "#984EA3", "#F46D43", 
+                   "#A65628", "#1F4E79", "#B2182B", "#D73027", "#F781BF", 
+                   "#4DAF4A", "#E41A1C", "#FF7F00", "#6A3D9A", "#1B7837", 
+                   "#E6AB02", "#542788", "#74ADD1", "#A50F15", "#01665E")
+    
+    
     # cos_color <- c("#1F70A9", "#33A02C", "#CAB2D6", "#EA7827")
   }
   args$col <- cos_color

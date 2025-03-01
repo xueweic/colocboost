@@ -23,5 +23,5 @@ colocboost object after gradient boosting update
 Joint boosting algorithm in ColocBoost
 }
 \details{
-The gradient boosting algorithm for multiple traits
+The gradient boosting algorithm for multiple outcomes
 }

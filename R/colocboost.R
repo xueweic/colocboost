@@ -553,27 +553,27 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                                    outcome_names = outcome_names)
 
     # --- post-processing of the colocboost updates
-    message("Starting post-hoc analyses and results summary.")
-    cb_output <- colocboost_posthoc(cb_obj, 
-                                    coverage = coverage,
-                                    func_intw = func_intw,
-                                    alpha = alpha,
-                                    check_null = check_null,
-                                    check_null_method = check_null_method,
-                                    check_null_max = check_null_max,
-                                    dedup = dedup,
-                                    overlap = overlap,
-                                    n_purity = n_purity,
-                                    min_abs_corr = min_abs_corr,
-                                    coverage_singlew = coverage_singlew,
-                                    median_abs_corr = median_abs_corr,
-                                    between_cluster = between_cluster,
-                                    between_purity = between_purity,
-                                    weaker_ucos = weaker_ucos,
-                                    merging =  merging,
-                                    tol = tol,
-                                    output_level = output_level)
-
+    message("Starting post-aggregate analyses and results summary.")
+    cb_output <- colocboost_aggregate(cb_obj, 
+                                      coverage = coverage,
+                                      func_intw = func_intw,
+                                      alpha = alpha,
+                                      check_null = check_null,
+                                      check_null_method = check_null_method,
+                                      check_null_max = check_null_max,
+                                      dedup = dedup,
+                                      overlap = overlap,
+                                      n_purity = n_purity,
+                                      min_abs_corr = min_abs_corr,
+                                      coverage_singlew = coverage_singlew,
+                                      median_abs_corr = median_abs_corr,
+                                      between_cluster = between_cluster,
+                                      between_purity = between_purity,
+                                      weaker_ucos = weaker_ucos,
+                                      merging =  merging,
+                                      tol = tol,
+                                      output_level = output_level)
+    
     return(cb_output)
 }
 

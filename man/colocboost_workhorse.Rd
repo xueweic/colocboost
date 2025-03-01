@@ -36,9 +36,9 @@ Workhorse of colocboost
 \details{
 The following functions are included in the gradient boosting iterations:
 
-Step 1: \code{colocboost_check_update_jk} selection scheme to choose traits need to be updated in each iteration.
+Step 1: \code{colocboost_check_update_jk} selection scheme to choose outcomes need to be updated in each iteration.
 
 Step 2: \code{colocboost_update} core function of the proximity smoothed gradient boosting update.
 
-Step 3: check the stop criteria for each trait.
+Step 3: check the stop criteria for each outcome.
 }
