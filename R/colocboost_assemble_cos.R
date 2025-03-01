@@ -1,18 +1,18 @@
-colocboost_post_aggregate_cos <- function(cb_obj,
-                                          coverage = 0.95,
-                                          func_intw = "fun_R",
-                                          alpha = 1.5,
-                                          check_null = 0.1,
-                                          check_null_method = "profile",
-                                          dedup = TRUE,
-                                          overlap = TRUE,
-                                          n_purity = 100,
-                                          min_abs_corr = 0.5,
-                                          coverage_singlew = 0.8,
-                                          median_abs_corr = NULL,
-                                          between_cluster = 0.8,
-                                          between_purity = 0.8,
-                                          tol = 1e-9){
+colocboost_assemble_cos <- function(cb_obj,
+                                    coverage = 0.95,
+                                    func_intw = "fun_R",
+                                    alpha = 1.5,
+                                    check_null = 0.1,
+                                    check_null_method = "profile",
+                                    dedup = TRUE,
+                                    overlap = TRUE,
+                                    n_purity = 100,
+                                    min_abs_corr = 0.5,
+                                    coverage_singlew = 0.8,
+                                    median_abs_corr = NULL,
+                                    between_cluster = 0.8,
+                                    between_purity = 0.8,
+                                    tol = 1e-9){
 
     if (class(cb_obj) != "colocboost"){
         stop("Input must from colocboost function!")}
