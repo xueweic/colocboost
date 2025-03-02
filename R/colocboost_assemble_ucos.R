@@ -2,20 +2,20 @@
 
 
 
-colocboost_posthoc_ucos <- function(cb_obj_single,
-                                    coverage = 0.95,
-                                    check_null = 0.1,
-                                    check_null_method = "profile",
-                                    dedup = TRUE,
-                                    overlap = TRUE,
-                                    squared = FALSE,
-                                    n_purity = 100,
-                                    min_abs_corr = 0.5,
-                                    median_abs_corr = NULL,
-                                    between_cluster = 0.8,
-                                    between_purity = 0.5,
-                                    weaker_ucos = TRUE,
-                                    tol = 1e-9){
+colocboost_assemble_ucos <- function(cb_obj_single,
+                                     coverage = 0.95,
+                                     check_null = 0.1,
+                                     check_null_method = "profile",
+                                     dedup = TRUE,
+                                     overlap = TRUE,
+                                     squared = FALSE,
+                                     n_purity = 100,
+                                     min_abs_corr = 0.5,
+                                     median_abs_corr = NULL,
+                                     between_cluster = 0.8,
+                                     between_purity = 0.5,
+                                     weaker_ucos = TRUE,
+                                     tol = 1e-9){
   
     if (class(cb_obj_single) != "colocboost"){
         stop("Input must from colocboost function!")}
@@ -114,7 +114,7 @@ colocboost_posthoc_ucos <- function(cb_obj_single,
         LogLik_change = abs(diff(cb_model[[1]]$profile_loglike_each))
 
         # Hierachical Clustering iteration based on weights
-        cormat = cor(t(weights))
+        cormat = get_cormat(t(weights))
         hc = hclust(as.dist(1-cormat))
         n_cluster = get_n_cluster(hc, cormat, between_cluster = between_cluster)$n_cluster
         # n_cluster = 6

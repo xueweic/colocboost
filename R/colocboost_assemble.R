@@ -1,11 +1,11 @@
-#' Main function for colocboost post-hoc analysis
+#' Main function for colocboost post aggregating analysis
 #'
 #' @details
 #' The following functions are included in the post-hoc analysis:
 #'
-#' Colocalization signal - `colocboost_posthoc_coloc` - identify the colocalized confidence sets and the corresponding causal configurations.
+#' Colocalization signal - `colocboost_assemble_cos` - identify the colocalized confidence sets and the corresponding causal configurations.
 #'
-#' Un-colocalization signal - `colocboost_posthoc_noncoloc` - identify the causal confidence sets for each outcome only.
+#' Un-colocalization signal - `colocboost_assemble_ucos` - identify the causal confidence sets for each outcome only.
 #'
 #' Add-hoc merging functions including
 #'
@@ -19,47 +19,49 @@
 #' Summary of the colocboost results and get the output of colocboost (TO-DO-LIST)
 #'
 #' @export
-colocboost_posthoc <- function(cb_obj,
-                               coverage = 0.95,
-                               func_intw = "fun_R",
-                               alpha = 1.5,
-                               check_null = 0.1,
-                               check_null_method = "profile",
-                               check_null_max=2e-5,
-                               dedup = TRUE,
-                               overlap = TRUE,
-                               n_purity = 100,
-                               min_abs_corr = 0.5,
-                               coverage_singlew = 0.8,
-                               median_abs_corr = NULL,
-                               between_cluster = 0.8,
-                               between_purity = 0.8,
-                               weaker_ucos = TRUE,
-                               merging = TRUE,
-                               tol = 1e-9,
-                               output_level = 1){
+colocboost_assemble <- function(cb_obj,
+                                coverage = 0.95,
+                                func_intw = "fun_R",
+                                alpha = 1.5,
+                                check_null = 0.1,
+                                check_null_method = "profile",
+                                check_null_max=2e-5,
+                                dedup = TRUE,
+                                overlap = TRUE,
+                                n_purity = 100,
+                                min_abs_corr = 0.5,
+                                coverage_singlew = 0.8,
+                                median_abs_corr = NULL,
+                                between_cluster = 0.8,
+                                between_purity = 0.8,
+                                weaker_ucos = TRUE,
+                                merging = TRUE,
+                                tol = 1e-9,
+                                output_level = 1){
 
     if (class(cb_obj) != "colocboost"){
         stop("Input must from colocboost function!")}
   
     # - data information
     data_info <- get_data_info(cb_obj)
+    model_info <- get_model_info(cb_obj, outcome_names = data_info$outcome_info$outcome_names)
     if (data_info$n_outcomes == 1 & output_level == 1){ output_level = 2 }
     if (cb_obj$cb_model_para$num_updates == 1){
         cb_output <- list("cos_summary" = NULL,
                           "vcp" = NULL,
                           "cos_details" = NULL,
-                          "data_info" = data_info)
+                          "data_info" = data_info,
+                          "model_info" = model_info)
         # - save model and all coloc and single information for diagnostic
         if (output_level != 1){
             tmp <- get_full_output(cb_obj = cb_obj, past_out = NULL, variables = NULL)
             if (output_level == 2){
                 cb_output$ucos_details = tmp$ucos_detials
-                cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "ucos_details")]
+                cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "model_info", "ucos_details")]
             } else {
                 cb_output$ucos_details = tmp$ucos_detials
                 cb_output$diagnostic_details = tmp[-1]
-                cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "ucos_details", "diagnostic_details")]
+                cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "model_info", "ucos_details", "diagnostic_details")]
             }
             if (data_info$n_outcome == 1){
               cb_output <- list("ucos_summary" = NULL, "pip" = NULL,
@@ -75,21 +77,21 @@ colocboost_posthoc <- function(cb_obj,
         }
         cb_obj <- get_max_profile(cb_obj, check_null_max=check_null_max, check_null_method = check_null_method)
         # --------- about colocalized confidence sets ---------------------------------
-        out_cos <- colocboost_posthoc_cos(cb_obj,
-                                          coverage = coverage,
-                                          func_intw = func_intw,
-                                          alpha = alpha,
-                                          check_null = check_null,
-                                          check_null_method = check_null_method,
-                                          dedup = dedup,
-                                          overlap = overlap,
-                                          n_purity = n_purity,
-                                          min_abs_corr = min_abs_corr,
-                                          coverage_singlew = coverage_singlew,
-                                          median_abs_corr = median_abs_corr,
-                                          between_cluster = between_cluster,
-                                          between_purity = between_purity,
-                                          tol = tol)
+        out_cos <- colocboost_assemble_cos(cb_obj,
+                                           coverage = coverage,
+                                           func_intw = func_intw,
+                                           alpha = alpha,
+                                           check_null = check_null,
+                                           check_null_method = check_null_method,
+                                           dedup = dedup,
+                                           overlap = overlap,
+                                           n_purity = n_purity,
+                                           min_abs_corr = min_abs_corr,
+                                           coverage_singlew = coverage_singlew,
+                                           median_abs_corr = median_abs_corr,
+                                           between_cluster = between_cluster,
+                                           between_purity = between_purity,
+                                           tol = tol)
         
         # --------- about non-colocalized confidence sets ---------------------------------
         L <- cb_obj$cb_model_para$L
@@ -124,19 +126,19 @@ colocboost_posthoc <- function(cb_obj,
                     }
                 }
                 class(cb_obj_single) <- "colocboost"
-                out_ucos_each <- colocboost_posthoc_ucos(cb_obj_single,
-                                                         coverage = coverage,
-                                                         check_null = check_null,
-                                                         check_null_method = check_null_method,
-                                                         dedup = dedup,
-                                                         overlap = overlap,
-                                                         n_purity = n_purity,
-                                                         min_abs_corr = min_abs_corr,
-                                                         median_abs_corr = median_abs_corr,
-                                                         between_cluster = between_cluster,
-                                                         between_purity = between_purity,
-                                                         weaker_ucos = weaker_ucos,
-                                                         tol = tol)
+                out_ucos_each <- colocboost_assemble_ucos(cb_obj_single,
+                                                          coverage = coverage,
+                                                          check_null = check_null,
+                                                          check_null_method = check_null_method,
+                                                          dedup = dedup,
+                                                          overlap = overlap,
+                                                          n_purity = n_purity,
+                                                          min_abs_corr = min_abs_corr,
+                                                          median_abs_corr = median_abs_corr,
+                                                          between_cluster = between_cluster,
+                                                          between_purity = between_purity,
+                                                          weaker_ucos = weaker_ucos,
+                                                          tol = tol)
                 aaa <- out_ucos_each$ucos$ucos
                 if (length(aaa) != 0){
                     ucos_outcome <- c(ucos_outcome, rep(i, length(aaa)))
@@ -193,24 +195,25 @@ colocboost_posthoc <- function(cb_obj,
         cos_results <- get_cos_details(cb_obj, coloc_out = past_out$cos$cos, data_info = data_info)
         cb_output <- list("vcp" = cos_results$vcp,
                           "cos_details" = cos_results$cos_results,
-                          "data_info" = data_info)
+                          "data_info" = data_info,
+                          "model_info" = model_info)
         
         ### - extract summary table
         target_idx <- cb_obj$cb_model_para$target_idx
         summary_table <- get_cos_summary(cb_output, target_outcome = data_info$outcome_info$outcome_names[target_idx])
         cb_output <- c(cb_output, list(cos_summary = summary_table))
-        cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info")]
+        cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "model_info")]
 
         # - save model and all coloc and single information for diagnostic
         if (output_level != 1){
           tmp <- get_full_output(cb_obj = cb_obj, past_out = past_out, variables = data_info$variables, cb_output = cb_output)
           if (output_level == 2){
             cb_output <- c(cb_output, list("ucos_details" = tmp$ucos_details))
-            cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "ucos_details")]
+            cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "model_info", "ucos_details")]
           } else {
             cb_output <- c(cb_output, list("ucos_details" = tmp$ucos_details))
             cb_output$diagnostic_details = tmp[-1]
-            cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "ucos_details", "diagnostic_details")]
+            cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "model_info", "ucos_details", "diagnostic_details")]
           }
           # - if fine-boost, the summary table will be the summary of finemapping
           if (data_info$n_outcomes == 1){

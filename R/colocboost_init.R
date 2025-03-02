@@ -382,7 +382,9 @@ colocboost_init_para <- function(cb_data, cb_model,tau=0.01,
                          "real_update_jk" = c(),
                          "outcome_names" = outcome_names,
                          "variables" = cb_data$variable.names,
-                         "target_idx" = target_idx)
+                         "target_idx" = target_idx,
+                         "coveraged" = TRUE,
+                         "num_updates" = 1)
     class(cb_model_para) = "colocboost"
 
     return(cb_model_para)
