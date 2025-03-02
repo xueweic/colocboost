@@ -224,7 +224,14 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                 warning("Error: X matrices do not have the same number of variables. Provide variable names to the colnames of X matrix.")
                 return(NULL)
             }
+        } else {
+            # --- check if there is only one X, default variable names as X_1, ..., X_p
+            X <- lapply(X, function(xx){
+              if (is.null(colnames(xx))){ colnames(xx) <- paste0("X_", 1:ncol(xx)) }
+              return(xx)
+            })
         }
+        
         keep.variable.individual <- lapply(X, colnames)
         if (!is.list(X) & !is.list(Y)){
             warning("Error: Input X and Y must be the list containing genotype matrics and all phenotype vectors!")
