@@ -59,7 +59,7 @@ check_null_post <- function(cb_obj,
             if (length(miss_idx)!=0){
                 xty <- XtY[-miss_idx] / scaling_factor
                 cs_beta <- cs_beta[-miss_idx]
-            } else { xty <- XtY  }
+            } else { xty <- XtY  / scaling_factor  }
             
             yty - 2*sum(cs_beta*xty) + sum( (xtx %*% as.matrix(cs_beta)) * cs_beta )
         }
@@ -174,8 +174,6 @@ check_null_post <- function(cb_obj,
     } 
     cs_change <- as.data.frame(cs_change)
     is_non_null <- which(rowSums( (check_cs_change >= check_null) * max_change ) != 0)
-    # is_non_null <- which(rowSums( (cs_change >= check_null) * (max_change >= check_null_max) ) != 0)
-    # is_non_null <- which(rowSums(cs_change >= check_null) != 0)
     
     ll = list("cs_change" = cs_change,
               "is_non_null" = is_non_null)
