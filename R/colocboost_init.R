@@ -117,7 +117,11 @@ colocboost_init_data <- function(X, Y, dict_YX,
             }
             if (change_x){
                 dict_YX_final[i] == i
-                x_stand <- Rfast::standardise(x_tmp, center = intercept, scale = standardize)
+                if (!intercept&!standardize){
+                  x_stand <- x_tmp
+                } else {
+                  x_stand <- Rfast::standardise(x_tmp, center = intercept, scale = standardize)
+                }
                 x_stand[which(is.na(x_stand))] = 0
                 tmp$X <- x_stand
             }
