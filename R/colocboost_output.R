@@ -75,7 +75,7 @@ get_data_info <- function(cb_obj){
 
 #' @noRd
 #' @keywords cb_post_inference
-get_cos_details <- function(cb_obj, coloc_out, data_info = NULL){
+get_cos_details <- function(cb_obj, coloc_out, data_info = NULL, pv_cutoff = 1e-4){
 
     if (is.null(data_info))
         data_info <- get_data_info(cb_obj)
@@ -559,4 +559,87 @@ get_summary_table_fm <- function(cb_output, outcome_names = NULL, gene_name = NU
   return(summary_table)
   
 }
+
+
+
+cos_pvalue_filter <- function(cos_results, data_info = NULL, pv_cutoff = 1e-4){
+  
+  if (is.null(data_info))
+    data_info <- get_data_info(cb_obj)
+  
+  n_cos <- length(cos_results$cos_results$cos$cos_index)
+  filtered_cos <- list("cos_index" = NULL,
+                       "cos_variables" = NULL)
+  filtered_traits <- list("outcome_index" = NULL,
+                          "outcome_name" = NULL)
+  filtered_cos_vcp <- list()
+  pp_remove <- c()
+  for (i in 1:n_cos){
+    cos_tmp <- cos_results$cos_results$cos$cos_index[[i]]
+    cos_trait <- cos_results$cos_results$cos_outcomes$outcome_index[[i]]
+    minPV <- sapply(cos_trait, function(tmp){
+      z <- data_info$z[[tmp]]
+      z <- z[cos_tmp]
+      pv <- pchisq(z^2, 1, lower.tail = FALSE)
+      min(pv)
+    })
+    pp <- which(minPV < 1e-4)
+    if (length(pp) == 0 | length(pp) == 1) {
+      pp_remove <- c(pp_remove, i)
+      next
+    }
+    filtered_cos$cos_index <- c(filtered_cos$cos_index, 
+                                cos_results$cos_results$cos$cos_index[i])
+    filtered_cos$cos_variables <- c(filtered_cos$cos_variables, 
+                                    cos_results$cos_results$cos$cos_variables[i])
+    filtered_cos_vcp <- c(filtered_cos_vcp, cos_results$cos_results$cos_vcp[i])
+    if (length(pp) == length(cos_trait)){
+      filtered_traits$outcome_index <- c(filtered_traits$outcome_index, 
+                                         cos_results$cos_results$cos_outcomes$outcome_index[i])
+      filtered_traits$outcome_name <- c(filtered_traits$outcome_name, 
+                                        cos_results$cos_results$cos_outcomes$outcome_name[i])
+      
+    } else {
+      filtered_traits$outcome_index <- c(filtered_traits$outcome_index, 
+                                         list(cos_results$cos_results$cos_outcomes$outcome_index[[i]][pp]))
+      filtered_traits$outcome_name <- c(filtered_traits$outcome_name, 
+                                        list(cos_results$cos_results$cos_outcomes$outcome_name[[i]][pp]))
+    }
+  }
+  if (length(filtered_cos$cos_index)==0){
+    cos_results <- list("cos_results" = NULL, "vcp" = NULL)
+  } else {
+    cos_results$cos_results$cos <- filtered_cos
+    names(filtered_traits$outcome_index) <- names(cos_results$cos_results$cos$cos_index)
+    names(filtered_traits$outcome_name) <- names(cos_results$cos_results$cos$cos_index)
+    cos_results$cos_results$cos_outcomes <- filtered_traits
+    cos_results$cos_results$cos_vcp <- filtered_cos_vcp
+    coloc_hits <- coloc_hits_variablenames <- coloc_hits_names <- c()
+    for (i in 1:length(filtered_cos_vcp)){
+      inw <- filtered_cos_vcp[[i]]
+      pp1 <- which(inw == max(inw))
+      coloc_hits <- c(coloc_hits, pp1)
+      coloc_hits_variablenames <- c(coloc_hits_variablenames, data_info$variables[pp1])
+      if (length(pp1)==1){
+        coloc_hits_names <- c(coloc_hits_names, names(filtered_cos_vcp)[i])
+      } else {
+        coloc_hits_names <- c(coloc_hits_names, paste0(names(filtered_cos_vcp)[i], ".", 1:length(pp1)))
+      }
+    }
+    coloc_hits <- data.frame("top_index" = coloc_hits, "top_variables" = coloc_hits_variablenames) 
+    rownames(coloc_hits) <- coloc_hits_names
+    cos_results$cos_results$cos_top_variables <- coloc_hits
+    
+    # - change purity
+    if (length(pp_remove)!=0){
+      cos_results$cos_results$cos_purity$min_abs_cor <- as.matrix(cos_results$cos_results$cos_purity$min_abs_cor)[-pp_remove, -pp_remove, drop=FALSE]
+      cos_results$cos_results$cos_purity$median_abs_cor <- as.matrix(cos_results$cos_results$cos_purity$median_abs_cor)[-pp_remove, -pp_remove, drop=FALSE]
+      cos_results$cos_results$cos_purity$max_abs_cor <- as.matrix(cos_results$cos_results$cos_purity$max_abs_cor)[-pp_remove, -pp_remove, drop=FALSE]
+    }
+    
+  }
+  return(cos_results)
+  
+}
+
 
