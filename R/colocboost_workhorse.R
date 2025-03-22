@@ -32,6 +32,7 @@ colocboost_workhorse <- function(cb_data,
                                  func_compare = "min_max",
                                  coloc_thres = 0.1,
                                  LD_obj = FALSE,
+                                 dynamic_step = TRUE,
                                  target_idx = NULL,
                                  outcome_names = NULL){
 
@@ -126,7 +127,8 @@ colocboost_workhorse <- function(cb_data,
                                           func_prior = func_prior,
                                           lambda = lambda,
                                           lambda_target = lambda_target,
-                                          LD_obj = LD_obj)
+                                          LD_obj = LD_obj,
+                                          dynamic_step = dynamic_step)
             
             # print(paste("m: update", which(cb_model_para$update_temp$update_status != 0), "at", cb_model_para$update_temp$real_update_jk[which(cb_model_para$update_temp$update_status != 0)]))
             

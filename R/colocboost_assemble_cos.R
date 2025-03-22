@@ -180,8 +180,8 @@ colocboost_assemble_cos <- function(cb_obj,
 
             } else {
 
-                av <- lapply(coloc_outcomes, function(i){
-                    get_avWeigth(cb_model, i, update, pos.coloc[pos_temp_coloc_each])
+                av <- lapply(coloc_outcomes, function(ii){
+                    get_avWeigth(cb_model, ii, update, pos.coloc[pos_temp_coloc_each])
                 })
                 weight_coloc <- do.call(cbind, av)
 
