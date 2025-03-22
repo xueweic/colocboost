@@ -197,8 +197,7 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL, npc_cutoff = 0.
                               "cos_npc" = npc,
                               "cos_purity" = csets_purity,
                               "cos_top_variables" = coloc_hits,
-                              "cos_outcomes_delta" = cs_change,
-                              "cos_normalization_evidence" = normalization_evidence,
+                              "cos_outcomes_npc" = normalization_evidence,
                               "cos_weights" = cos_weights)
         
         
@@ -596,7 +595,7 @@ get_summary_table_fm <- function(cb_output, outcome_names = NULL, gene_name = NU
 
 
 
-cos_pvalue_filter <- function(cos_results, data_info = NULL, pv_cutoff = 1e-4){
+cos_pvalue_filter <- function(cos_results, data_info = NULL, pvalue_cutoff = 1e-4){
   
   if (is.null(data_info))
     data_info <- get_data_info(cb_obj)
@@ -617,7 +616,7 @@ cos_pvalue_filter <- function(cos_results, data_info = NULL, pv_cutoff = 1e-4){
       pv <- pchisq(z^2, 1, lower.tail = FALSE)
       min(pv)
     })
-    pp <- which(minPV < pv_cutoff)
+    pp <- which(minPV < pvalue_cutoff)
     if (length(pp) == 0 | length(pp) == 1) {
       pp_remove <- c(pp_remove, i)
       next
@@ -684,7 +683,7 @@ colocboost_get_npc_configs <- function(cb_results, npc_cutoff = 0.7, alpha = 1.5
     return(cb_results)
   }
   if (npc_cutoff == 0){
-    warnings("No changes in the original results for the most likely colocalization with npc_cutoff=0")
+    warnings("All possible colocalization events are reported regardless of their relative evidence compared to uncolocalized events (npc_cutoff = 0).")
     return(cb_results)
   }
   message(paste("Extracting colocalization results with npc_cutoff =", npc_cutoff, ".\n",

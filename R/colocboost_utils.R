@@ -35,25 +35,6 @@ get_cormat <- function(X, intercepte = FALSE){
   return(cr)
 }
 
-get_profile <- function(cs_beta, X = NULL, Y = NULL, N = NULL,
-                        XtX = NULL, YtY = NULL, XtY = NULL, miss_idx, adj_dep = 1){
-  
-  if (!is.null(X)){
-    mean((Y-X%*%as.matrix(cs_beta))^2) *N/(N-1)
-  } else if (!is.null(XtY)){
-    scaling_factor <- if (!is.null(N)) (N - 1) else 1
-    yty <- YtY / scaling_factor
-    xtx <- XtX
-    if (length(miss_idx)!=0){
-      xty <- XtY[-miss_idx] / scaling_factor
-      cs_beta <- cs_beta[-miss_idx]
-    } else { xty <- XtY / scaling_factor  }
-    
-    ( yty - 2*sum(cs_beta*xty) + sum( (xtx %*% as.matrix(cs_beta)) * cs_beta ) ) * adj_dep
-  }
-  
-}
-
 
 check_null_post <- function(cb_obj, 
                             coloc_sets_temp,
@@ -64,6 +45,25 @@ check_null_post <- function(cb_obj,
   
   extract_last <- function(lst) { tail(lst, n = 1)}
   extract_first <- function(lst) { head(lst, n = 1)}
+  
+  get_profile <- function(cs_beta, X = NULL, Y = NULL, N = NULL,
+                          XtX = NULL, YtY = NULL, XtY = NULL, miss_idx, adj_dep = 1){
+    
+    if (!is.null(X)){
+      mean((Y-X%*%as.matrix(cs_beta))^2) *N/(N-1)
+    } else if (!is.null(XtY)){
+      scaling_factor <- if (!is.null(N)) (N - 1) else 1
+      yty <- YtY / scaling_factor
+      xtx <- XtX
+      if (length(miss_idx)!=0){
+        xty <- XtY[-miss_idx] / scaling_factor
+        cs_beta <- cs_beta[-miss_idx]
+      } else { xty <- XtY / scaling_factor  }
+      
+      ( yty - 2*sum(cs_beta*xty) + sum( (xtx %*% as.matrix(cs_beta)) * cs_beta ) ) * adj_dep
+    }
+    
+  }
   
   get_cs_obj <- function(cs_beta, res, tau, func_prior, lambda, adj_dep, LD_obj,
                          X = NULL, Y = NULL, N = NULL,

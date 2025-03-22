@@ -157,7 +157,6 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                        multicorrection_cut = 1,
                        ash_prior = "normal", # only applicable if func_multicorrection = lfsr
                        p.adjust.methods = "fdr",
-                       pv_cutoff = NULL, 
                        npc_cutoff = 0.7,
                        check_null = 0.1, # the cut off value for change conditional objective function
                        check_null_method = "profile",
@@ -569,7 +568,6 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                                      coverage = coverage,
                                      func_intw = func_intw,
                                      alpha = alpha,
-                                     pv_cutoff = pv_cutoff,
                                      npc_cutoff = npc_cutoff,
                                      check_null = check_null,
                                      check_null_method = check_null_method,
