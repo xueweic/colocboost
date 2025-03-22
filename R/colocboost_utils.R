@@ -1,5 +1,3 @@
-
-
 get_integrated_weight <- function(avWeight, func_intw = "fun_R", alpha = 1.5){
     
     if (func_intw == "prod"){
@@ -37,147 +35,160 @@ get_cormat <- function(X, intercepte = FALSE){
   return(cr)
 }
 
+
 check_null_post <- function(cb_obj, 
                             coloc_sets_temp,
                             coloc_outcomes,
                             check_null = 0.1,
                             check_null_method = "profile",
                             weaker_ucos = TRUE){
+  
+  extract_last <- function(lst) { tail(lst, n = 1)}
+  extract_first <- function(lst) { head(lst, n = 1)}
+  
+  get_profile <- function(cs_beta, X = NULL, Y = NULL, N = NULL,
+                          XtX = NULL, YtY = NULL, XtY = NULL, miss_idx, adj_dep = 1){
     
-    extract_last <- function(lst) { tail(lst, n = 1)}
-    extract_first <- function(lst) { head(lst, n = 1)}
-    
-    get_profile <- function(cs_beta, X = NULL, Y = NULL, N = NULL,
-                            XtX = NULL, YtY = NULL, XtY = NULL, miss_idx){
-        
-        if (!is.null(X)){
-            mean((Y-X%*%as.matrix(cs_beta))^2) *N/(N-1)
-        } else if (!is.null(XtY)){
-            scaling_factor <- if (!is.null(N)) (N - 1) else 1
-            yty <- YtY / scaling_factor
-            xtx <- XtX
-            if (length(miss_idx)!=0){
-                xty <- XtY[-miss_idx] / scaling_factor
-                cs_beta <- cs_beta[-miss_idx]
-            } else { xty <- XtY  / scaling_factor  }
-            
-            yty - 2*sum(cs_beta*xty) + sum( (xtx %*% as.matrix(cs_beta)) * cs_beta )
-        }
-        
+    if (!is.null(X)){
+      mean((Y-X%*%as.matrix(cs_beta))^2) *N/(N-1)
+    } else if (!is.null(XtY)){
+      scaling_factor <- if (!is.null(N)) (N - 1) else 1
+      yty <- YtY / scaling_factor
+      xtx <- XtX
+      if (length(miss_idx)!=0){
+        xty <- XtY[-miss_idx] / scaling_factor
+        cs_beta <- cs_beta[-miss_idx]
+      } else { xty <- XtY / scaling_factor  }
+      
+      ( yty - 2*sum(cs_beta*xty) + sum( (xtx %*% as.matrix(cs_beta)) * cs_beta ) ) * adj_dep
     }
     
-    get_cs_obj <- function(cs_beta, res, tau, func_prior, lambda, adj_dep, LD_obj,
-                           X = NULL, Y = NULL, N = NULL,
-                           XtX = NULL, YtY = NULL, XtY = NULL, miss_idx = NULL){
-        
-        correlation <- get_correlation(X = X, res = res, XtY = XtY, N = N, YtY = YtY, 
-                                       XtX = XtX, beta_k = cs_beta, miss_idx = miss_idx)
-        z <- get_z(correlation, n=N, res)
-        abs_cor <- abs(correlation)
-        jk <- which(abs_cor == max(abs_cor))
-        jk <- ifelse(length(jk) == 1, jk, sample(jk,1))
-        P <- length(z)
-        ld_jk <- get_LD_jk(jk, X = X, XtX = XtX, N = N,
-                             remain_idx = setdiff(1:P, miss_idx), P = P)
-        ld_feature <- sqrt(abs(ld_jk))
-        # - calculate delta
-        delta <- boost_KL_delta(z = z, ld_feature = ld_feature, adj_dep=adj_dep,
-                                func_prior = func_prior, lambda = lambda)
-        scaling_factor <- if (!is.null(N)) (N - 1) else 1
-        cov_Xtr <- if(!is.null(X)){
-            t(X)%*%res / scaling_factor
-        } else {
-            res / scaling_factor
-        }
-        obj_ld <- if (LD_obj) ld_feature else rep(1, length(ld_feature))
-        obj_ld[miss_idx] <- 0
-        exp_term <- adj_dep * obj_ld * (abs(cov_Xtr))
-        return(tau * matrixStats::logSumExp(exp_term / tau + log(delta)))
-        
-    }
+  }
+  
+  get_cs_obj <- function(cs_beta, res, tau, func_prior, lambda, adj_dep, LD_obj,
+                         X = NULL, Y = NULL, N = NULL,
+                         XtX = NULL, YtY = NULL, XtY = NULL, miss_idx = NULL){
     
-    update_res <- function(X = NULL, Y = NULL, XtX = NULL, XtY = NULL, N = NULL, cs_beta, miss_idx){
-        if (!is.null(X)){
-            return(Y - X%*%cs_beta)
-        } else if (!is.null(XtX)){
-            scaling.factor <- if (!is.null(N)) N-1 else 1
-            xtx <- XtX / scaling.factor
-            if (length(miss_idx)!=0){
-                xty <- XtY[-miss_idx] / scaling.factor
-                res.tmp <- rep(0, length(XtY))
-                res.tmp[-miss_idx] <- xty - xtx%*%cs_beta[-miss_idx]
-            } else {
-                xty <- XtY / scaling.factor
-                res.tmp <- xty - xtx%*%cs_beta
-            }
-            return(res.tmp)
-        }
+    correlation <- get_correlation(X = X, res = res, XtY = XtY, N = N, YtY = YtY, 
+                                   XtX = XtX, beta_k = cs_beta, miss_idx = miss_idx)
+    z <- get_z(correlation, n=N, res)
+    abs_cor <- abs(correlation)
+    jk <- which(abs_cor == max(abs_cor))
+    jk <- ifelse(length(jk) == 1, jk, sample(jk,1))
+    P <- length(z)
+    ld_jk <- get_LD_jk(jk, X = X, XtX = XtX, N = N,
+                       remain_idx = setdiff(1:P, miss_idx), P = P)
+    ld_feature <- sqrt(abs(ld_jk))
+    # - calculate delta
+    delta <- boost_KL_delta(z = z, ld_feature = ld_feature, adj_dep=adj_dep,
+                            func_prior = func_prior, lambda = lambda)
+    scaling_factor <- if (!is.null(N)) (N - 1) else 1
+    cov_Xtr <- if(!is.null(X)){
+      t(X)%*%res / scaling_factor
+    } else {
+      res / scaling_factor
     }
-    # - add hoc
-    cut <- if(length(cb_obj$cb_data)==1) 0.2 else 1
+    obj_ld <- if (LD_obj) ld_feature else rep(1, length(ld_feature))
+    obj_ld[miss_idx] <- 0
+    exp_term <- adj_dep * obj_ld * (abs(cov_Xtr))
+    return(tau * matrixStats::logSumExp(exp_term / tau + log(delta)))
     
-    # ----- null filtering
-    cb_data <- cb_obj$cb_data
-    cs_change <- check_cs_change <- matrix(0, nrow = length(coloc_sets_temp), ncol = cb_obj$cb_model_para$L)
-    colnames(cs_change) <- colnames(check_cs_change) <- paste0("change_obj_", 1:cb_obj$cb_model_para$L)
-    max_change <- matrix(0, nrow = length(coloc_sets_temp), ncol = cb_obj$cb_model_para$L)
-    for (i in 1:length(coloc_sets_temp)){
-        cs_variants <- as.numeric(unlist(coloc_sets_temp[[i]]))
-        for (j in coloc_outcomes){
-            cs_beta <- cb_obj$cb_model[[j]]$beta
-            cs_beta[cs_variants] <- 0
-            X_dict <- cb_data$dict[j]
-            adj_dep <- cb_data$data[[j]]$dependency
-            if (check_null_method == "profile"){
-                cs_profile <- get_profile(cs_beta, X = cb_data$data[[X_dict]]$X, Y = cb_data$data[[j]]$Y, 
-                                          XtX = cb_data$data[[X_dict]]$XtX, XtY = cb_data$data[[j]]$XtY, 
-                                          YtY = cb_data$data[[j]]$YtY, N = cb_data$data[[j]]$N, 
-                                          miss_idx = cb_data$data[[j]]$variable_miss)
-                last_profile <- extract_last(cb_obj$cb_model[[j]]$profile_loglike_each)
-                change <- abs(cs_profile - last_profile) 
-                # - add hoc
-                if (min(cb_obj$cb_model[[j]]$multi_correction_univariate[cs_variants]) >= cut){ change <- 0 }
-                # ------
-                # - check_null
-                check_cs_change[i,j] <- change  / diff(range(cb_obj$cb_model[[j]]$profile_loglike_each))
-                cs_change[i,j] <- change # / diff(range(cb_obj$cb_model[[j]]$profile_loglike_each))
-                first_profile <- extract_first(cb_obj$cb_model[[j]]$profile_loglike_each)
-                max_change[i,j] <- (first_profile - last_profile) >= cb_obj$cb_model[[j]]$check_null_max
-            } else if (check_null_method == "obj"){
-                res <- update_res(X = cb_data$data[[X_dict]]$X, Y = cb_data$data[[j]]$Y, 
+  }
+  
+  update_res <- function(X = NULL, Y = NULL, XtX = NULL, XtY = NULL, N = NULL, cs_beta, miss_idx){
+    if (!is.null(X)){
+      return(Y - X%*%cs_beta)
+    } else if (!is.null(XtX)){
+      scaling.factor <- if (!is.null(N)) N-1 else 1
+      xtx <- XtX / scaling.factor
+      if (length(miss_idx)!=0){
+        xty <- XtY[-miss_idx] / scaling.factor
+        res.tmp <- rep(0, length(XtY))
+        res.tmp[-miss_idx] <- xty - xtx%*%cs_beta[-miss_idx]
+      } else {
+        xty <- XtY / scaling.factor
+        res.tmp <- xty - xtx%*%cs_beta
+      }
+      return(res.tmp)
+    }
+  }
+  # - add hoc
+  cut <- if(length(cb_obj$cb_data)==1) 0.2 else 1
+  
+  # ----- null filtering
+  cb_data <- cb_obj$cb_data
+  cs_change <- check_cs_change <- matrix(0, nrow = length(coloc_sets_temp), ncol = cb_obj$cb_model_para$L)
+  colnames(cs_change) <- colnames(check_cs_change) <- paste0("change_obj_", 1:cb_obj$cb_model_para$L)
+  max_change <- matrix(0, nrow = length(coloc_sets_temp), ncol = cb_obj$cb_model_para$L)
+  for (i in 1:length(coloc_sets_temp)){
+    cs_variants <- as.numeric(unlist(coloc_sets_temp[[i]]))
+    for (j in coloc_outcomes){
+      cs_beta <- cb_obj$cb_model[[j]]$beta
+      cs_beta[cs_variants] <- 0
+      X_dict <- cb_data$dict[j]
+      adj_dep <- cb_data$data[[j]]$dependency
+      if (check_null_method == "profile"){
+        cs_profile <- get_profile(cs_beta, X = cb_data$data[[X_dict]]$X, Y = cb_data$data[[j]]$Y, 
                                   XtX = cb_data$data[[X_dict]]$XtX, XtY = cb_data$data[[j]]$XtY, 
-                                  N = cb_data$data[[j]]$N, cs_beta,
-                                  miss_idx = cb_data$data[[j]]$variable_miss)
-                cs_obj <- get_cs_obj(cs_beta, res, cb_obj$cb_model_para$tau, cb_obj$cb_model_para$func_prior, 
-                                     cb_obj$cb_model_para$lambda, adj_dep = adj_dep,
-                                     LD_obj = cb_obj$cb_model_para$LD_obj,
-                                     X = cb_data$data[[X_dict]]$X, N = cb_data$data[[j]]$N, 
-                                     XtX = cb_data$data[[X_dict]]$XtX, XtY = cb_data$data[[X_dict]]$XtY, 
-                                     YtY = cb_data$data[[X_dict]]$YtY,
-                                     miss_idx = cb_data$data[[j]]$variable_miss)
-                last_obj <- min(cb_obj$cb_model[[j]]$obj_path)
-                change <- abs(cs_obj - last_obj) 
-                if (length(cb_obj$cb_model[[j]]$obj_path)==1){
-                  total_obj <- 1
-                } else {
-                  total_obj <- diff(range(cb_obj$cb_model[[j]]$obj_path))
-                }
-                check_cs_change[i,j] <- change / total_obj
-                cs_change[i,j] <- change
-                max_change[i,j] <- total_obj >= cb_obj$cb_model[[j]]$check_null_max
-            }
+                                  YtY = cb_data$data[[j]]$YtY, N = cb_data$data[[j]]$N, 
+                                  miss_idx = cb_data$data[[j]]$variable_miss, adj_dep = adj_dep)
+        last_profile <- extract_last(cb_obj$cb_model[[j]]$profile_loglike_each)
+        change <- abs(cs_profile - last_profile) 
+        # - add hoc
+        if (min(cb_obj$cb_model[[j]]$multi_correction_univariate[cs_variants]) >= cut){ change <- 0 }
+        # ------
+        # - check_null
+        check_cs_change[i,j] <- change  / diff(range(cb_obj$cb_model[[j]]$profile_loglike_each))
+        cs_change[i,j] <- change # / diff(range(cb_obj$cb_model[[j]]$profile_loglike_each))
+        first_profile <- extract_first(cb_obj$cb_model[[j]]$profile_loglike_each)
+        max_change[i,j] <- (first_profile - last_profile) >= cb_obj$cb_model[[j]]$check_null_max
+      } else if (check_null_method == "obj"){
+        res <- update_res(X = cb_data$data[[X_dict]]$X, Y = cb_data$data[[j]]$Y, 
+                          XtX = cb_data$data[[X_dict]]$XtX, XtY = cb_data$data[[j]]$XtY, 
+                          N = cb_data$data[[j]]$N, cs_beta,
+                          miss_idx = cb_data$data[[j]]$variable_miss)
+        cs_obj <- get_cs_obj(cs_beta, res, cb_obj$cb_model_para$tau, cb_obj$cb_model_para$func_prior, 
+                             cb_obj$cb_model_para$lambda, adj_dep = adj_dep,
+                             LD_obj = cb_obj$cb_model_para$LD_obj,
+                             X = cb_data$data[[X_dict]]$X, N = cb_data$data[[j]]$N, 
+                             XtX = cb_data$data[[X_dict]]$XtX, XtY = cb_data$data[[X_dict]]$XtY, 
+                             YtY = cb_data$data[[X_dict]]$YtY,
+                             miss_idx = cb_data$data[[j]]$variable_miss)
+        last_obj <- min(cb_obj$cb_model[[j]]$obj_path)
+        change <- abs(cs_obj - last_obj) 
+        if (length(cb_obj$cb_model[[j]]$obj_path)==1){
+          total_obj <- 1
+        } else {
+          total_obj <- diff(range(cb_obj$cb_model[[j]]$obj_path))
         }
+        check_cs_change[i,j] <- change / total_obj
+        cs_change[i,j] <- change
+        max_change[i,j] <- total_obj >= cb_obj$cb_model[[j]]$check_null_max
+      }
     }
-    if (!weaker_ucos){ 
-        check_cs_change <- cs_change 
-        check_null <- cb_obj$cb_model[[j]]$check_null_max
-    } 
-    cs_change <- as.data.frame(cs_change)
-    is_non_null <- which(rowSums( (check_cs_change >= check_null) * max_change ) != 0)
-    
-    ll = list("cs_change" = cs_change,
-              "is_non_null" = is_non_null)
-    return(ll)
+  }
+  if (!weaker_ucos){ 
+    check_cs_change <- cs_change 
+    check_null_tmp <- sapply(1:cb_obj$cb_model_para$L, function(j) cb_obj$cb_model[[j]]$check_null_max)
+  } else { check_null_tmp <- rep(check_null, cb_obj$cb_model_para$L) }
+  # check_tmp <- sapply(1:nrow(check_cs_change), function(ii) {
+  #   check_cs_tmp <- check_cs_change[ii, ] > check_null
+  #   check_max_change <- max_change[ii, ]
+  #   pos <- which(check_max_change!=0)
+  #   min(check_cs_tmp[pos])
+  # })
+  cs_change <- as.data.frame(cs_change * max_change) # changed
+  for (ii in 1:nrow(check_cs_change)){
+    cs_tmp <- check_cs_change[ii,]
+    check_cs_change[ii,] <- (cs_tmp>check_null_tmp)
+  }
+  is_non_null <- which(rowSums( check_cs_change * max_change ) != 0)
+  # is_non_null <- which(rowSums( (cs_change >= check_null) * (max_change >= check_null_max) ) != 0)
+  # is_non_null <- which(rowSums(cs_change >= check_null) != 0)
+  
+  ll = list("cs_change" = cs_change,
+            "is_non_null" = is_non_null)
+  return(ll)
 }
 
 
@@ -328,6 +339,104 @@ get_between_purity = function (pos1, pos2, X=NULL, Xcorr=NULL, N = NULL, miss_id
 }
 
 
+get_cos_evidence <- function(cb_obj, coloc_out, data_info, npc_cutoff = 0.7){
+
+  get_cos_config <- function(w, config_idx, alpha = 1.5, coverage = 0.95){
+    
+    w_outcome <- colnames(w)
+    config_outcome <- paste0("outcome", config_idx)
+    pos <- which(w_outcome %in% config_outcome)
+    w_config <- w[, pos, drop=FALSE]
+    int_w <- get_integrated_weight(w_config, alpha = alpha)
+    unlist(get_in_csets(int_w, coverage = coverage))
+    
+  }
+  
+  get_cos_profile <- function(cs_beta, outcome_idx, X = NULL, Y = NULL, N = NULL,
+                          XtX = NULL, YtY = NULL, XtY = NULL, miss_idx = NULL, adj_dep = 1){
+    
+    if (!is.null(X)){
+      cos_profile <- mean((Y-X%*%as.matrix(cs_beta))^2) *N/(N-1)
+      yty <- var(Y)
+    } else if (!is.null(XtY)){
+      scaling_factor <- if (!is.null(N)) (N - 1) else 1
+      yty <- YtY / scaling_factor
+      xtx <- XtX
+      if (length(miss_idx)!=0){
+        xty <- XtY[-miss_idx] / scaling_factor
+        cs_beta <- cs_beta[-miss_idx]
+      } else { xty <- XtY / scaling_factor  }
+      
+      cos_profile <- ( yty - 2*sum(cs_beta*xty) + sum( (xtx %*% as.matrix(cs_beta)) * cs_beta ) ) * adj_dep
+    }
+    delta <- yty - cos_profile
+    if (delta <= 0){
+      warning(paste("Warning message: potential sumstat & LD mismatch may happens for outcome", outcome_idx,
+                    ". Using logLR  = CoS(profile) - max(profile). Please check our website."))
+    }
+    cos_profile
+  }
+  
+  # - 
+  get_outcome_profile_change <- function(outcome_idx, cos, cb_obj, check_null_max){
+    extract_last <- function(lst) { tail(lst, n = 1)}
+    cb_data <- cb_obj$cb_data
+    cs_beta <- rep(0, cb_obj$cb_model_para$P)
+    cs_beta[cos] <- cb_obj$cb_model[[outcome_idx]]$beta[cos]
+    X_dict <- cb_data$dict[outcome_idx]
+    cos_profile <- get_cos_profile(cs_beta, outcome_idx, 
+                                   X = cb_data$data[[X_dict]]$X, Y = cb_data$data[[outcome_idx]]$Y,
+                                   XtX = cb_data$data[[X_dict]]$XtX, XtY = cb_data$data[[outcome_idx]]$XtY,
+                                   YtY = cb_data$data[[outcome_idx]]$YtY, N = cb_data$data[[outcome_idx]]$N,
+                                   miss_idx = cb_data$data[[outcome_idx]]$variable_miss,
+                                   adj_dep = cb_data$data[[outcome_idx]]$dependency)
+    max_profile <- max(cb_obj$cb_model[[outcome_idx]]$profile_loglike_each)
+    ifelse(max_profile < cos_profile, 0, max_profile - cos_profile)
+  }
+  
+  # - calculate best configuration likelihood explained by minimal configuration
+  get_normalization_evidence <- function(profile_change, null_max, outcomes, outcome_names, npc_cutoff = 0.7) {
+    # Define the exponential likelihood ratio normalization (ELRN)
+    logLR_normalization <- function(ratio) { 1 - exp( - 2*ratio ) }
+    
+    ratio <- profile_change / null_max
+    prob <- logLR_normalization(ratio)
+    df <- data.frame(outcomes_index = outcomes, relative_logLR = ratio, npc_outcome = prob)
+    rownames(df) <- outcome_names[outcomes]
+    sorted_df <- df[order(-df$relative_logLR), ]
+    sorted_df$strong_effect <- sorted_df$relative_logLR >= 1
+    sorted_df$suggestive_effect <- sorted_df$npc_outcome >= npc_cutoff
+    return(sorted_df)
+  }
+  
+  avWeight <- coloc_out$avWeight
+  cs_change <- coloc_out$cs_change
+  check_null_max <- sapply(cb_obj$cb_model, function(cb) cb$check_null_max)
+  outcome_names <- data_info$outcome_info$outcome_names
+  n_cos <- length(avWeight)
+  npc <- c() # normalized probability for / of colocalization
+  normalization_evidence <- list()
+  for (i in 1:n_cos){
+    w <- avWeight[[i]]
+    outcomes <- coloc_out$coloc_outcomes[[i]]
+    # most likely cos
+    cos <- get_cos_config(w, outcomes,alpha = cb_obj$cb_model_para$alpha,coverage = cb_obj$cb_model_para$coverage)
+    profile_change_outcome <- sapply(outcomes, function(outcome_idx){
+      get_outcome_profile_change(outcome_idx, cos, cb_obj, check_null_max)
+    })
+    normalization_evidence[[i]] <- get_normalization_evidence(profile_change = profile_change_outcome, 
+                                                   null_max = check_null_max[outcomes], 
+                                                   outcomes, outcome_names, npc_cutoff = npc_cutoff)
+    
+    # - calcualte CoS colocalization probability (CCP) and CoS uncolocalization probability (UCCP) 
+    npc_outcome <- normalization_evidence[[i]]$npc_outcome 
+    max_idx <- which.max(npc_outcome)
+    npuc <- npc_outcome[max_idx] * prod(1 - npc_outcome[-max_idx])
+    npc[i] <- 1 - npuc
+  }
+  names(normalization_evidence) <- names(npc) <- names(coloc_out$cos)
+  return(list(normalization_evidence=normalization_evidence, npc=npc))
+}
 
 
 

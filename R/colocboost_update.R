@@ -13,7 +13,8 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data,
                               func_prior = "z2z",
                               lambda = 0.5,
                               lambda_target = 1,
-                              LD_obj = FALSE){
+                              LD_obj = FALSE,
+                              dynamic_step = TRUE){
 
     # - clear which outcome need to be updated at which jk
     pos.update <- which(cb_model_para$update_temp$update_status != 0)
@@ -82,10 +83,14 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data,
         ########## BEGIN: MAIN UPDATE ######################
         # - Gradient ascent on beta
         beta_grad <- weights * sign(cb_model[[i]]$correlation)
-        if (tail(cb_model[[i]]$obj_path, n=1) > 0.5){
+        if (dynamic_step){
+          if (tail(cb_model[[i]]$obj_path, n=1) > 0.5){
             step1 = max(0.5 * (1 / ( 1 + decayrate*(length(cb_model[[i]]$obj_path)-1) )), cb_model[[i]]$step)
-        } else {
+          } else {
             step1 = cb_model[[i]]$step
+          }
+        } else {
+          step1 = cb_model[[i]]$step
         }
         cb_model[[i]]$beta <- cb_model[[i]]$beta + step1 * beta_grad
 

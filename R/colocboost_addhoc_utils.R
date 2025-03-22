@@ -61,8 +61,8 @@ merge_cos_ucos <- function(cb_obj, out_cos, out_ucos, coverage = 0.95,
                 min_between <- res[1]
                 max_between <- res[2]
                 ave_between <- res[3]
-                # is.between <- ((min_between>min_abs_corr) & (abs(max_between-1) < tol))
-                is.between <- (min_between>min_abs_corr) * (abs(max_between-1)<tol) * (ave_between>between_purity)
+                is.between <- ((min_between>between_purity) & (abs(max_between-1) < tol))
+                # is.between <- (min_between>min_abs_corr) * (abs(max_between-1)<tol) * (ave_between>between_purity)
                 if (is.between){
                     is_overlap = c(is_overlap, j)
                     # -- add weight
@@ -154,7 +154,8 @@ merge_ucos <- function(cb_obj, past_out,
             ave_between[i.between, j.between] <- ave_between[j.between, i.between] <- res[3]
         }
     }
-    is.between <- (min_between>min_abs_corr) * (abs(max_between-1)<tol) * (ave_between>between_purity)
+    # is.between <- (min_between>min_abs_corr) * (abs(max_between-1)<tol) * (ave_between>between_purity)
+    is.between <- ((min_between>between_purity) & (abs(max_between-1) < tol))
     if (sum(is.between) != 0){
         temp <- sapply(1:nrow(is.between), function(x){
             tt <- c(x, which(is.between[x,] != 0))

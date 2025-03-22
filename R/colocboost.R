@@ -157,12 +157,13 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                        multicorrection_cut = 1,
                        ash_prior = "normal", # only applicable if func_multicorrection = lfsr
                        p.adjust.methods = "fdr",
-                       pv_cutoff = 1e-4, 
+                       npc_cutoff = 0.7,
                        check_null = 0.1, # the cut off value for change conditional objective function
                        check_null_method = "profile",
                        check_null_max = 0.02,
                        residual_correlation = NULL, # sample overlap, it is diagonal if it is NULL
                        LD_obj = FALSE,
+                       dynamic_step = TRUE,
                        weaker_ucos = TRUE,
                        output_level = 1){
 
@@ -557,6 +558,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                                    func_compare = func_compare,
                                    coloc_thres = coloc_thres,
                                    LD_obj = LD_obj,
+                                   dynamic_step = dynamic_step,
                                    target_idx = target_idx,
                                    outcome_names = outcome_names)
 
@@ -566,7 +568,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                                      coverage = coverage,
                                      func_intw = func_intw,
                                      alpha = alpha,
-                                     pv_cutoff = pv_cutoff,
+                                     npc_cutoff = npc_cutoff,
                                      check_null = check_null,
                                      check_null_method = check_null_method,
                                      check_null_max = check_null_max,

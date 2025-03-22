@@ -75,7 +75,7 @@ get_data_info <- function(cb_obj){
 
 #' @noRd
 #' @keywords cb_post_inference
-get_cos_details <- function(cb_obj, coloc_out, data_info = NULL, pv_cutoff = 1e-4){
+get_cos_details <- function(cb_obj, coloc_out, data_info = NULL, npc_cutoff = 0.7){
 
     if (is.null(data_info))
         data_info <- get_data_info(cb_obj)
@@ -85,7 +85,12 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL, pv_cutoff = 1e-
     coloc_sets <- coloc_out$cos
     if (length(coloc_sets)!=0){
 
-        # - colocalized outcomes
+      # - colocalization outcome configurations
+      tmp <- get_cos_evidence(cb_obj, coloc_out, data_info, npc_cutoff = npc_cutoff)
+      normalization_evidence <- tmp$normalization_evidence
+      npc <- tmp$npc
+      
+      # - colocalized outcomes
         analysis_outcome <- cb_obj$cb_model_para$outcome_names
         coloc_outcome_index <- coloc_outcome <- list()
         colocset_names <- c()
@@ -98,6 +103,7 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL, pv_cutoff = 1e-
             }
         }
         names(coloc_outcome) <- names(coloc_outcome_index) <- colocset_names
+        names(npc) <- names(normalization_evidence) <- colocset_names
         coloc_outcomes <- list("outcome_index" = coloc_outcome_index, "outcome_name" = coloc_outcome)
 
         # - colocalized sets for variables
@@ -113,12 +119,12 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL, pv_cutoff = 1e-
         colnames(cs_change) <- analysis_outcome
 
         # - VCP
-        int_weight <- lapply(coloc_out$avWeight, get_integrated_weight, alpha = cb_obj$cb_model_para$alpha)
-        names(int_weight) <- colocset_names
-        int_weight <- lapply(int_weight, function(inw) {
-            pos <- match(data_info$variables, cb_obj$cb_model_para$variables)
-            return(inw[pos])
+        cos_weights <- lapply(coloc_out$avWeight, function(w){
+          pos <- match(data_info$variables, cb_obj$cb_model_para$variables)
+          return(w[pos, , drop = FALSE])
         })
+        int_weight <- lapply(cos_weights, get_integrated_weight, alpha = cb_obj$cb_model_para$alpha)
+        names(int_weight) <- names(cos_weights) <- colocset_names
         vcp <- as.vector(1 - apply(1 - do.call(cbind, int_weight),1,prod))
         names(vcp) <- data_info$variables
         
@@ -144,7 +150,7 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL, pv_cutoff = 1e-
         rownames(coloc_hits) <- coloc_hits_names
 
         # - purity
-        ncos <- length(coloc_sets)
+        ncos <- length(coloc_csets$cos_index)
         if (ncos >= 2){
             empty_matrix <- matrix(NA, ncos, ncos)
             colnames(empty_matrix) <- rownames(empty_matrix) <- colocset_names
@@ -154,8 +160,8 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL, pv_cutoff = 1e-
             })
             for (i in 1:(ncos-1)){
                 for (j in (i+1):ncos){
-                    cset1 <- coloc_sets[[i]]
-                    cset2 <- coloc_sets[[j]]
+                    cset1 <- coloc_csets$cos_index[[i]]
+                    cset2 <- coloc_csets$cos_index[[j]]
                     y.i <- coloc_outcomes$outcome_index[[i]]
                     y.j <- coloc_outcomes$outcome_index[[j]]
                     yy <- unique(y.i, y.j)
@@ -188,9 +194,11 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL, pv_cutoff = 1e-
         coloc_results <- list("cos" = coloc_csets,
                               "cos_outcomes" = coloc_outcomes,
                               "cos_vcp" = int_weight,
+                              "cos_npc" = npc,
                               "cos_purity" = csets_purity,
                               "cos_top_variables" = coloc_hits,
-                              "cos_outcomes_delta" = cs_change)
+                              "cos_outcomes_npc" = normalization_evidence,
+                              "cos_weights" = cos_weights)
         
         
         # - missing variable and warning message
@@ -270,7 +278,8 @@ get_model_info <- function(cb_obj, outcome_names = NULL){
 #'
 #' @noRd
 #' @keywords cb_post_inference
-get_cos_summary <- function(cb_output, outcome_names = NULL, gene_name = NULL, target_outcome = NULL){
+get_cos_summary <- function(cb_output, outcome_names = NULL, gene_name = NULL, 
+                            target_outcome = NULL){
 
     coloc_csets <- cb_output$cos_details$cos$cos_index
     if (length(coloc_csets) != 0){
@@ -284,21 +293,22 @@ get_cos_summary <- function(cb_output, outcome_names = NULL, gene_name = NULL, t
         }
         vcp <- as.numeric(cb_output$vcp)
     
-        summary_table <- matrix(NA, nrow = length(coloc_sets), ncol = 10)
+        summary_table <- matrix(NA, nrow = length(coloc_sets), ncol = 11)
         colnames(summary_table) <- c("target_outcome", "colocalized_outcomes", "cos_id", "purity", 
-                                     "top_variable", "top_variable_vcp", "n_variables", "colocalized_index",
-                                     "colocalized_variables", "colocalized_variables_vcp")
+                                     "top_variable", "top_variable_vcp", "cos_npc", "n_variables", 
+                                     "colocalized_index", "colocalized_variables", "colocalized_variables_vcp")
         summary_table <- as.data.frame(summary_table)
         summary_table[,1] <- FALSE
         summary_table[,2] <- unlist(sapply(coloc_outcome, function(tmp) paste0(tmp, collapse = "; ")))
         summary_table[,3] <- names(coloc_sets)
         summary_table[,4] <- as.numeric(diag(as.matrix(cb_output$cos_details$cos_purity$min_abs_cor)))
         summary_table[,5] <- unlist(sapply(cb_output$cos_details$cos$cos_variables, function(tmp) tmp[1]))    
-        summary_table[,6] <- sapply(coloc_sets, function(tmp) max(vcp[tmp]))                                  
-        summary_table[,7] <- as.numeric(sapply(coloc_sets, length))
-        summary_table[,8] <- unlist(sapply(coloc_sets, function(tmp) paste0(tmp, collapse = "; ")))
-        summary_table[,9] <- unlist(sapply(cb_output$cos_details$cos$cos_variables, function(tmp) paste0(tmp, collapse = "; ")))
-        summary_table[,10] <- unlist(sapply(coloc_sets, function(tmp) paste0(vcp[tmp], collapse = "; ")))
+        summary_table[,6] <- sapply(coloc_sets, function(tmp) max(vcp[tmp]))   
+        summary_table[,7] <- as.numeric(cb_output$cos_details$cos_npc)
+        summary_table[,8] <- as.numeric(sapply(coloc_sets, length))
+        summary_table[,9] <- unlist(sapply(coloc_sets, function(tmp) paste0(tmp, collapse = "; ")))
+        summary_table[,10] <- unlist(sapply(cb_output$cos_details$cos$cos_variables, function(tmp) paste0(tmp, collapse = "; ")))
+        summary_table[,11] <- unlist(sapply(coloc_sets, function(tmp) paste0(vcp[tmp], collapse = "; ")))
         if (!is.null(gene_name)){ summary_table$gene_name <- gene_name }
         
         if (!is.null(target_outcome)){
@@ -325,7 +335,7 @@ get_cos_summary <- function(cb_output, outcome_names = NULL, gene_name = NULL, t
 
 #' @noRd
 #' @keywords cb_post_inference
-get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output = NULL){
+get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output = NULL, weaker_ucos = FALSE){
 
     cb_model <- cb_obj$cb_model
     cb_model_para <- cb_obj$cb_model_para
@@ -367,6 +377,7 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
         out_ucos <- past_out$ucos
         # - single sets
         if (!is.null(out_ucos$ucos_each)){
+        
             out_ucos$ucos_each <- lapply(out_ucos$ucos_each, function(cs){
                 match(cb_model_para$variables[cs], variables)
             })
@@ -402,105 +413,127 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
             change_values <- diag(as.matrix(cs_change[index_change$row, index_change$col]))
             cs_change <- data.frame("ucos_outcome" = change_outcomes, "ucos_delta" = change_values)
             
-            # - ucos_weight
-            specific_w <- lapply(1:ncol(out_ucos$avW_ucos_each), function(ii) out_ucos$avW_ucos_each[,ii,drop=FALSE])
-            names(specific_w) <- specific_cs_names
-            
-            # - hits variables in each csets
-            cs_hits <- sapply(1:length(specific_w), function(jj){ inw=specific_w[[jj]]; sample(which(inw == max(inw)),1) })
-            cs_hits_variablenames <- sapply(cs_hits, function(ch) variables[ch] )
-            specific_cs_hits <- data.frame("top_index" = cs_hits, "top_variables" = cs_hits_variablenames)   # save
-            rownames(specific_cs_hits) <- specific_cs_names
-            
-            # - purity
-            nucos <- length(out_ucos$ucos_each)
-            if (nucos >= 2){
-              empty_matrix <- matrix(NA, nucos, nucos)
-              colnames(empty_matrix) <- rownames(empty_matrix) <- specific_cs_names
-              specific_cs_purity <- lapply(1:3, function(ii){
-                diag(empty_matrix) <- out_ucos$purity_each[,ii]
-                return(empty_matrix)
-              })
-              for (i in 1:(nucos-1)){
-                for (j in (i+1):nucos){
-                  cset1 <- out_ucos$ucos_each[[i]]
-                  cset2 <- out_ucos$ucos_each[[j]]
-                  y.i <- specific_outcomes$outcome_index[[i]]
-                  y.j <- specific_outcomes$outcome_index[[j]]
-                  yy <- unique(y.i, y.j)
-                  res <- list()
-                  flag <- 1
-                  for (ii in yy){
-                    X_dict <- cb_obj$cb_data$dict[ii]
-                    res[[flag]] <- get_between_purity(cset1, cset2, X = cb_obj$cb_data$data[[X_dict]]$X,
-                                                      Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
-                                                      N = cb_obj$cb_data$data[[ii]]$N,
-                                                      miss_idx = cb_obj$cb_data$data[[ii]]$variable_miss,
-                                                      P = cb_obj$cb_model_para$P)
-                    flag <- flag + 1
-                  }
-                  res <- Reduce(pmax, res)
-                  specific_cs_purity <- lapply(1:3, function(ii){
-                    specific_cs_purity[[ii]][i,j] <- specific_cs_purity[[ii]][j,i] <- res[ii]
-                    return(specific_cs_purity[[ii]])
-                  })
-                }
-              }
-              names(specific_cs_purity) <- c("min_abs_cor", "max_abs_cor", "median_abs_cor")
+            # - filter weak ucos
+            check_null_max <- sapply(cb_model, function(cb) cb$check_null_max)
+            remove_weak <- sapply(1:nrow(cs_change), function(ic){
+              outcome_tmp <- cs_change$ucos_outcome[ic]
+              delta_tmp <- cs_change$ucos_delta[ic]
+              pp <- which(cb_obj$cb_model_para$outcome_names == outcome_tmp)
+              check_tmp <- check_null_max[pp]
+              delta_tmp >= check_tmp
+            })
+            keep_ucos <- which(remove_weak)
+            if (length(keep_ucos)==0){
+              specific_results <- NULL
+            } else {
+              specific_outcomes$outcome_index <- specific_outcomes$outcome_index[keep_ucos]
+              specific_outcomes$outcome_name <- specific_outcomes$outcome_name[keep_ucos]
+              specific_css$ucos_index <- specific_css$ucos_index[keep_ucos]
+              specific_css$ucos_variables <- specific_css$ucos_variables[keep_ucos]
+              cs_change <- cs_change[keep_ucos, , drop = FALSE]
+              out_ucos$avW_ucos_each <- out_ucos$avW_ucos_each[, keep_ucos, drop = FALSE]
+              specific_cs_names <- specific_cs_names[keep_ucos]
+              out_ucos$purity_each <- out_ucos$purity_each[keep_ucos, , drop = FALSE]
               
-            } else {
-              specific_cs_purity <- out_ucos$purity_each
-              rownames(specific_cs_purity) <- specific_cs_names
-            }
-            
-            # - cos&ucos purity
-            cos <- cb_output$cos_details$cos$cos_index
-            ucos <- 
-            ncos <- length(cos)
-            if (ncos!=0){
-              empty_matrix <- matrix(NA, ncos, nucos)
-              colnames(empty_matrix) <- specific_cs_names
-              rownames(empty_matrix) <- names(cos)
-              cos_ucos_purity <- lapply(1:3, function(ii) empty_matrix )
-              for (i in 1:ncos){
-                for (j in 1:nucos){
-                  cset1 <- cos[[i]]
-                  cset2 <- specific_cs_variableidx[[j]]
-                  y.i <- cb_output$cos_details$cos_outcomes$outcome_index[[i]]
-                  y.j <- specific_outcomes$outcome_index[[j]]
-                  yy <- unique(y.i, y.j)
-                  res <- list()
-                  flag <- 1
-                  for (ii in yy){
-                    X_dict <- cb_obj$cb_data$dict[ii]
-                    res[[flag]] <- get_between_purity(cset1, cset2, X = cb_obj$cb_data$data[[X_dict]]$X,
-                                                      Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
-                                                      N = cb_obj$cb_data$data[[ii]]$N,
-                                                      miss_idx = cb_obj$cb_data$data[[ii]]$variable_miss,
-                                                      P = cb_obj$cb_model_para$P)
-                    flag <- flag + 1
+              # - ucos_weight
+              specific_w <- lapply(1:ncol(out_ucos$avW_ucos_each), function(ii) out_ucos$avW_ucos_each[,ii,drop=FALSE])
+              names(specific_w) <- specific_cs_names
+              
+              # - hits variables in each csets
+              cs_hits <- sapply(1:length(specific_w), function(jj){ inw=specific_w[[jj]]; sample(which(inw == max(inw)),1) })
+              cs_hits_variablenames <- sapply(cs_hits, function(ch) variables[ch] )
+              specific_cs_hits <- data.frame("top_index" = cs_hits, "top_variables" = cs_hits_variablenames)   # save
+              rownames(specific_cs_hits) <- specific_cs_names
+              
+              # - purity
+              nucos <- length(specific_css$ucos_index)
+              if (nucos >= 2){
+                empty_matrix <- matrix(NA, nucos, nucos)
+                colnames(empty_matrix) <- rownames(empty_matrix) <- specific_cs_names
+                specific_cs_purity <- lapply(1:3, function(ii){
+                  diag(empty_matrix) <- out_ucos$purity_each[,ii]
+                  return(empty_matrix)
+                })
+                for (i in 1:(nucos-1)){
+                  for (j in (i+1):nucos){
+                    cset1 <- specific_css$ucos_index[[i]]
+                    cset2 <- specific_css$ucos_index[[j]]
+                    y.i <- specific_outcomes$outcome_index[[i]]
+                    y.j <- specific_outcomes$outcome_index[[j]]
+                    yy <- unique(y.i, y.j)
+                    res <- list()
+                    flag <- 1
+                    for (ii in yy){
+                      X_dict <- cb_obj$cb_data$dict[ii]
+                      res[[flag]] <- get_between_purity(cset1, cset2, X = cb_obj$cb_data$data[[X_dict]]$X,
+                                                        Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
+                                                        N = cb_obj$cb_data$data[[ii]]$N,
+                                                        miss_idx = cb_obj$cb_data$data[[ii]]$variable_miss,
+                                                        P = cb_obj$cb_model_para$P)
+                      flag <- flag + 1
+                    }
+                    res <- Reduce(pmax, res)
+                    specific_cs_purity <- lapply(1:3, function(ii){
+                      specific_cs_purity[[ii]][i,j] <- specific_cs_purity[[ii]][j,i] <- res[ii]
+                      return(specific_cs_purity[[ii]])
+                    })
                   }
-                  res <- Reduce(pmax, res)
-                  cos_ucos_purity <- lapply(1:3, function(ii){
-                    cos_ucos_purity[[ii]][i,j] <- res[ii]
-                    return(cos_ucos_purity[[ii]])
-                  })
                 }
+                names(specific_cs_purity) <- c("min_abs_cor", "max_abs_cor", "median_abs_cor")
+                
+              } else {
+                specific_cs_purity <- out_ucos$purity_each
+                rownames(specific_cs_purity) <- specific_cs_names
               }
-              names(cos_ucos_purity) <- c("min_abs_cor", "max_abs_cor", "median_abs_cor")
-            } else {
-              cos_ucos_purity <- NULL
+              
+              # - cos&ucos purity
+              cos <- cb_output$cos_details$cos$cos_index
+              ncos <- length(cos)
+              if (ncos!=0){
+                empty_matrix <- matrix(NA, ncos, nucos)
+                colnames(empty_matrix) <- specific_cs_names
+                rownames(empty_matrix) <- names(cos)
+                cos_ucos_purity <- lapply(1:3, function(ii) empty_matrix )
+                for (i in 1:ncos){
+                  for (j in 1:nucos){
+                    cset1 <- cos[[i]]
+                    cset2 <- specific_css$ucos_index[[j]]
+                    y.i <- cb_output$cos_details$cos_outcomes$outcome_index[[i]]
+                    y.j <- specific_outcomes$outcome_index[[j]]
+                    yy <- unique(y.i, y.j)
+                    res <- list()
+                    flag <- 1
+                    for (ii in yy){
+                      X_dict <- cb_obj$cb_data$dict[ii]
+                      res[[flag]] <- get_between_purity(cset1, cset2, X = cb_obj$cb_data$data[[X_dict]]$X,
+                                                        Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
+                                                        N = cb_obj$cb_data$data[[ii]]$N,
+                                                        miss_idx = cb_obj$cb_data$data[[ii]]$variable_miss,
+                                                        P = cb_obj$cb_model_para$P)
+                      flag <- flag + 1
+                    }
+                    res <- Reduce(pmax, res)
+                    cos_ucos_purity <- lapply(1:3, function(ii){
+                      cos_ucos_purity[[ii]][i,j] <- res[ii]
+                      return(cos_ucos_purity[[ii]])
+                    })
+                  }
+                }
+                names(cos_ucos_purity) <- c("min_abs_cor", "max_abs_cor", "median_abs_cor")
+              } else {
+                cos_ucos_purity <- NULL
+              }
+              
+              
+              # - save coloc_results
+              specific_results <- list("ucos" = specific_css,
+                                       "ucos_outcomes" = specific_outcomes,
+                                       "ucos_weight" = specific_w,
+                                       "ucos_top_variables" = specific_cs_hits,
+                                       "ucos_purity" = specific_cs_purity,
+                                       "cos_ucos_purity" = cos_ucos_purity,
+                                       "ucos_outcomes_delta" = cs_change)
             }
-            
-            
-            # - save coloc_results
-            specific_results <- list("ucos" = specific_css,
-                                     "ucos_outcomes" = specific_outcomes,
-                                     "ucos_weight" = specific_w,
-                                     "ucos_top_variables" = specific_cs_hits,
-                                     "ucos_purity" = specific_cs_purity,
-                                     "cos_ucos_purity" = cos_ucos_purity,
-                                     "ucos_outcomes_delta" = cs_change)
             
         } else {
             specific_results <- NULL
@@ -562,7 +595,7 @@ get_summary_table_fm <- function(cb_output, outcome_names = NULL, gene_name = NU
 
 
 
-cos_pvalue_filter <- function(cos_results, data_info = NULL, pv_cutoff = 1e-4){
+cos_pvalue_filter <- function(cos_results, data_info = NULL, pvalue_cutoff = 1e-4){
   
   if (is.null(data_info))
     data_info <- get_data_info(cb_obj)
@@ -583,7 +616,7 @@ cos_pvalue_filter <- function(cos_results, data_info = NULL, pv_cutoff = 1e-4){
       pv <- pchisq(z^2, 1, lower.tail = FALSE)
       min(pv)
     })
-    pp <- which(minPV < 1e-4)
+    pp <- which(minPV < pvalue_cutoff)
     if (length(pp) == 0 | length(pp) == 1) {
       pp_remove <- c(pp_remove, i)
       next
@@ -598,7 +631,6 @@ cos_pvalue_filter <- function(cos_results, data_info = NULL, pv_cutoff = 1e-4){
                                          cos_results$cos_results$cos_outcomes$outcome_index[i])
       filtered_traits$outcome_name <- c(filtered_traits$outcome_name, 
                                         cos_results$cos_results$cos_outcomes$outcome_name[i])
-      
     } else {
       filtered_traits$outcome_index <- c(filtered_traits$outcome_index, 
                                          list(cos_results$cos_results$cos_outcomes$outcome_index[[i]][pp]))
@@ -635,11 +667,188 @@ cos_pvalue_filter <- function(cos_results, data_info = NULL, pv_cutoff = 1e-4){
       cos_results$cos_results$cos_purity$min_abs_cor <- as.matrix(cos_results$cos_results$cos_purity$min_abs_cor)[-pp_remove, -pp_remove, drop=FALSE]
       cos_results$cos_results$cos_purity$median_abs_cor <- as.matrix(cos_results$cos_results$cos_purity$median_abs_cor)[-pp_remove, -pp_remove, drop=FALSE]
       cos_results$cos_results$cos_purity$max_abs_cor <- as.matrix(cos_results$cos_results$cos_purity$max_abs_cor)[-pp_remove, -pp_remove, drop=FALSE]
+      cos_results$cos_results$cos_PPC <- cos_results$cos_results$cos_PPC[-pp_remove]
     }
     
   }
   return(cos_results)
   
 }
+
+
+colocboost_get_npc_configs <- function(cb_results, npc_cutoff = 0.7, alpha = 1.5, coverage = 0.95){
+  
+  if (is.null(cb_results$cos_details)){
+    warnings("No colocalization results in this region!")
+    return(cb_results)
+  }
+  if (npc_cutoff == 0){
+    warnings("All possible colocalization events are reported regardless of their relative evidence compared to uncolocalized events (npc_cutoff = 0).")
+    return(cb_results)
+  }
+  message(paste("Extracting colocalization results with npc_cutoff =", npc_cutoff, ".\n",
+                "For each CoS, keep the outcomes configurations that the npc_outcome >", npc_cutoff, "."))
+  
+  remove_cos <- function(cb_results, remove_idx = NULL){
+    if (length(remove_idx)==0){
+      return(cb_results)
+    }
+    ncos <- length(cos_details$cos_top_variables)
+    if (length(remove_idx) == ncos){
+      cb_results$vcp <- NULL
+      cb_results$cos_details <- NULL
+      cb_results <- c(cb_results, list(vcp = NULL, cos_details = NULL))
+      return(cb_results)
+    }
+    cos_details <- cb_results$cos_details
+    cos_details$cos_top_variables <- cos_details$cos_top_variables[-remove_idx, , drop = FALSE]
+    cos_details$cos$cos_index <- cos_details$cos$cos_index[-remove_idx]
+    cos_details$cos$cos_variables <- cos_details$cos$cos_variables[-remove_idx]
+    cos_details$cos_outcomes$outcome_index <- cos_details$cos_outcomes$outcome_index[-remove_idx]
+    cos_details$cos_outcomes$outcome_name <- cos_details$cos_outcomes$outcome_name[-remove_idx]
+    cos_details$cos_vcp <- cos_details$cos_vcp[-remove_idx]
+    cos_details$cos_weights <- cos_details$cos_weights[-remove_idx]
+    cos_details$cos_npc <- cos_details$cos_npc[-remove_idx]
+    cos_details$cos_purity$min_abs_cor <- as.matrix(cos_details$cos_purity$min_abs_cor)[-remove_idx, -remove_idx, drop=FALSE]
+    cos_details$cos_purity$median_abs_cor <- as.matrix(cos_details$cos_purity$median_abs_cor)[-remove_idx, -remove_idx, drop=FALSE]
+    cos_details$cos_purity$max_abs_cor <- as.matrix(cos_details$cos_purity$max_abs_cor)[-remove_idx, -remove_idx, drop=FALSE]
+    vcp <- as.vector(1 - apply(1 - do.call(cbind, cos_details$cos_vcp),1,prod))
+    names(vcp) <- cb_results$data_info$variables
+    cb_results$vcp <- vcp
+    cb_results$cos_details <- cos_details
+    return(cb_results)
+  }
+  
+  cos_details <- cb_results$cos_details
+
+  coloc_outcome_index <- coloc_outcome <- list()
+  colocset_names <- c()
+  for (i in 1:length(cos_details$cos$cos_index)){
+    cos_npc_config <-  cos_details$cos_normalization_evidence[[i]]
+    npc_outcome <- cos_npc_config$npc_outcome
+    pos_pass <- which(npc_outcome>=npc_cutoff)
+    if (length(pos_pass) == 0){
+       coloc_outcome_index[[i]] <- 0
+       coloc_outcome[[i]] <- 0
+       colocset_names[i] <- paste0("remove", i)
+    } else {
+        coloc_outcome_index[[i]] <- sort(cos_npc_config$outcomes_index[pos_pass])
+        coloc_outcome[[i]] <- rownames(cos_npc_config)[pos_pass]
+        colocset_names[i] <- paste0("cos", i, ":", paste0(paste0("y", coloc_outcome_index[[i]]), collapse = "_"))
+        if (grepl("merged", names(cos_details$cos$cos_index)[i])) {
+          colocset_names[i] <- paste0(colocset_names[i], ":merged")
+        }
+    }
+    
+  }
+  names(coloc_outcome) <- names(coloc_outcome_index) <- colocset_names
+  cos_details$cos_outcomes <- list("outcome_index" = coloc_outcome_index, "outcome_name" = coloc_outcome)
+  
+  # - VCP
+  cos_weights <- lapply(1:length(cos_details$cos_outcomes$outcome_index), function(idx){
+    w <- cos_details$cos_weights[[idx]]
+    config_idx <- cos_details$cos_outcomes$outcome_index[[idx]]
+    if (length(config_idx)==1){
+      if (config_idx == 0){
+        return(matrix(1, nrow=nrow(cos_details$cos_weights[[idx]])))
+      }
+    }
+    w_outcome <- colnames(w)
+    config_outcome <- paste0("outcome", config_idx)
+    pos <- which(w_outcome %in% config_outcome)
+    w[, pos, drop=FALSE]
+  })
+  cos_details$cos_weights <- cos_weights
+  int_weight <- lapply(cos_weights, get_integrated_weight, alpha = alpha)
+  names(int_weight) <- names(cos_weights) <- colocset_names
+  vcp <- as.vector(1 - apply(1 - do.call(cbind, int_weight),1,prod))
+  names(vcp) <- cb_results$data_info$variables
+  cb_results$vcp <- vcp
+  cos_details$cos_vcp = int_weight
+  
+  # - resummary results
+  cos_re_idx <- lapply(int_weight, function(w){ unlist(get_in_csets(w, coverage = coverage))})
+  cos_re_var <- lapply(cos_re_idx, function(idx){ cb_results$data_info$variables[idx] })
+  coloc_csets <- list("cos_index" = cos_re_idx, "cos_variables" = cos_re_var)
+  cos_details$cos <- coloc_csets
+  
+  # - hits variables in each csets
+  coloc_hits <- coloc_hits_variablenames <- coloc_hits_names <- c()
+  for (i in 1:length(int_weight)){
+    inw <- int_weight[[i]]
+    if (length(unique(inw))==1){
+      coloc_hits <- c(coloc_hits, 0)
+      coloc_hits_names <- c(coloc_hits_names, names(int_weight)[i])
+    } else {
+      pp <- which(inw == max(inw))
+      coloc_hits <- c(coloc_hits, pp)
+      coloc_hits_variablenames <- c(coloc_hits_variablenames, cb_results$data_info$variables[pp])
+      if (length(pp)==1){
+        coloc_hits_names <- c(coloc_hits_names, names(int_weight)[i])
+      } else {
+        coloc_hits_names <- c(coloc_hits_names, paste0(names(int_weight)[i], ".", 1:length(pp)))
+      }
+    }
+  }
+  coloc_hits <- data.frame("top_index" = coloc_hits, "top_variables" = coloc_hits_variablenames) 
+  rownames(coloc_hits) <- coloc_hits_names
+  cos_details$cos_top_variables <- coloc_hits
+  cb_results$cos_details <- cos_details
+  
+  
+  # remove CoS does not include outcomes pass npc_cutoff
+  remove <- grep("remove", colocset_names)
+  cb_results <- remove_cos(cb_results, remove_idx = remove)
+  cos_details <- cb_results$cos_details
+  
+  # remove CoS only with one trait
+  n_outcome <- sapply(cos_details$cos_outcomes$outcome_index, length)
+  single <- which(n_outcome == 1)
+  if (length(single)==length(n_outcome)){
+    
+    # - all remaining the single outcome
+    cb_results$cos_details <- cb_results$vcp <- NULL
+    cb_results <- c(cb_results, list(vcp = NULL, cos_details = NULL))
+    
+  } else if (length(single)!=0 & length(single)!=length(n_outcome)){
+    
+    # - partial remaining the single outcome
+    ucos_from_cos <- list("ucos" = list("ucos_index" = cos_details$cos$cos_index[single],
+                                        "ucos_variables" = cos_details$cos$cos_variables[single]),
+                          "ucos_outcomes" = list("outcome_idx" = cos_details$cos_outcomes$outcome_index[single],
+                                                 "outcome_name" = cos_details$cos_outcomes$outcome_name[single]),
+                          "ucos_weight" = cos_details$cos_weights[single],
+                          "ucos_purity" = list("min_abs_cor" = as.matrix(cos_details$cos_purity$min_abs_cor)[single, single, drop=FALSE],
+                                               "median_abs_cor" = as.matrix(cos_details$cos_purity$median_abs_cor)[single, single, drop=FALSE],
+                                               "max_abs_cor" = as.matrix(cos_details$cos_purity$max_abs_cor)[single, single, drop=FALSE]),
+                          "ucos_top_variables" = cos_details$cos_top_variables[single, , drop = FALSE])
+    cb_results$ucos_from_cos <- ucos_from_cos
+    cb_results <- remove_cos(cb_results, remove_idx = single)
+    
+  }
+  
+  # - refine and output
+  target_outcome <- NULL
+  target_idx <- which(cb_results$data_info$outcome_info$is_target)
+  if (length(target_idx)!=0){
+    target_outcome <- cb_results$data_info$outcome_info$outcome_names[target_idx]
+  }
+  cb_results$cos_summary <- get_cos_summary(cb_results, target_outcome = target_outcome)
+  
+  return(cb_results)
+  
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
 

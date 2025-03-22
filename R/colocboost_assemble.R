@@ -26,7 +26,7 @@ colocboost_assemble <- function(cb_obj,
                                 check_null = 0.1,
                                 check_null_method = "profile",
                                 check_null_max=2e-5,
-                                pv_cutoff = 1e-4,
+                                npc_cutoff = 0.7,
                                 dedup = TRUE,
                                 overlap = TRUE,
                                 n_purity = 100,
@@ -193,10 +193,7 @@ colocboost_assemble <- function(cb_obj,
         # - colocalization results
         cb_obj$cb_model_para$alpha <- alpha
         cb_obj$cb_model_para$coverage <- coverage
-        cos_results <- get_cos_details(cb_obj, coloc_out = past_out$cos$cos, data_info = data_info)
-        if (!is.null(pv_cutoff) & !is.null(cos_results$cos_results)){
-            cos_results <- cos_pvalue_filter(cos_results, data_info = data_info, pv_cutoff = pv_cutoff)
-        }
+        cos_results <- get_cos_details(cb_obj, coloc_out = past_out$cos$cos, data_info = data_info, npc_cutoff = npc_cutoff)
         cb_output <- list("vcp" = cos_results$vcp,
                           "cos_details" = cos_results$cos_results,
                           "data_info" = data_info,
@@ -210,7 +207,8 @@ colocboost_assemble <- function(cb_obj,
 
         # - save model and all coloc and single information for diagnostic
         if (output_level != 1){
-          tmp <- get_full_output(cb_obj = cb_obj, past_out = past_out, variables = data_info$variables, cb_output = cb_output)
+          tmp <- get_full_output(cb_obj = cb_obj, past_out = past_out, variables = data_info$variables, 
+                                 cb_output = cb_output)
           if (output_level == 2){
             cb_output <- c(cb_output, list("ucos_details" = tmp$ucos_details))
             cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "model_info", "ucos_details")]
