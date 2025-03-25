@@ -26,7 +26,6 @@ colocboost_assemble <- function(cb_obj,
                                 check_null = 0.1,
                                 check_null_method = "profile",
                                 check_null_max=2e-5,
-                                npc_cutoff = 0.7,
                                 dedup = TRUE,
                                 overlap = TRUE,
                                 n_purity = 100,
@@ -193,7 +192,7 @@ colocboost_assemble <- function(cb_obj,
         # - colocalization results
         cb_obj$cb_model_para$alpha <- alpha
         cb_obj$cb_model_para$coverage <- coverage
-        cos_results <- get_cos_details(cb_obj, coloc_out = past_out$cos$cos, data_info = data_info, npc_cutoff = npc_cutoff)
+        cos_results <- get_cos_details(cb_obj, coloc_out = past_out$cos$cos, data_info = data_info)
         cb_output <- list("vcp" = cos_results$vcp,
                           "cos_details" = cos_results$cos_results,
                           "data_info" = data_info,

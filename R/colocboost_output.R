@@ -75,7 +75,7 @@ get_data_info <- function(cb_obj){
 
 #' @noRd
 #' @keywords cb_post_inference
-get_cos_details <- function(cb_obj, coloc_out, data_info = NULL, npc_cutoff = 0.7){
+get_cos_details <- function(cb_obj, coloc_out, data_info = NULL){
 
     if (is.null(data_info))
         data_info <- get_data_info(cb_obj)
@@ -86,7 +86,7 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL, npc_cutoff = 0.
     if (length(coloc_sets)!=0){
 
       # - colocalization outcome configurations
-      tmp <- get_cos_evidence(cb_obj, coloc_out, data_info, npc_cutoff = npc_cutoff)
+      tmp <- get_cos_evidence(cb_obj, coloc_out, data_info)
       normalization_evidence <- tmp$normalization_evidence
       npc <- tmp$npc
       
