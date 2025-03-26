@@ -2,7 +2,7 @@
 
 This R package implements ColocBoost --- motivated and designed for colocalization analysis ([first formulated here](https://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1004383)) of multiple genetic association studies --- as a multi-task learning approach to variable selection regression with highly correlated predictors and sparse effects, based on frequentist statistical inference. It provides statistical evidence to identify which subsets of predictors have non-zero effects on which subsets of response variables.
 
-Temporary usage before packaging (v0.1.0-alpha)
+Temporary usage before our cran or conda release
 - clone the repo to your local folder, then
 ```bash
 cd colocboost
