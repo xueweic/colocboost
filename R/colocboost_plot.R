@@ -28,6 +28,9 @@ colocboost_plot <- function(cb_output, y = "log10p",
                             ...){
                     
   
+    if (class(cb_output) != "colocboost"){
+        stop("Input of colocboost_plot must be a 'colocboost' object!")}
+  
     # get cb_plot_input data from colocboost results
     cb_plot_input <- get_input_plot(cb_output, plot_cos_idx = plot_cos_idx, 
                                     plot_target_only = plot_target_only,

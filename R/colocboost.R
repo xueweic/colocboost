@@ -582,6 +582,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                                      merging =  merging,
                                      tol = tol,
                                      output_level = output_level)
+    class(cb_output) <- "colocboost"
     
     return(cb_output)
 }

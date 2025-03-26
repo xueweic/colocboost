@@ -40,7 +40,7 @@ colocboost_assemble <- function(cb_obj,
                                 output_level = 1){
 
     if (class(cb_obj) != "colocboost"){
-        stop("Input must from colocboost function!")}
+        stop("Input must from colocboost object!")}
   
     # - data information
     data_info <- get_data_info(cb_obj)
@@ -232,7 +232,7 @@ colocboost_assemble <- function(cb_obj,
           }
         }
     }
-
+    
     return(cb_output)
 
 }
