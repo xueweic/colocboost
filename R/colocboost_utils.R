@@ -339,7 +339,7 @@ get_between_purity = function (pos1, pos2, X=NULL, Xcorr=NULL, N = NULL, miss_id
 }
 
 
-get_cos_evidence <- function(cb_obj, coloc_out, data_info, npc_cutoff = 0.7){
+get_cos_evidence <- function(cb_obj, coloc_out, data_info){
 
   get_cos_config <- function(w, config_idx, alpha = 1.5, coverage = 0.95){
     
@@ -395,7 +395,7 @@ get_cos_evidence <- function(cb_obj, coloc_out, data_info, npc_cutoff = 0.7){
   }
   
   # - calculate best configuration likelihood explained by minimal configuration
-  get_normalization_evidence <- function(profile_change, null_max, outcomes, outcome_names, npc_cutoff = 0.7) {
+  get_normalization_evidence <- function(profile_change, null_max, outcomes, outcome_names) {
     # Define the exponential likelihood ratio normalization (ELRN)
     logLR_normalization <- function(ratio) { 1 - exp( - 2*ratio ) }
     
@@ -405,8 +405,14 @@ get_cos_evidence <- function(cb_obj, coloc_out, data_info, npc_cutoff = 0.7){
     rownames(df) <- outcome_names[outcomes]
     sorted_df <- df[order(-df$relative_logLR), ]
     sorted_df$strong_effect <- sorted_df$relative_logLR >= 1
-    sorted_df$suggestive_effect <- sorted_df$npc_outcome >= npc_cutoff
     return(sorted_df)
+  }
+  
+  get_npuc <- function(npc_outcome){
+    # npuc_outcome <- sapply(1:length(npc_outcome), function(i) npc_outcome[i]*prod(1-npc_outcome[-i]) )
+    # 1 - prod(1-npuc_outcome)
+    max_idx <- which.max(npc_outcome)
+    npc_outcome[max_idx] * prod(1 - npc_outcome[-max_idx])
   }
   
   avWeight <- coloc_out$avWeight
@@ -426,12 +432,10 @@ get_cos_evidence <- function(cb_obj, coloc_out, data_info, npc_cutoff = 0.7){
     })
     normalization_evidence[[i]] <- get_normalization_evidence(profile_change = profile_change_outcome, 
                                                    null_max = check_null_max[outcomes], 
-                                                   outcomes, outcome_names, npc_cutoff = npc_cutoff)
+                                                   outcomes, outcome_names)
     
     # - calcualte CoS colocalization probability (CCP) and CoS uncolocalization probability (UCCP) 
-    npc_outcome <- normalization_evidence[[i]]$npc_outcome 
-    max_idx <- which.max(npc_outcome)
-    npuc <- npc_outcome[max_idx] * prod(1 - npc_outcome[-max_idx])
+    npuc <- get_npuc(normalization_evidence[[i]]$npc_outcome)
     npc[i] <- 1 - npuc
   }
   names(normalization_evidence) <- names(npc) <- names(coloc_out$cos)
