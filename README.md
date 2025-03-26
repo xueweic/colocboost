@@ -9,5 +9,5 @@ cd colocboost
 R --slave -e "devtools::install()"
 ```
 - To run FineBoost, you need `colocboost(X=X, Y=y)`, where X and y are the same as `susie(X,y)`
-- To run ColocBoost we suggest using [this pipeline wrapper](https://github.com/StatFunGen/pecotmr/blob/main/R/colocboost_pipeline.R) to manage multiple data-sets mixing individual level and summary statistics data.
+- To run ColocBoost we suggest using [this pipeline wrapper](https://github.com/StatFunGen/pecotmr/blob/main/R/colocboost_pipeline.R) to manage multiple data-sets mixing individual level and summary statistics data. The `pecotmr` package can be installed either from source or from our conda package at https://anaconda.org/dnachun/r-pecotmr
 
