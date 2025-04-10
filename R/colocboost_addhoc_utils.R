@@ -108,7 +108,7 @@ merge_cos_ucos <- function(cb_obj, out_cos, out_ucos, coverage = 0.95,
 
 }
 
-
+#' @importFrom stats na.omit
 merge_ucos <- function(cb_obj, past_out,
                        min_abs_corr = 0.5,
                        median_abs_corr = NULL,

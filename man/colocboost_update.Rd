@@ -13,7 +13,8 @@ colocboost_update(
   func_prior = "z2z",
   lambda = 0.5,
   lambda_target = 1,
-  LD_obj = FALSE
+  LD_obj = FALSE,
+  dynamic_step = TRUE
 )
 }
 \value{

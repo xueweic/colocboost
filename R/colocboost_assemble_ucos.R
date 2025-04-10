@@ -1,7 +1,4 @@
-
-
-
-
+#' @importFrom stats as.dist cutree hclust
 colocboost_assemble_ucos <- function(cb_obj_single,
                                      coverage = 0.95,
                                      check_null = 0.1,

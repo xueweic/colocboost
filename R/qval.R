@@ -162,6 +162,8 @@ qvalue <- function(p, fdr.level = NULL, pfdr = FALSE, lfdr.out = TRUE, pi0 = NUL
 #' against the tuning parameter \eqn{\lambda}{lambda}. Optional.
 #' @param \dots Arguments passed from \code{\link{qvalue}} function.
 #'
+#' @importFrom stats predict quantile smooth.spline
+#'
 #' @details
 #' If no options are selected, then the method used to estimate \eqn{\pi_0}{pi_0} is
 #' the smoother method described in Storey and Tibshirani (2003). The
@@ -295,6 +297,8 @@ pi0est <- function(p, lambda = seq(0.05,0.95,0.05), pi0.method = c("smoother", "
 #'
 #' @description
 #' Estimate the local FDR values from p-values.
+#'
+#' @importFrom stats density dnorm predict qnorm smooth.spline
 #'
 #' @param p A vector of p-values (only necessary input).
 #' @param pi0 Estimated proportion of true null p-values. If NULL, then \code{\link{pi0est}} is called.

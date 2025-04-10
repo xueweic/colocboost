@@ -57,6 +57,7 @@ colocboost(
   check_null_max = 0.02,
   residual_correlation = NULL,
   LD_obj = FALSE,
+  dynamic_step = TRUE,
   weaker_ucos = TRUE,
   output_level = 1
 )

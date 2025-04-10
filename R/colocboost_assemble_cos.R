@@ -1,3 +1,4 @@
+#' @importFrom stats as.dist cutree hclust
 colocboost_assemble_cos <- function(cb_obj,
                                     coverage = 0.95,
                                     func_intw = "fun_R",
