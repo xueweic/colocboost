@@ -15,7 +15,7 @@ colocboost_assemble_cos <- function(cb_obj,
                                     between_purity = 0.8,
                                     tol = 1e-9){
 
-    if (class(cb_obj) != "colocboost"){
+    if (!inherits(cb_obj, "colocboost")){
         stop("Input must from colocboost function!")}
 
     cb_model <- cb_obj$cb_model

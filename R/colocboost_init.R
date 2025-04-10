@@ -520,7 +520,7 @@ get_lfdr <- function(z, miss_idx = NULL){
             result <- try({
                 lfdr_nomissing <- qvalue(pchisq(drop(z^2), 1, lower.tail = FALSE), lambda = seq(0.05, lambda_max, 0.05))$lfdr
             }, silent = TRUE)
-            if(class(result) == "try-error") {
+            if(inherits(result, "try-error")) {
                 lambda_max <- lambda_max - 0.05 # Decrement lambda_max if error occurs
             } else {try_run = 0}
         }
@@ -533,7 +533,7 @@ get_lfdr <- function(z, miss_idx = NULL){
             result <- try({
                 lfdr <- qvalue(pchisq(drop(z^2), 1, lower.tail = FALSE), lambda = seq(0.05, lambda_max, 0.05))$lfdr
             }, silent = TRUE)
-            if(class(result) == "try-error") {
+            if(inherits(result, "try-error")) {
                 lambda_max <- lambda_max - 0.05 # Decrement lambda_max if error occurs
             } else {try_run = 0}
         }

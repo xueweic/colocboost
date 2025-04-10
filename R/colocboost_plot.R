@@ -29,7 +29,7 @@ colocboost_plot <- function(cb_output, y = "log10p",
                             ...){
                     
   
-    if (class(cb_output) != "colocboost"){
+    if (!inherits(cb_output, "colocboost")){
         stop("Input of colocboost_plot must be a 'colocboost' object!")}
   
     # get cb_plot_input data from colocboost results

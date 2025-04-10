@@ -14,7 +14,7 @@ colocboost_assemble_ucos <- function(cb_obj_single,
                                      weaker_ucos = TRUE,
                                      tol = 1e-9){
   
-    if (class(cb_obj_single) != "colocboost"){
+    if (!inherits(cb_obj_single, "colocboost")){
         stop("Input must from colocboost function!")}
 
     cb_data <- cb_obj_single$cb_data
