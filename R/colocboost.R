@@ -79,7 +79,7 @@
 #' @param merging When \code{merging = TRUE}, the sets for only one outcome will be merged if passed the \code{between_purity}.
 #' @param coverage_singlew A number between 0 and 1 specifying the weight in each SEC (default is 0.8).
 #' @param func_intw The integrated weight method. The default is "fun_R", indicating the same log-scale for different colocalized outcomes.
-#' @param alpha The strenght to integrate weight from differnt outcomes, default is 1.5
+#' @param weight_fudge_factor The strenght to integrate weight from differnt outcomes, default is 1.5
 #' @param ash_prior The prior distribution for calculating lfsr when \code{func_multicorrection = "lfsr"}.
 #' @param p.adjust.methods The adjusted pvalue method in stats:p.adj  when \code{func_multicorrection = "fdr"}
 #' @param check_null The cut off value for change conditional objective function. Default is 0.1.
@@ -145,7 +145,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                        lambda = 0.5, # the ratio for z^2 and z in weight penalty
                        lambda_target = 1,
                        func_intw = "fun_R", # integrated weight method
-                       alpha = 1.5, # integrated weight smooth ratio
+                       weight_fudge_factor = 1.5, # integrated weight smooth ratio
                        func_prior = "LD_z2z", # penalty for weights
                        func_multicorrection = "lfdr",
                        # --- add-hoc
@@ -566,7 +566,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
     cb_output <- colocboost_assemble(cb_obj, 
                                      coverage = coverage,
                                      func_intw = func_intw,
-                                     alpha = alpha,
+                                     weight_fudge_factor = weight_fudge_factor,
                                      check_null = check_null,
                                      check_null_method = check_null_method,
                                      check_null_max = check_null_max,

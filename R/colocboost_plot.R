@@ -109,7 +109,7 @@ colocboost_plot <- function(cb_output, y = "log10p",
       }
       for (iy in outcome_idx){
         args$y = y[[iy]]
-        args$ylim = c(0, cb_plot_init$ymax[iy])
+        args$ylim = c(cb_plot_init$ymin[iy], cb_plot_init$ymax[iy])
         if (!is.null(cb_plot_init$xtext)){
           args$xaxt = "n"
           do.call(plot, args)
@@ -222,6 +222,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
   # extract z-scores
   variables <- cb_output$data_info$variables
   Z <- cb_output$data_info$z
+  coef <- cb_output$data_info$coef
     
   # if finemapping
   if (cb_output$data_info$n_outcomes==1){
@@ -304,6 +305,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
                      "x" = x,
                      "Zscores" = Z,
                      "vcp" = vcp,
+                     "coef" = coef,
                      "cos" = coloc_cos,
                      "cos_hits" = coloc_hits,
                      "coloc_index" = coloc_index)
@@ -423,6 +425,9 @@ plot_initial <- function(cb_plot_input, y = "log10p",
     ylab = "VCP"
     if (length(cb_plot_input$outcomes)==1){ ylab = "PIP" }
     args$ylim <- c(0,1)
+  } else if (y == "coef"){
+    plot_data <- cb_plot_input$coef
+    ylab = "Coefficients"
   } else {
     stop("Invalid y value! Choose from 'z' or 'z_original'")
   }
@@ -447,7 +452,13 @@ plot_initial <- function(cb_plot_input, y = "log10p",
   args$axis_face <- axis_style[2]
   
   # - set ylim for each subfigure
-  if (exists("ylim", args)) ymax = rep(args$ylim[2],length(args$y)) else ymax = NULL
+  if (exists("ylim", args)){
+    ymax = rep(args$ylim[2],length(args$y))
+    ymin = rep(args$ylim[1],length(args$y))
+  } else {
+    ymax = NULL
+    ymin = rep(0,length(args$y))
+  }
   if (ylim_each & is.null(ymax)) {
     ymax <- sapply(plot_data, function(p){
       valid_values <- p[is.finite(p)]
@@ -458,8 +469,12 @@ plot_initial <- function(cb_plot_input, y = "log10p",
       }
       return(ymax)
     })
+    if (y == "coef"){
+      ymin <- sapply(plot_data, function(p) min(p)*1.05)
+    }
   } 
   args$ymax = ymax
+  args$ymin = ymin
   
   # - set legend text position and format
   args$outcome_legend_pos <- outcome_legend_pos

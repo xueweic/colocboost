@@ -1,11 +1,11 @@
-get_integrated_weight <- function(avWeight, func_intw = "fun_R", alpha = 1.5){
+get_integrated_weight <- function(avWeight, func_intw = "fun_R", weight_fudge_factor = 1.5){
     
     if (func_intw == "prod"){
         av <- apply(avWeight, 1, function(w) prod(w))
     } else if (func_intw == "sqrt_prod"){
         av <- apply(avWeight, 1, function(w) prod(sqrt(w)))
     } else if (func_intw == "fun_R"){
-        av <- apply(avWeight, 1, function(w) prod(w^(alpha/ncol(avWeight))))
+        av <- apply(avWeight, 1, function(w) prod(w^(weight_fudge_factor/ncol(avWeight))))
     } else {
         stop("Please check func_intw! ")
     }
@@ -341,13 +341,13 @@ get_between_purity = function (pos1, pos2, X=NULL, Xcorr=NULL, N = NULL, miss_id
 
 get_cos_evidence <- function(cb_obj, coloc_out, data_info){
 
-  get_cos_config <- function(w, config_idx, alpha = 1.5, coverage = 0.95){
+  get_cos_config <- function(w, config_idx, weight_fudge_factor = 1.5, coverage = 0.95){
     
     w_outcome <- colnames(w)
     config_outcome <- paste0("outcome", config_idx)
     pos <- which(w_outcome %in% config_outcome)
     w_config <- w[, pos, drop=FALSE]
-    int_w <- get_integrated_weight(w_config, alpha = alpha)
+    int_w <- get_integrated_weight(w_config, weight_fudge_factor = weight_fudge_factor)
     unlist(get_in_csets(int_w, coverage = coverage))
     
   }
@@ -426,7 +426,7 @@ get_cos_evidence <- function(cb_obj, coloc_out, data_info){
     w <- avWeight[[i]]
     outcomes <- coloc_out$coloc_outcomes[[i]]
     # most likely cos
-    cos <- get_cos_config(w, outcomes,alpha = cb_obj$cb_model_para$alpha,coverage = cb_obj$cb_model_para$coverage)
+    cos <- get_cos_config(w, outcomes,weight_fudge_factor = cb_obj$cb_model_para$weight_fudge_factor,coverage = cb_obj$cb_model_para$coverage)
     profile_change_outcome <- sapply(outcomes, function(outcome_idx){
       get_outcome_profile_change(outcome_idx, cos, cb_obj, check_null_max)
     })

@@ -123,7 +123,7 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL){
           pos <- match(data_info$variables, cb_obj$cb_model_para$variables)
           return(w[pos, , drop = FALSE])
         })
-        int_weight <- lapply(cos_weights, get_integrated_weight, alpha = cb_obj$cb_model_para$alpha)
+        int_weight <- lapply(cos_weights, get_integrated_weight, weight_fudge_factor = cb_obj$cb_model_para$weight_fudge_factor)
         names(int_weight) <- names(cos_weights) <- colocset_names
         vcp <- as.vector(1 - apply(1 - do.call(cbind, int_weight),1,prod))
         names(vcp) <- data_info$variables
@@ -279,7 +279,7 @@ get_model_info <- function(cb_obj, outcome_names = NULL){
 #' @noRd
 #' @keywords cb_post_inference
 get_cos_summary <- function(cb_output, outcome_names = NULL, gene_name = NULL, 
-                            target_outcome = NULL){
+                            target_outcome = NULL, min_npc_outcome = FALSE){
 
     coloc_csets <- cb_output$cos_details$cos$cos_index
     if (length(coloc_csets) != 0){
@@ -304,12 +304,13 @@ get_cos_summary <- function(cb_output, outcome_names = NULL, gene_name = NULL,
         summary_table[,4] <- as.numeric(diag(as.matrix(cb_output$cos_details$cos_purity$min_abs_cor)))
         summary_table[,5] <- unlist(sapply(cb_output$cos_details$cos$cos_variables, function(tmp) tmp[1]))    
         summary_table[,6] <- sapply(coloc_sets, function(tmp) max(vcp[tmp]))   
-        summary_table[,7] <- as.numeric(cb_output$cos_details$cos_npc)
+        summary_table[,7] <- round(as.numeric(cb_output$cos_details$cos_npc), 4)
         summary_table[,8] <- as.numeric(sapply(coloc_sets, length))
         summary_table[,9] <- unlist(sapply(coloc_sets, function(tmp) paste0(tmp, collapse = "; ")))
         summary_table[,10] <- unlist(sapply(cb_output$cos_details$cos$cos_variables, function(tmp) paste0(tmp, collapse = "; ")))
         summary_table[,11] <- unlist(sapply(coloc_sets, function(tmp) paste0(vcp[tmp], collapse = "; ")))
         if (!is.null(gene_name)){ summary_table$gene_name <- gene_name }
+        if (min_npc_outcome){ summary_table$min_npc_outcome <- round(as.numeric(cb_output$cos_details$cos_min_npc_outcome),4) }
         
         if (!is.null(target_outcome)){
             tmp <- sapply(target_outcome, function(tmp) grep(paste0(tmp, "\\b"), analysis_outcome))
@@ -675,8 +676,29 @@ cos_pvalue_filter <- function(cos_results, data_info = NULL, pvalue_cutoff = 1e-
   
 }
 
+exchange_results <- function(cb_results){
+  logLR_normalization <- function(ratio) { 1 - exp( - 2*ratio ) }
+  get_npuc <- function(npc_outcome, type = "old"){
+    if (type == "new"){
+      npuc_outcome <- sapply(1:length(npc_outcome), function(i) npc_outcome[i]*prod(1-npc_outcome[-i]) )
+      1 - prod(1-npuc_outcome)
+    } else {
+      max_idx <- which.max(npc_outcome)
+      npc_outcome[max_idx] * prod(1 - npc_outcome[-max_idx])
+    }
+  }
+  cos_npc_outcome <- lapply(result$cos_details$cos_blem_config, function(cp){
+    ratio = cp$relative_change_outcome
+    cp$npc_outcome <- logLR_normalization(ratio)
+    return(cp)
+  })
+  cb_results$cos_details$cos_outcomes_npc <- cos_npc_outcome
+  cb_results$cos_details$cos_npc <- 1-sapply(cos_npc_outcome, function(cp) get_npuc(cp$npc_outcome))
+  return(cb_results)
+}
 
-colocboost_get_npc_configs <- function(cb_results, npc_cutoff = 0.7, alpha = 1.5, coverage = 0.95){
+
+colocboost_get_npc_configs <- function(cb_results, npc_cutoff = 0.7, weight_fudge_factor = 1.5, coverage = 0.95){
   
   if (is.null(cb_results$cos_details)){
     warnings("No colocalization results in this region!")
@@ -709,6 +731,7 @@ colocboost_get_npc_configs <- function(cb_results, npc_cutoff = 0.7, alpha = 1.5
     cos_details$cos_vcp <- cos_details$cos_vcp[-remove_idx]
     cos_details$cos_weights <- cos_details$cos_weights[-remove_idx]
     cos_details$cos_npc <- cos_details$cos_npc[-remove_idx]
+    cos_details$cos_min_npc_outcome <- cos_details$cos_min_npc_outcome[-remove_idx]
     cos_details$cos_purity$min_abs_cor <- as.matrix(cos_details$cos_purity$min_abs_cor)[-remove_idx, -remove_idx, drop=FALSE]
     cos_details$cos_purity$median_abs_cor <- as.matrix(cos_details$cos_purity$median_abs_cor)[-remove_idx, -remove_idx, drop=FALSE]
     cos_details$cos_purity$max_abs_cor <- as.matrix(cos_details$cos_purity$max_abs_cor)[-remove_idx, -remove_idx, drop=FALSE]
@@ -722,16 +745,18 @@ colocboost_get_npc_configs <- function(cb_results, npc_cutoff = 0.7, alpha = 1.5
   cos_details <- cb_results$cos_details
 
   coloc_outcome_index <- coloc_outcome <- list()
-  colocset_names <- c()
+  colocset_names <- cos_min_npc_outcome <- c()
   for (i in 1:length(cos_details$cos$cos_index)){
-    cos_npc_config <-  cos_details$cos_normalization_evidence[[i]]
+    cos_npc_config <-  cos_details$cos_outcomes_npc[[i]]
     npc_outcome <- cos_npc_config$npc_outcome
     pos_pass <- which(npc_outcome>=npc_cutoff)
-    if (length(pos_pass) == 0){
+    if (length(pos_pass) == 0 ){
        coloc_outcome_index[[i]] <- 0
        coloc_outcome[[i]] <- 0
+       cos_min_npc_outcome[i] <- 0
        colocset_names[i] <- paste0("remove", i)
     } else {
+        cos_min_npc_outcome[i] <- min(npc_outcome[pos_pass])
         coloc_outcome_index[[i]] <- sort(cos_npc_config$outcomes_index[pos_pass])
         coloc_outcome[[i]] <- rownames(cos_npc_config)[pos_pass]
         colocset_names[i] <- paste0("cos", i, ":", paste0(paste0("y", coloc_outcome_index[[i]]), collapse = "_"))
@@ -741,8 +766,9 @@ colocboost_get_npc_configs <- function(cb_results, npc_cutoff = 0.7, alpha = 1.5
     }
     
   }
-  names(coloc_outcome) <- names(coloc_outcome_index) <- colocset_names
+  names(coloc_outcome) <- names(coloc_outcome_index) <- names(cos_min_npc_outcome) <- colocset_names
   cos_details$cos_outcomes <- list("outcome_index" = coloc_outcome_index, "outcome_name" = coloc_outcome)
+  cos_details$cos_min_npc_outcome <- cos_min_npc_outcome
   
   # - VCP
   cos_weights <- lapply(1:length(cos_details$cos_outcomes$outcome_index), function(idx){
@@ -759,7 +785,7 @@ colocboost_get_npc_configs <- function(cb_results, npc_cutoff = 0.7, alpha = 1.5
     w[, pos, drop=FALSE]
   })
   cos_details$cos_weights <- cos_weights
-  int_weight <- lapply(cos_weights, get_integrated_weight, alpha = alpha)
+  int_weight <- lapply(cos_weights, get_integrated_weight, weight_fudge_factor = weight_fudge_factor)
   names(int_weight) <- names(cos_weights) <- colocset_names
   vcp <- as.vector(1 - apply(1 - do.call(cbind, int_weight),1,prod))
   names(vcp) <- cb_results$data_info$variables
@@ -778,6 +804,7 @@ colocboost_get_npc_configs <- function(cb_results, npc_cutoff = 0.7, alpha = 1.5
     inw <- int_weight[[i]]
     if (length(unique(inw))==1){
       coloc_hits <- c(coloc_hits, 0)
+      coloc_hits_variablenames <- c(coloc_hits_variablenames, 0)
       coloc_hits_names <- c(coloc_hits_names, names(int_weight)[i])
     } else {
       pp <- which(inw == max(inw))
@@ -833,7 +860,7 @@ colocboost_get_npc_configs <- function(cb_results, npc_cutoff = 0.7, alpha = 1.5
   if (length(target_idx)!=0){
     target_outcome <- cb_results$data_info$outcome_info$outcome_names[target_idx]
   }
-  cb_results$cos_summary <- get_cos_summary(cb_results, target_outcome = target_outcome)
+  cb_results$cos_summary <- get_cos_summary(cb_results, target_outcome = target_outcome, min_npc_outcome = TRUE)
   
   return(cb_results)
   

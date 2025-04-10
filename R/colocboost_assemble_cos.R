@@ -1,7 +1,7 @@
 colocboost_assemble_cos <- function(cb_obj,
                                     coverage = 0.95,
                                     func_intw = "fun_R",
-                                    alpha = 1.5,
+                                    weight_fudge_factor = 1.5,
                                     check_null = 0.1,
                                     check_null_method = "profile",
                                     dedup = TRUE,
@@ -53,7 +53,7 @@ colocboost_assemble_cos <- function(cb_obj,
           pos_purity <- which(check_purity)
           avWeight <- avWeight[,pos_purity,drop=FALSE]
           coloc_outcomes <- coloc_outcomes[pos_purity]
-          weights <- get_integrated_weight(avWeight, func_intw = func_intw, alpha = alpha)
+          weights <- get_integrated_weight(avWeight, func_intw = func_intw, weight_fudge_factor = weight_fudge_factor)
           coloc_cos <- get_in_csets(weights, coverage = coverage)
           evidence_strength <- sum(weights[coloc_cos[[1]]])
           
@@ -154,7 +154,7 @@ colocboost_assemble_cos <- function(cb_obj,
                   pos_purity <- which(check_purity)
                   avWeight <- avWeight[,pos_purity,drop=FALSE]
                   coloc_outcomes <- coloc_outcomes[pos_purity]
-                  weights <- get_integrated_weight(avWeight, func_intw = func_intw, alpha = alpha)
+                  weights <- get_integrated_weight(avWeight, func_intw = func_intw, weight_fudge_factor = weight_fudge_factor)
                   coloc_cos <- get_in_csets(weights, coverage = coverage)
                   evidence_strength <- sum(weights[coloc_cos[[1]]])
                   
@@ -240,7 +240,7 @@ colocboost_assemble_cos <- function(cb_obj,
                 for (i.w in 1:length(avWeight_coloc)){
                     w <- avWeight_coloc[[i.w]]
                     if (sum(w) != 0){
-                        weights <- get_integrated_weight(w, func_intw = func_intw, alpha = alpha)
+                        weights <- get_integrated_weight(w, func_intw = func_intw, weight_fudge_factor = weight_fudge_factor)
                         csets <- get_in_csets(weights, coverage = coverage)
                         coloc_cos[[fl]] <- unlist(csets)
                         evidence_strength[[fl]] <- sum(weights[coloc_cos[[fl]]])

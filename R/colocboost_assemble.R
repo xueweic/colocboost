@@ -22,7 +22,7 @@
 colocboost_assemble <- function(cb_obj,
                                 coverage = 0.95,
                                 func_intw = "fun_R",
-                                alpha = 1.5,
+                                weight_fudge_factor = 1.5,
                                 check_null = 0.1,
                                 check_null_method = "profile",
                                 check_null_max=2e-5,
@@ -80,7 +80,7 @@ colocboost_assemble <- function(cb_obj,
         out_cos <- colocboost_assemble_cos(cb_obj,
                                            coverage = coverage,
                                            func_intw = func_intw,
-                                           alpha = alpha,
+                                           weight_fudge_factor = weight_fudge_factor,
                                            check_null = check_null,
                                            check_null_method = check_null_method,
                                            dedup = dedup,
@@ -190,7 +190,7 @@ colocboost_assemble <- function(cb_obj,
 
         ############# - extract colocboost output - ####################
         # - colocalization results
-        cb_obj$cb_model_para$alpha <- alpha
+        cb_obj$cb_model_para$weight_fudge_factor <- weight_fudge_factor
         cb_obj$cb_model_para$coverage <- coverage
         cos_results <- get_cos_details(cb_obj, coloc_out = past_out$cos$cos, data_info = data_info)
         cb_output <- list("vcp" = cos_results$vcp,
