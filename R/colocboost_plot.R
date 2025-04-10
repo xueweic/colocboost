@@ -1,5 +1,6 @@
-
-
+#' @importFrom utils head tail
+#' @importFrom graphics abline axis legend mtext par points text
+#' @importFrom grDevices adjustcolor
 colocboost_plot <- function(cb_output, y = "log10p", 
                             gene_name = NULL,
                             outcome_idx = NULL, 
@@ -28,7 +29,7 @@ colocboost_plot <- function(cb_output, y = "log10p",
                             ...){
                     
   
-    if (class(cb_output) != "colocboost"){
+    if (!inherits(cb_output, "colocboost")){
         stop("Input of colocboost_plot must be a 'colocboost' object!")}
   
     # get cb_plot_input data from colocboost results
@@ -372,7 +373,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
 }
 
 
-
+#' @importFrom stats pnorm
 plot_initial <- function(cb_plot_input, y = "log10p", 
                          points_color = "grey90", cos_color = NULL,
                          ylim_each = TRUE, gene_name = NULL,

@@ -5,6 +5,7 @@
 #' @details
 #' The gradient boosting algorithm for multiple outcomes
 #'
+#' @importFrom utils head tail
 #' @return colocboost object after gradient boosting update
 #' @export
 colocboost_update <- function(cb_model, cb_model_para, cb_data,

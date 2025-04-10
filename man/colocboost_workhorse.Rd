@@ -26,6 +26,7 @@ colocboost_workhorse(
   func_compare = "min_max",
   coloc_thres = 0.1,
   LD_obj = FALSE,
+  dynamic_step = TRUE,
   target_idx = NULL,
   outcome_names = NULL
 )

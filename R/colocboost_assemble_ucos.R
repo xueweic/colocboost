@@ -1,7 +1,4 @@
-
-
-
-
+#' @importFrom stats as.dist cutree hclust
 colocboost_assemble_ucos <- function(cb_obj_single,
                                      coverage = 0.95,
                                      check_null = 0.1,
@@ -17,7 +14,7 @@ colocboost_assemble_ucos <- function(cb_obj_single,
                                      weaker_ucos = TRUE,
                                      tol = 1e-9){
   
-    if (class(cb_obj_single) != "colocboost"){
+    if (!inherits(cb_obj_single, "colocboost")){
         stop("Input must from colocboost function!")}
 
     cb_data <- cb_obj_single$cb_data

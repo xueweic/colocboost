@@ -335,6 +335,7 @@ colocboost_init_model <- function(cb_data,
 
 #' @noRd
 #' @keywords cb_objects
+#' @importFrom utils tail
 colocboost_init_para <- function(cb_data, cb_model,tau=0.01,
                                  func_prior = "z2z",
                                  lambda = 0.5, lambda_target = 1,
@@ -508,7 +509,7 @@ get_lfsr <- function(z, miss_idx = NULL, ash_prior = "normal"){
     return(lfsr)
 }
 
-
+#' @importFrom stats pchisq
 get_lfdr <- function(z, miss_idx = NULL){
     P <- length(z)
     lambda_max <- 0.95
@@ -519,7 +520,7 @@ get_lfdr <- function(z, miss_idx = NULL){
             result <- try({
                 lfdr_nomissing <- qvalue(pchisq(drop(z^2), 1, lower.tail = FALSE), lambda = seq(0.05, lambda_max, 0.05))$lfdr
             }, silent = TRUE)
-            if(class(result) == "try-error") {
+            if(inherits(result, "try-error")) {
                 lambda_max <- lambda_max - 0.05 # Decrement lambda_max if error occurs
             } else {try_run = 0}
         }
@@ -532,7 +533,7 @@ get_lfdr <- function(z, miss_idx = NULL){
             result <- try({
                 lfdr <- qvalue(pchisq(drop(z^2), 1, lower.tail = FALSE), lambda = seq(0.05, lambda_max, 0.05))$lfdr
             }, silent = TRUE)
-            if(class(result) == "try-error") {
+            if(inherits(result, "try-error")) {
                 lambda_max <- lambda_max - 0.05 # Decrement lambda_max if error occurs
             } else {try_run = 0}
         }
@@ -541,7 +542,7 @@ get_lfdr <- function(z, miss_idx = NULL){
     return(lfdr)
 }
                                                                                                                    
-                                                                                                                   
+#' @importFrom stats pchisq
 get_padj <- function(z, miss_idx = NULL, p.adjust.methods = "fdr"){ # test also p.adjust.methods = "BY"
     P <- length(z)
     if (length(miss_idx)!=0){

@@ -37,7 +37,7 @@ colocboost_workhorse <- function(cb_data,
                                  outcome_names = NULL){
 
 
-    if (class(cb_data) != "colocboost"){
+    if (!inherits(cb_data, "colocboost")){
         stop("Input must from colocboost function!")}
 
     cb_model <- colocboost_init_model(cb_data,
