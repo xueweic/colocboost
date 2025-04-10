@@ -595,7 +595,7 @@ get_summary_table_fm <- function(cb_output, outcome_names = NULL, gene_name = NU
 }
 
 
-
+#' @importFrom stats pchisq
 cos_pvalue_filter <- function(cos_results, data_info = NULL, pvalue_cutoff = 1e-4){
   
   if (is.null(data_info))

@@ -17,8 +17,12 @@ build:
 requirements:
   host:
     - r-base
+    - r-matrixstats
+    - r-rfast
   run:
     - r-base
+    - r-matrixstats
+    - r-rfast
 
 tests:
   - script:

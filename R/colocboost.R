@@ -98,6 +98,7 @@
 #' \item{vcp}{The variable colocalized probability for each variable.}
 #' \item{data_info}{A object with detailed information from input data}
 #'
+#' @importFrom stats na.omit
 #' @export
 #'
 #' @examples

@@ -50,7 +50,7 @@ colocboost_check_update_jk <- function(cb_model, cb_model_para, cb_data,
 
 
 
-
+#' @importFrom stats median
 boost_check_update_jk_notarget <- function(cb_model, cb_model_para, cb_data,
                                             prioritize_jkstar = TRUE,
                                             jk_equiv_cor = 0.8, ##### more than 2 traits
@@ -534,7 +534,7 @@ boost_check_update_jk_target <- function(cb_model, cb_model_para, cb_data,
     return(cb_model_para)
 }
 
-
+#' @importFrom stats cor
 get_LD_jk1_jk2 <- function(jk1, jk2,
                            X = NULL, XtX = NULL, N = NULL,
                            remain_jk = NULL){

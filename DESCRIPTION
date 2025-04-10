@@ -1,7 +1,7 @@
 Package: colocboost
 Type: Package
 Date: 2024-09-01
-Title: Multi-context colocalization analysis tool for molecular QTL and GWAS studies
+Title: Multi-Context Colocalization Analysis Tool for Molecular QTL and GWAS Studies
 Version: 0.1.0
 Authors@R: c(
   person(given = "Xuewei", family = "Cao", email = "xc2270@cumc.columbia.edu", role = c("cre", "aut")),
@@ -12,7 +12,7 @@ Authors@R: c(
   person(given = "Kushal", family = "Dey", email = "deyk@mskcc.org", role = c("aut")),
   person(given = "Gao", family = "Wang", email = "gw2411@cumc.columbia.edu", role = c("aut"))
   )
-Maintainer: The package maintainer <xc2270@cumc.columbia.edu>
+Maintainer: Xuewei Cao <xc2270@cumc.columbia.edu>
 Description: This R package implements ColocBoost --- motivated and designed for colocalization analysis of multiple genetic association studies --- as a multi-task learning approach to variable selection regression with highly correlated predictors and sparse effects, based on frequentist statistical inference. It provides statistical evidence to identify which subsets of predictors have non-zero effects on which subsets of response variables.
 Encoding: UTF-8
 LazyData: true
@@ -33,4 +33,4 @@ Suggests:
 VignetteBuilder: knitr
 Roxygen: list(markdown = TRUE)
 Config/testthat/edition: 3
-License: MIT
+License: MIT + file LICENSE

@@ -39,7 +39,7 @@ colocboost_assemble <- function(cb_obj,
                                 tol = 1e-9,
                                 output_level = 1){
 
-    if (class(cb_obj) != "colocboost"){
+    if (!inherits(cb_obj, "colocboost")){
         stop("Input must from colocboost object!")}
   
     # - data information

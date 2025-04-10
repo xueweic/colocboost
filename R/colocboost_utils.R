@@ -36,6 +36,7 @@ get_cormat <- function(X, intercepte = FALSE){
 }
 
 
+#' @importFrom utils head tail
 check_null_post <- function(cb_obj, 
                             coloc_sets_temp,
                             coloc_outcomes,
@@ -191,8 +192,8 @@ check_null_post <- function(cb_obj,
   return(ll)
 }
 
-
-get_purity = function (pos, X=NULL, Xcorr=NULL, N = NULL, n = 100) {
+#' @importFrom stats na.omit
+get_purity <- function(pos, X=NULL, Xcorr=NULL, N = NULL, n = 100) {
     get_upper_tri = Rfast::upper_tri
     get_median    = Rfast::med
     
@@ -256,7 +257,7 @@ get_modularity <- function(Weight, B){
     }
 }
 
-
+#' @importFrom stats cutree
 get_n_cluster <- function(hc, Sigma, m=ncol(Sigma), between_cluster = 0.8){
     if (min(Sigma) > between_cluster){
         IND = 1
@@ -300,8 +301,9 @@ w_purity <- function(weights, X=NULL, Xcorr=NULL, N = NULL, n = 100, coverage = 
 }
 
 
+#' @importFrom stats na.omit
 # - Calculate purity between two confidence sets
-get_between_purity = function (pos1, pos2, X=NULL, Xcorr=NULL, N = NULL, miss_idx = NULL, P = NULL){
+get_between_purity <- function(pos1, pos2, X=NULL, Xcorr=NULL, N = NULL, miss_idx = NULL, P = NULL){
     
     get_matrix_mult <- function(X_sub1, X_sub2){
         
@@ -338,7 +340,8 @@ get_between_purity = function (pos1, pos2, X=NULL, Xcorr=NULL, N = NULL, miss_id
     return(c(min(value), max(value), get_median(value)))
 }
 
-
+#' @importFrom stats var
+#' @importFrom utils tail
 get_cos_evidence <- function(cb_obj, coloc_out, data_info){
 
   get_cos_config <- function(w, config_idx, weight_fudge_factor = 1.5, coverage = 0.95){
