@@ -213,9 +213,9 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
   
   # extract results from colocboost
   analysis_outcome <- cb_output$data_info$outcome_info$outcome_names
-  target_idx <- which(cb_output$data_info$outcome_info$is_target)
-  if ( length(target_idx)!=0 ){
-      target_outcome <- analysis_outcome[target_idx]
+  target_outcome_idx <- which(cb_output$data_info$outcome_info$is_target)
+  if ( length(target_outcome_idx)!=0 ){
+      target_outcome <- analysis_outcome[target_outcome_idx]
   } else { target_outcome <- NULL }
   # check if target cos
   target_cos <- cb_output$cos_summary$cos_id[cb_output$cos_summary$target_outcome!=FALSE]

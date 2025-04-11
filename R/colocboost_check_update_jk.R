@@ -11,37 +11,37 @@
 #' @export
 colocboost_check_update_jk <- function(cb_model, cb_model_para, cb_data,
                                        prioritize_jkstar = TRUE,
-                                       jk_equiv_cor = 0.8, ##### more than 2 traits
+                                       jk_equiv_corr = 0.8, ##### more than 2 traits
                                        jk_equiv_loglik = 1, ## more than 2 traits
                                        func_compare = "min_max", ##### more than 3 traits
-                                       coloc_thres = 0.1
+                                       coloc_thresh = 0.1
 ){
   
     pos.update <- which(cb_model_para$update_y == 1)
-    target_idx <- cb_model_para$target_idx
-    if (is.null(target_idx)){
+    target_outcome_idx <- cb_model_para$target_outcome_idx
+    if (is.null(target_outcome_idx)){
         cb_model_para <- boost_check_update_jk_notarget(cb_model, cb_model_para, cb_data,
                                                         prioritize_jkstar = prioritize_jkstar,
-                                                        jk_equiv_cor = jk_equiv_cor,
+                                                        jk_equiv_corr = jk_equiv_corr,
                                                         jk_equiv_loglik = jk_equiv_loglik,
                                                         func_compare = func_compare,
-                                                        coloc_thres = coloc_thres)
+                                                        coloc_thresh = coloc_thresh)
     } else {
-        if (target_idx %in% pos.update){
+        if (target_outcome_idx %in% pos.update){
             cb_model_para <- boost_check_update_jk_target(cb_model, cb_model_para, cb_data,
                                                           prioritize_jkstar = prioritize_jkstar,
-                                                          jk_equiv_cor = jk_equiv_cor,
+                                                          jk_equiv_corr = jk_equiv_corr,
                                                           jk_equiv_loglik = jk_equiv_loglik,
                                                           func_compare = func_compare,
-                                                          coloc_thres = coloc_thres,
-                                                          target_idx = target_idx)
+                                                          coloc_thresh = coloc_thresh,
+                                                          target_outcome_idx = target_outcome_idx)
         } else {
             cb_model_para <- boost_check_update_jk_notarget(cb_model, cb_model_para, cb_data,
                                                             prioritize_jkstar = prioritize_jkstar,
-                                                            jk_equiv_cor = jk_equiv_cor,
+                                                            jk_equiv_corr = jk_equiv_corr,
                                                             jk_equiv_loglik = jk_equiv_loglik,
                                                             func_compare = func_compare,
-                                                            coloc_thres = coloc_thres)
+                                                            coloc_thresh = coloc_thresh)
         }
     }
     return(cb_model_para)
@@ -53,10 +53,10 @@ colocboost_check_update_jk <- function(cb_model, cb_model_para, cb_data,
 #' @importFrom stats median
 boost_check_update_jk_notarget <- function(cb_model, cb_model_para, cb_data,
                                             prioritize_jkstar = TRUE,
-                                            jk_equiv_cor = 0.8, ##### more than 2 traits
+                                            jk_equiv_corr = 0.8, ##### more than 2 traits
                                             jk_equiv_loglik = 1, ## more than 2 traits
                                             func_compare = "min_max", ##### more than 3 traits
-                                            coloc_thres = 0.1
+                                            coloc_thresh = 0.1
 ){
                                    
 
@@ -68,8 +68,8 @@ boost_check_update_jk_notarget <- function(cb_model, cb_model_para, cb_data,
     update_status <- rep(0, cb_model_para$L)
     update_jk <- rep(NA, cb_model_para$L+1)
     real_update_jk <- rep(NA, cb_model_para$L)
-    if (is.null(cb_model_para$coloc_thres))
-        cb_model_para$coloc_thres <- (1-coloc_thres)*max(sapply(1:length(cb_model), function(i)max(cb_model[[i]]$change_loglike)))
+    if (is.null(cb_model_para$coloc_thresh))
+        cb_model_para$coloc_thresh <- (1-coloc_thresh)*max(sapply(1:length(cb_model), function(i)max(cb_model[[i]]$change_loglike)))
 
     # - update only Ys which is not stop
     pos.update <- which(cb_model_para$update_y == 1)
@@ -110,7 +110,7 @@ boost_check_update_jk_notarget <- function(cb_model, cb_model_para, cb_data,
                                       model_update = model_update,
                                       cb_data = cb_data,
                                       X_dict = X_dict,
-                                      jk_equiv_cor = jk_equiv_cor,
+                                      jk_equiv_corr = jk_equiv_corr,
                                       jk_equiv_loglik = jk_equiv_loglik)
 
         if (all(judge_each)){
@@ -134,7 +134,7 @@ boost_check_update_jk_notarget <- function(cb_model, cb_model_para, cb_data,
                                                   model_update = model_update,
                                                   cb_data = cb_data,
                                                   X_dict = X_dict,
-                                                  jk_equiv_cor = jk_equiv_cor,
+                                                  jk_equiv_corr = jk_equiv_corr,
                                                   jk_equiv_loglik = jk_equiv_loglik)
             pos <- which(colSums(change_each_pair) != 0)
             if (length(pos) == length(pos.update)){
@@ -188,7 +188,7 @@ boost_check_update_jk_notarget <- function(cb_model, cb_model_para, cb_data,
             pos <- which(judge_each) # for jk = jk_each
             pos_not <- which(!judge_each) # for jk != jk_each
             check_coloc <- sapply(pos_not, function(i){
-                check_temp <- model_update[[i]]$change_loglike[jk] > cb_model_para$coloc_thres
+                check_temp <- model_update[[i]]$change_loglike[jk] > cb_model_para$coloc_thresh
                 return(check_temp)
             })
 
@@ -217,7 +217,7 @@ boost_check_update_jk_notarget <- function(cb_model, cb_model_para, cb_data,
                                                       model_update = model_update[pos_index],
                                                       cb_data = cb_data,
                                                       X_dict = X_dict[pos_index],
-                                                      jk_equiv_cor = jk_equiv_cor,
+                                                      jk_equiv_corr = jk_equiv_corr,
                                                       jk_equiv_loglik = jk_equiv_loglik)
                 pos_similar <- pos_not[which(colSums(change_each_pair) != 0)]
                 # -- we only need to update paired Y_i at jk_i with higher change of loglikelihood
@@ -289,7 +289,7 @@ boost_check_update_jk_notarget <- function(cb_model, cb_model_para, cb_data,
                                                        model_update = model_update[pos_not],
                                                        cb_data = cb_data,
                                                        X_dict = X_dict[pos_not],
-                                                       jk_equiv_cor = jk_equiv_cor,
+                                                       jk_equiv_corr = jk_equiv_corr,
                                                        jk_equiv_loglik = jk_equiv_loglik)
                 pos_similar <- pos_not[which(colSums(change_each_pair) != 0)]
 
@@ -346,11 +346,11 @@ boost_check_update_jk_notarget <- function(cb_model, cb_model_para, cb_data,
                                                
 boost_check_update_jk_target <- function(cb_model, cb_model_para, cb_data,
                                           prioritize_jkstar = TRUE,
-                                          jk_equiv_cor = 0.8, ##### more than 2 traits
+                                          jk_equiv_corr = 0.8, ##### more than 2 traits
                                           jk_equiv_loglik = 1, ## more than 2 traits
                                           func_compare = "min_max", ##### more than 3 traits
-                                          coloc_thres = 0.1,
-                                          target_idx = 1
+                                          coloc_thresh = 0.1,
+                                          target_outcome_idx = 1
                                    ){
 
     ############# Output #################
@@ -361,8 +361,8 @@ boost_check_update_jk_target <- function(cb_model, cb_model_para, cb_data,
     update_status <- rep(0, cb_model_para$L)
     update_jk <- rep(NA, cb_model_para$L+1)
     real_update_jk <- rep(NA, cb_model_para$L)
-    if (is.null(cb_model_para$coloc_thres))
-        cb_model_para$coloc_thres <- (1-coloc_thres)*max(sapply(1:length(cb_model), function(i)max(cb_model[[i]]$change_loglike)))
+    if (is.null(cb_model_para$coloc_thresh))
+        cb_model_para$coloc_thresh <- (1-coloc_thresh)*max(sapply(1:length(cb_model), function(i)max(cb_model[[i]]$change_loglike)))
 
     # - update only Ys which is not stop
     pos.update <- which(cb_model_para$update_y == 1)
@@ -393,7 +393,7 @@ boost_check_update_jk_target <- function(cb_model, cb_model_para, cb_data,
             jk_temp <- which(temp == max(temp))
             return(ifelse(length(jk_temp) == 1, jk_temp, sample(jk_temp,1)))
         })
-        pp_target <- which(pos.update == target_idx)   
+        pp_target <- which(pos.update == target_outcome_idx)   
         jk_target <- jk_each[pp_target]
         
         # - if jk_target missing in all other traits
@@ -409,7 +409,7 @@ boost_check_update_jk_target <- function(cb_model, cb_model_para, cb_data,
                            remain_jk = 1:cb_model_para$P)
           })
           # ----- second, if within the same LD buddies, select the following variants
-          if (max(ld)>jk_equiv_cor){
+          if (max(ld)>jk_equiv_corr){
             cor_target <- abs_cor_vals_each[, pp_target]
             order_cor <- order(cor_target, decreasing = TRUE)
             jk_target_tmp <- setdiff(order_cor, variable_missing)[1]
@@ -417,7 +417,7 @@ boost_check_update_jk_target <- function(cb_model, cb_model_para, cb_data,
             ld_tmp <- get_LD_jk1_jk2(jk_target, jk_target_tmp, 
                                      XtX = cb_data$data[[X_dict[pp_target]]]$XtX,
                                      remain_jk = 1:cb_model_para$P)
-            if (ld_tmp>jk_equiv_cor){
+            if (ld_tmp>jk_equiv_corr){
               jk_target <- jk_target_tmp
               jk_each[pp_target] <- jk_target
             }
@@ -431,7 +431,7 @@ boost_check_update_jk_target <- function(cb_model, cb_model_para, cb_data,
                                       model_update = model_update,
                                       cb_data = cb_data,
                                       X_dict = X_dict,
-                                      jk_equiv_cor = jk_equiv_cor,
+                                      jk_equiv_corr = jk_equiv_corr,
                                       jk_equiv_loglik = jk_equiv_loglik)
         
         judge_notarget <- judge_each[-pp_target]
@@ -457,7 +457,7 @@ boost_check_update_jk_target <- function(cb_model, cb_model_para, cb_data,
             
             # -- all strongest signals for non-target are different from the strongest signal for target trait
             check_coloc <- sapply(pos.update, function(i){
-                check_temp <- cb_model[[i]]$change_loglike[jk_target] > cb_model_para$coloc_thres
+                check_temp <- cb_model[[i]]$change_loglike[jk_target] > cb_model_para$coloc_thresh
                 return(check_temp)
             })
             check_coloc <- check_coloc[-pp_target]
@@ -486,7 +486,7 @@ boost_check_update_jk_target <- function(cb_model, cb_model_para, cb_data,
             pos <- which(judge_each) # for jk_target = jk_each
             pos_not <- which(!judge_each) # for jk_target != jk_each
             check_coloc <- sapply(pos_not, function(i){
-                check_temp <- model_update[[i]]$change_loglike[jk_target] > cb_model_para$coloc_thres
+                check_temp <- model_update[[i]]$change_loglike[jk_target] > cb_model_para$coloc_thresh
                 return(check_temp)
             })
             
@@ -558,7 +558,7 @@ check_jk_jkeach <- function(jk, jk_each,
                             pos.update,
                             model_update,
                             cb_data, X_dict,
-                            jk_equiv_cor = 0.8,
+                            jk_equiv_corr = 0.8,
                             jk_equiv_loglik = 0.001){
   
   data_update = cb_data$data[pos.update]
@@ -576,7 +576,7 @@ check_jk_jkeach <- function(jk, jk_each,
                                 XtX = cb_data$data[[X_dict[i]]]$XtX,
                                 N = data_update[[i]]$N,
                                 remain_jk = setdiff(1:length(model_update[[i]]$res), data_update[[i]]$variable_miss))
-      judge[i] <- (change_each <= jk_equiv_loglik) & (abs(LD_temp) >= jk_equiv_cor)
+      judge[i] <- (change_each <= jk_equiv_loglik) & (abs(LD_temp) >= jk_equiv_corr)
       
     } else { judge[i] <- FALSE }
     
@@ -591,7 +591,7 @@ check_pair_jkeach <- function(jk_each,
                               pos.update,
                               model_update,
                               cb_data, X_dict,
-                              jk_equiv_cor = 0.8,
+                              jk_equiv_corr = 0.8,
                               jk_equiv_loglik = 0.001){
   
   data_update = cb_data$data[pos.update]
@@ -612,7 +612,7 @@ check_pair_jkeach <- function(jk_each,
                                     XtX = cb_data$data[[X_dict[i]]]$XtX,
                                     N = data_update[[i]]$N,
                                     remain_jk = setdiff(1:length(model_update[[i]]$res), data_update[[i]]$variable_miss))
-          change_each_pair[i,j] <- (change_each <= jk_equiv_loglik) & (abs(LD_temp) >= jk_equiv_cor)
+          change_each_pair[i,j] <- (change_each <= jk_equiv_loglik) & (abs(LD_temp) >= jk_equiv_corr)
         } else {
           change_each_pair[i,j] <- FALSE
         }

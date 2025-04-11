@@ -1,7 +1,6 @@
 #' @importFrom stats as.dist cutree hclust
 colocboost_assemble_cos <- function(cb_obj,
                                     coverage = 0.95,
-                                    func_intw = "fun_R",
                                     weight_fudge_factor = 1.5,
                                     check_null = 0.1,
                                     check_null_method = "profile",
@@ -9,10 +8,10 @@ colocboost_assemble_cos <- function(cb_obj,
                                     overlap = TRUE,
                                     n_purity = 100,
                                     min_abs_corr = 0.5,
-                                    coverage_singlew = 0.8,
+                                    sec_coverage_thresh = 0.8,
                                     median_abs_corr = NULL,
-                                    between_cluster = 0.8,
-                                    between_purity = 0.8,
+                                    min_cluster_corr = 0.8,
+                                    median_cos_abs_corr = 0.8,
                                     tol = 1e-9){
 
     if (!inherits(cb_obj, "colocboost")){
@@ -43,7 +42,7 @@ colocboost_assemble_cos <- function(cb_obj,
           X_dict <- cb_data$dict[coloc_outcomes[iiii]]
           tmp <- w_purity(avWeight[,iiii,drop=FALSE],
                           X=cb_data$data[[X_dict]]$X,Xcorr=cb_data$data[[X_dict]]$XtX,
-                          N=cb_data$data[[coloc_outcomes[iiii]]]$N, n=n_purity, coverage = coverage_singlew,
+                          N=cb_data$data[[coloc_outcomes[iiii]]]$N, n=n_purity, coverage = sec_coverage_thresh,
                           min_abs_corr = min_abs_corr, median_abs_corr = median_abs_corr,
                           miss_idx = cb_data$data[[coloc_outcomes[iiii]]]$variable_miss)
           check_purity[iiii] <- length(tmp) == 1
@@ -54,8 +53,8 @@ colocboost_assemble_cos <- function(cb_obj,
           pos_purity <- which(check_purity)
           avWeight <- avWeight[,pos_purity,drop=FALSE]
           coloc_outcomes <- coloc_outcomes[pos_purity]
-          weights <- get_integrated_weight(avWeight, func_intw = func_intw, weight_fudge_factor = weight_fudge_factor)
-          coloc_cos <- get_in_csets(weights, coverage = coverage)
+          weights <- get_integrated_weight(avWeight, weight_fudge_factor = weight_fudge_factor)
+          coloc_cos <- get_in_cos(weights, coverage = coverage)
           evidence_strength <- sum(weights[coloc_cos[[1]]])
           
           # ----- null filtering
@@ -144,7 +143,7 @@ colocboost_assemble_cos <- function(cb_obj,
                   X_dict <- cb_data$dict[coloc_outcomes[iiii]]
                   tmp <- w_purity(avWeight[,iiii,drop=FALSE],
                                   X=cb_data$data[[X_dict]]$X,Xcorr=cb_data$data[[X_dict]]$XtX,
-                                  N=cb_data$data[[coloc_outcomes[iiii]]]$N, n=n_purity, coverage = coverage_singlew,
+                                  N=cb_data$data[[coloc_outcomes[iiii]]]$N, n=n_purity, coverage = sec_coverage_thresh,
                                   min_abs_corr = min_abs_corr, median_abs_corr = median_abs_corr,
                                   miss_idx = cb_data$data[[coloc_outcomes[iiii]]]$variable_miss)
                   check_purity[iiii] <- length(tmp) == 1
@@ -155,8 +154,8 @@ colocboost_assemble_cos <- function(cb_obj,
                   pos_purity <- which(check_purity)
                   avWeight <- avWeight[,pos_purity,drop=FALSE]
                   coloc_outcomes <- coloc_outcomes[pos_purity]
-                  weights <- get_integrated_weight(avWeight, func_intw = func_intw, weight_fudge_factor = weight_fudge_factor)
-                  coloc_cos <- get_in_csets(weights, coverage = coverage)
+                  weights <- get_integrated_weight(avWeight, weight_fudge_factor = weight_fudge_factor)
+                  coloc_cos <- get_in_cos(weights, coverage = coverage)
                   evidence_strength <- sum(weights[coloc_cos[[1]]])
                   
                   # ----- null filtering
@@ -189,7 +188,7 @@ colocboost_assemble_cos <- function(cb_obj,
                 # Hierachical Clustering iteration based on sequenced weights
                 cormat = get_cormat(t(weight_coloc))
                 hc = hclust(as.dist(1-cormat))
-                n_cluster = get_n_cluster(hc, cormat, between_cluster = between_cluster)$n_cluster
+                n_cluster = get_n_cluster(hc, cormat, min_cluster_corr = min_cluster_corr)$n_cluster
                 index = cutree(hc,n_cluster)
                 B = sapply(1:n_cluster, function(t) as.numeric(index==t))
                 B <- as.matrix(B)
@@ -205,7 +204,7 @@ colocboost_assemble_cos <- function(cb_obj,
                         X_dict <- cb_data$dict[coloc_outcomes[iiii]]
                         tmp <- w_purity(weight_cluster,
                                         X=cb_data$data[[X_dict]]$X,Xcorr=cb_data$data[[X_dict]]$XtX,
-                                        N=cb_data$data[[coloc_outcomes[iiii]]]$N, n=n_purity, coverage = coverage_singlew,
+                                        N=cb_data$data[[coloc_outcomes[iiii]]]$N, n=n_purity, coverage = sec_coverage_thresh,
                                         min_abs_corr = min_abs_corr, median_abs_corr = median_abs_corr,
                                         miss_idx = cb_data$data[[coloc_outcomes[iiii]]]$variable_miss)
                         check_purity[[iiii]] <- tmp
@@ -241,8 +240,8 @@ colocboost_assemble_cos <- function(cb_obj,
                 for (i.w in 1:length(avWeight_coloc)){
                     w <- avWeight_coloc[[i.w]]
                     if (sum(w) != 0){
-                        weights <- get_integrated_weight(w, func_intw = func_intw, weight_fudge_factor = weight_fudge_factor)
-                        csets <- get_in_csets(weights, coverage = coverage)
+                        weights <- get_integrated_weight(w, weight_fudge_factor = weight_fudge_factor)
+                        csets <- get_in_cos(weights, coverage = coverage)
                         coloc_cos[[fl]] <- unlist(csets)
                         evidence_strength[[fl]] <- sum(weights[coloc_cos[[fl]]])
                         avWeight_csets[[fl]] <- w
@@ -325,7 +324,7 @@ colocboost_assemble_cos <- function(cb_obj,
 
 
 
-        # --- filter 2*: remove overlap confidence sets based on between_purity
+        # --- filter 2*: remove overlap confidence sets based on median_cos_abs_corr
         if (length(coloc_sets) >= 2){
             if (overlap){
 
@@ -351,7 +350,7 @@ colocboost_assemble_cos <- function(cb_obj,
                         ave_between[i.between, j.between] <- ave_between[j.between, i.between] <- res[3]
                     }
                 }
-                is.between <- (min_between>min_abs_corr) * (abs(max_between-1)<tol) * (ave_between>between_purity)
+                is.between <- (min_between>min_abs_corr) * (abs(max_between-1)<tol) * (ave_between>median_cos_abs_corr)
                 if (sum(is.between) != 0){
                     temp <- sapply(1:nrow(is.between), function(x){
                         tt <- c(x, which(is.between[x,] != 0))

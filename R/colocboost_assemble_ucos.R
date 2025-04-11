@@ -9,9 +9,9 @@ colocboost_assemble_ucos <- function(cb_obj_single,
                                      n_purity = 100,
                                      min_abs_corr = 0.5,
                                      median_abs_corr = NULL,
-                                     between_cluster = 0.8,
-                                     between_purity = 0.5,
-                                     weaker_ucos = TRUE,
+                                     min_cluster_corr = 0.8,
+                                     median_cos_abs_corr = 0.5,
+                                     weaker_effect = TRUE,
                                      tol = 1e-9){
   
     if (!inherits(cb_obj_single, "colocboost")){
@@ -43,7 +43,7 @@ colocboost_assemble_ucos <- function(cb_obj_single,
         res_temp <- check_null_post(cb_obj_single, confidence_sets, coloc_outcomes=1,
                                     check_null=check_null,
                                     check_null_method = check_null_method,
-                                    weaker_ucos = weaker_ucos)
+                                    weaker_effect = weaker_effect)
         cs_change <- res_temp$cs_change
         is_non_null <- res_temp$is_non_null
 
@@ -113,7 +113,7 @@ colocboost_assemble_ucos <- function(cb_obj_single,
         # Hierachical Clustering iteration based on weights
         cormat = get_cormat(t(weights))
         hc = hclust(as.dist(1-cormat))
-        n_cluster = get_n_cluster(hc, cormat, between_cluster = between_cluster)$n_cluster
+        n_cluster = get_n_cluster(hc, cormat, min_cluster_corr = min_cluster_corr)$n_cluster
         # n_cluster = 6
         index = cutree(hc,n_cluster)
         B = sapply(1:n_cluster, function(t) as.numeric(index==t))
@@ -169,7 +169,7 @@ colocboost_assemble_ucos <- function(cb_obj_single,
             res_temp <- check_null_post(cb_obj_single, confidence_sets, coloc_outcomes=1,
                                         check_null=check_null,
                                         check_null_method = check_null_method,
-                                        weaker_ucos = weaker_ucos)
+                                        weaker_effect = weaker_effect)
             cs_change <- res_temp$cs_change
             is_non_null <- res_temp$is_non_null
             if (length(is_non_null) > 0) {
@@ -218,7 +218,7 @@ colocboost_assemble_ucos <- function(cb_obj_single,
             }
         }
 
-        # --- filter 2*: remove overlap confidence sets based on between_purity
+        # --- filter 2*: remove overlap confidence sets based on median_cos_abs_corr
         if (length(confidence_sets) >= 2){
             if (overlap){
 
@@ -239,7 +239,7 @@ colocboost_assemble_ucos <- function(cb_obj_single,
                         ave_between[i.between, j.between] <- ave_between[j.between, i.between] <- res[3]
                     }
                 }
-                is.between <- (min_between>min_abs_corr) * (abs(max_between-1)<tol) * (ave_between>between_purity)
+                is.between <- (min_between>min_abs_corr) * (abs(max_between-1)<tol) * (ave_between>median_cos_abs_corr)
                 if (sum(is.between) != 0){
                     # potential_merged <- find_merged_csets(is.between)
                     temp <- sapply(1:nrow(is.between), function(x){

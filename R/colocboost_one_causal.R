@@ -1,35 +1,35 @@
 
 
 colocboost_one_causal <- function(cb_model, cb_model_para, cb_data,
-                                  jk_equiv_cor = 0.8,
+                                  jk_equiv_corr = 0.8,
                                   jk_equiv_loglik = 1,
                                   tau = 0.01,
-                                  decayrate = 1,
-                                  func_prior = "z2z",
+                                  learning_rate_decay = 1,
+                                  func_simplex = "z2z",
                                   lambda = 0.5,
-                                  lambda_target = 1,
-                                  LD_obj = FALSE){
+                                  lambda_target_outcome = 1,
+                                  LD_free = FALSE){
   
-  if (jk_equiv_cor != 0){
+  if (jk_equiv_corr != 0){
     cb_obj <- colocboost_one_iteration(cb_model, cb_model_para, cb_data,
-                                       jk_equiv_cor = jk_equiv_cor,
+                                       jk_equiv_corr = jk_equiv_corr,
                                        jk_equiv_loglik = jk_equiv_loglik,
                                        tau = tau,
-                                       decayrate = decayrate,
-                                       func_prior = func_prior,
+                                       learning_rate_decay = learning_rate_decay,
+                                       func_simplex = func_simplex,
                                        lambda = lambda,
-                                       lambda_target = lambda_target,
-                                       LD_obj = LD_obj)
+                                       lambda_target_outcome = lambda_target_outcome,
+                                       LD_free = LD_free)
   } else {
     cb_obj <- colocboost_diagLD(cb_model, cb_model_para, cb_data,
-                                jk_equiv_cor = jk_equiv_cor,
+                                jk_equiv_corr = jk_equiv_corr,
                                 jk_equiv_loglik = jk_equiv_loglik,
                                 tau = tau,
-                                decayrate = decayrate,
-                                func_prior = func_prior,
+                                learning_rate_decay = learning_rate_decay,
+                                func_simplex = func_simplex,
                                 lambda = lambda,
-                                lambda_target = lambda_target,
-                                LD_obj = LD_obj)
+                                lambda_target_outcome = lambda_target_outcome,
+                                LD_free = LD_free)
   }
   return(cb_obj)
   
@@ -40,14 +40,14 @@ colocboost_one_causal <- function(cb_model, cb_model_para, cb_data,
 
 # under one causal per trait assumption with one iteration
 colocboost_one_iteration <- function(cb_model, cb_model_para, cb_data,
-                                     jk_equiv_cor = 0.8,
+                                     jk_equiv_corr = 0.8,
                                      jk_equiv_loglik = 1,
                                      tau = 0.01,
-                                     decayrate = 1,
-                                     func_prior = "z2z",
+                                     learning_rate_decay = 1,
+                                     func_simplex = "z2z",
                                      lambda = 0.5,
-                                     lambda_target = 1,
-                                     LD_obj = FALSE){
+                                     lambda_target_outcome = 1,
+                                     LD_free = FALSE){
     
     
     if (sum(cb_model_para$update_y == 1) != 0){
@@ -55,7 +55,7 @@ colocboost_one_iteration <- function(cb_model, cb_model_para, cb_data,
       ######## - some traits updated
       # - step 1: check update clusters
       real_update <- boost_check_update_jk_one_causal(cb_model, cb_model_para, cb_data,
-                                                      jk_equiv_cor = jk_equiv_cor,
+                                                      jk_equiv_corr = jk_equiv_corr,
                                                       jk_equiv_loglik = jk_equiv_loglik)
       
       # - step 2: boost update
@@ -68,11 +68,11 @@ colocboost_one_iteration <- function(cb_model, cb_model_para, cb_data,
           # - update cb_model
           cb_model <- colocboost_update(cb_model, cb_model_para, cb_data,
                                         tau = tau,
-                                        decayrate = decayrate,
-                                        func_prior = func_prior,
+                                        learning_rate_decay = learning_rate_decay,
+                                        func_simplex = func_simplex,
                                         lambda = lambda,
-                                        lambda_target = lambda_target,
-                                        LD_obj = LD_obj)
+                                        lambda_target_outcome = lambda_target_outcome,
+                                        LD_free = LD_free)
       }
     }
     # -- remove redundant parameters
@@ -94,7 +94,7 @@ colocboost_one_iteration <- function(cb_model, cb_model_para, cb_data,
 
 boost_check_update_jk_one_causal <- function(cb_model, cb_model_para, cb_data,
                                              prioritize_jkstar = TRUE, 
-                                             jk_equiv_cor = 0.8,
+                                             jk_equiv_corr = 0.8,
                                              jk_equiv_loglik = 1){
   
     pos.update <- which(cb_model_para$update_y == 1)
@@ -132,7 +132,7 @@ boost_check_update_jk_one_causal <- function(cb_model, cb_model_para, cb_data,
                                             model_update = model_update,
                                             cb_data = cb_data,
                                             X_dict = X_dict,
-                                            jk_equiv_cor = jk_equiv_cor,
+                                            jk_equiv_corr = jk_equiv_corr,
                                             jk_equiv_loglik = jk_equiv_loglik)
       # define category with same jk
       temp <- sapply(1:nrow(change_each_pair), function(x){
@@ -168,14 +168,14 @@ boost_check_update_jk_one_causal <- function(cb_model, cb_model_para, cb_data,
 
 # under one causal per trait assumption with no LD
 colocboost_diagLD <- function(cb_model, cb_model_para, cb_data,
-                              jk_equiv_cor = 0,
+                              jk_equiv_corr = 0,
                               jk_equiv_loglik = 0.1,
                               tau = 0.01,
-                              decayrate = 1,
-                              func_prior = "z2z",
+                              learning_rate_decay = 1,
+                              func_simplex = "z2z",
                               lambda = 0.5,
-                              lambda_target = 1,
-                              LD_obj = FALSE){
+                              lambda_target_outcome = 1,
+                              LD_free = FALSE){
   
   if (sum(cb_model_para$update_y == 1) == 1){
     
@@ -196,8 +196,8 @@ colocboost_diagLD <- function(cb_model, cb_model_para, cb_data,
     cb_model_para$update_status <- cbind(cb_model_para$update_status, as.matrix(update_status))
     cb_model_para$real_update_jk <- rbind(cb_model_para$real_update_jk, real_update_jk)
     cb_model <- colocboost_update(cb_model, cb_model_para, cb_data,
-                                  tau = tau, decayrate = decayrate, func_prior = func_prior,
-                                  lambda = lambda, lambda_target = lambda_target, LD_obj = LD_obj)
+                                  tau = tau, learning_rate_decay = learning_rate_decay, func_simplex = func_simplex,
+                                  lambda = lambda, lambda_target_outcome = lambda_target_outcome, LD_free = LD_free)
     
   }
   
@@ -226,8 +226,8 @@ colocboost_diagLD <- function(cb_model, cb_model_para, cb_data,
                                           "real_update_jk" = real_update_jk)
         # - update cb_model
         cb_model_tmp <- colocboost_update(cb_model_tmp, cb_model_para, cb_data,
-                                          tau = tau, decayrate = decayrate, func_prior = func_prior,
-                                          lambda = lambda, lambda_target = lambda_target, LD_obj = LD_obj)
+                                          tau = tau, learning_rate_decay = learning_rate_decay, func_simplex = func_simplex,
+                                          lambda = lambda, lambda_target_outcome = lambda_target_outcome, LD_free = LD_free)
         weights <- rbind(weights, cb_model_tmp[[iy]]$weights_path)
     }
     ###### overlap weights
@@ -237,7 +237,7 @@ colocboost_diagLD <- function(cb_model, cb_model_para, cb_data,
                                           model_update = model_update,
                                           cb_data = cb_data,
                                           X_dict = X_dict,
-                                          jk_equiv_cor = jk_equiv_cor,
+                                          jk_equiv_corr = jk_equiv_corr,
                                           jk_equiv_loglik = jk_equiv_loglik)
     change_each_pair <- change_each_pair * overlap_pair
     # define category with same jk
@@ -277,11 +277,11 @@ colocboost_diagLD <- function(cb_model, cb_model_para, cb_data,
       # - update cb_model
       cb_model <- colocboost_update(cb_model, cb_model_para, cb_data,
                                     tau = tau,
-                                    decayrate = decayrate,
-                                    func_prior = func_prior,
+                                    learning_rate_decay = learning_rate_decay,
+                                    func_simplex = func_simplex,
                                     lambda = lambda,
-                                    lambda_target = lambda_target,
-                                    LD_obj = LD_obj)
+                                    lambda_target_outcome = lambda_target_outcome,
+                                    LD_free = LD_free)
     }
   }
   # -- remove redundant parameters
@@ -305,11 +305,11 @@ check_pair_overlap <- function(weights, coverage = 0.95){
   overlap_pair <- matrix(NA, nrow = nrow(weights), ncol =  nrow(weights))
   for (i in 1:nrow(weights)){
     w1 <- weights[i,]
-    cos1 <- get_in_csets(w1, coverage = coverage)[[1]]
+    cos1 <- get_in_cos(w1, coverage = coverage)[[1]]
     for (j in 1:nrow(weights)){
       if (j != i){
         w2 <- weights[j,]
-        cos2 <- get_in_csets(w2, coverage = coverage)[[1]]
+        cos2 <- get_in_cos(w2, coverage = coverage)[[1]]
         
         overlap <- intersect(cos1, cos2)
         if ( length(overlap)!=0 ){
