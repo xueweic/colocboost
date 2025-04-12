@@ -47,10 +47,11 @@ test_that("colocboost runs with individual data", {
   
   # Convert Y to list
   Y_list <- list(test_data$Y[,1], test_data$Y[,2])
+  X_list <- list(test_data$X, test_data$X)
   
   # Run colocboost with minimal parameters
   result <- colocboost(
-    X = test_data$X, 
+    X = X_list, 
     Y = Y_list,
     M = 10,  # Small number of iterations for testing
     output_level = 2  # More detailed output for testing
@@ -123,10 +124,11 @@ test_that("colocboost handles target outcome correctly", {
   
   # Convert Y to list
   Y_list <- list(test_data$Y[,1], test_data$Y[,2])
+  X_list <- list(test_data$X, test_data$X)
   
   # Run colocboost with target_outcome_idx = 1
   result <- colocboost(
-    X = test_data$X, 
+    X = X_list, 
     Y = Y_list,
     target_outcome_idx = 1,
     M = 10,  # Small number of iterations for testing
@@ -147,10 +149,11 @@ test_that("get_cos_summary returns expected structure", {
   
   # Convert Y to list
   Y_list <- list(test_data$Y[,1], test_data$Y[,2])
+  X_list <- list(test_data$X, test_data$X)
   
   # Run colocboost with minimal parameters
   result <- colocboost(
-    X = test_data$X, 
+    X = X_list, 
     Y = Y_list,
     M = 10,  # Small number of iterations for testing
     output_level = 2  # More detailed output for testing
@@ -181,10 +184,11 @@ test_that("colocboost_plot runs without error", {
   
   # Convert Y to list
   Y_list <- list(test_data$Y[,1], test_data$Y[,2])
+  X_list <- list(test_data$X, test_data$X)
   
   # Run colocboost with minimal parameters
   result <- colocboost(
-    X = test_data$X, 
+    X = X_list, 
     Y = Y_list,
     M = 10,  # Small number of iterations for testing
     output_level = 2  # More detailed output for testing
@@ -201,10 +205,11 @@ test_that("get_strong_colocalization maintains colocboost structure", {
   
   # Convert Y to list
   Y_list <- list(test_data$Y[,1], test_data$Y[,2])
+  X_list <- list(test_data$X, test_data$X)
   
   # Run colocboost with minimal parameters
   result <- colocboost(
-    X = test_data$X, 
+    X = X_list, 
     Y = Y_list,
     M = 10,  # Small number of iterations for testing
     output_level = 2  # More detailed output for testing
@@ -234,6 +239,7 @@ test_that("colocboost handles missing/invalid inputs appropriately", {
   # Test mismatched dimensions
   X_bad <- test_data$X[1:(nrow(test_data$X) - 10), ]
   Y_list <- list(test_data$Y[,1], test_data$Y[,2])
+  X_list <- list(X_bad, X_bad)
   
-  expect_error(colocboost(X = X_bad, Y = Y_list), "do not have the same sample size")
+  expect_error(colocboost(X = X_list, Y = Y_list), "do not have the same sample size")
 })
