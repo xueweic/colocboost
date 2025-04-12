@@ -12,53 +12,52 @@ colocboost(
   dict_YX = NULL,
   dict_sumstatLD = NULL,
   outcome_names = NULL,
+  target_outcome_idx = NULL,
+  target_outcome_variables = TRUE,
+  overlap_variables = FALSE,
+  intercept = TRUE,
+  standardize = TRUE,
   effect_est = NULL,
   effect_se = NULL,
   effect_n = NULL,
   M = NULL,
   stop_thresh = 1e-06,
-  step = 0.01,
-  decayrate = 1,
   tau = 0.01,
+  learning_rate_init = 0.01,
+  learning_rate_decay = 1,
+  dynamic_learning_rate = TRUE,
   prioritize_jkstar = TRUE,
   func_compare = "min_max",
-  jk_equiv_cor = 0.8,
+  jk_equiv_corr = 0.8,
   jk_equiv_loglik = 1,
-  coloc_thres = 0.1,
-  intercept = TRUE,
-  standardize = TRUE,
+  coloc_thresh = 0.1,
+  lambda = 0.5,
+  lambda_target_outcome = 1,
+  func_simplex = "LD_z2z",
+  func_multi_test = "lfdr",
+  stop_null = 1,
+  multi_test_max = 1,
+  multi_test_thresh = 1,
+  ash_prior = "normal",
+  p.adjust.methods = "fdr",
+  residual_correlation = NULL,
   coverage = 0.95,
-  between_cluster = 0.8,
+  min_cluster_corr = 0.8,
   dedup = TRUE,
   overlap = TRUE,
   n_purity = 100,
   min_abs_corr = 0.5,
   median_abs_corr = NULL,
-  between_purity = 0.8,
+  median_cos_abs_corr = 0.8,
   tol = 1e-09,
-  merging = TRUE,
-  coverage_singlew = 0.8,
-  lambda = 0.5,
-  lambda_target = 1,
-  func_intw = "fun_R",
-  alpha = 1.5,
-  func_prior = "LD_z2z",
-  func_multicorrection = "lfdr",
-  target_idx = NULL,
-  target_variables = TRUE,
-  overlap_variables = FALSE,
-  stop_null = 1,
-  multicorrection_max = 1,
-  multicorrection_cut = 1,
-  ash_prior = "normal",
-  p.adjust.methods = "fdr",
+  merge_cos = TRUE,
+  sec_coverage_thresh = 0.8,
+  weight_fudge_factor = 1.5,
   check_null = 0.1,
   check_null_method = "profile",
   check_null_max = 0.02,
-  residual_correlation = NULL,
-  LD_obj = FALSE,
-  dynamic_step = TRUE,
-  weaker_ucos = TRUE,
+  weaker_effect = TRUE,
+  LD_free = FALSE,
   output_level = 1
 )
 }
@@ -87,40 +86,67 @@ The innovation: do not provide the same matrix in \code{LD} to reduce the comput
 
 \item{outcome_names}{The names of outcomes, which has the same order for Y.}
 
-\item{effect_est}{Matrix of variable regression coefficients (i.e. regression beta values) in the genomic region}
+\item{target_outcome_idx}{The index of the target outcome if perform GWAS-xQTL ColocBoost}
 
-\item{effect_se}{Matrix of standard errors associated with the beta values}
+\item{target_outcome_variables}{If \code{target_outcome_variables = TRUE}, only consider the variables exist in the target outcome.}
 
-\item{effect_n}{A scalar or a vector of sample sizes for estimating regression coefficients. Highly recommendated!}
-
-\item{M}{The maximum number of gradient boosting iterations. If the number of outcomes are large, it will be automatically increased to a larger number.}
-
-\item{stop_thresh}{The stop criterion for overall profile loglikelihood function.}
-
-\item{step}{The minimum step size (learning rate) for updating in each iteration.}
-
-\item{decayrate}{The decayrate for step size. If the objective function is large at the early iterations,
-we need to have the higher step size to improve the computational efficiency.}
-
-\item{tau}{The smooth parameter for proximity adaptive smoothing weights for the best update jk-star.}
-
-\item{prioritize_jkstar}{When \code{prioritize_jkstar = TRUE}, the selected outcomes will prioritize best update j_k^star in SEC.}
-
-\item{func_compare}{The criterion when we update jk-star in SEC (default is "min_max").}
-
-\item{jk_equiv_cor}{The LD cutoff between overall best update jk-star and marginal best update jk-l for lth outcome}
-
-\item{jk_equiv_loglik}{The change of loglikelihood cutoff between overall best update jk-star and marginal best update jk-l for lth outcome}
-
-\item{coloc_thres}{The cutoff of checking if the best update jk-star is the potential causal variable for outcome l if jk-l is not similar to jk-star (used in Delayed SEC).}
+\item{overlap_variables}{If \code{overlap_variables = TRUE}, only perform colocalization in the overlapped region.}
 
 \item{intercept}{If \code{intercept = TRUE}, the intercept is fitted. Setting \code{intercept = FALSE} is generally not recommended.}
 
 \item{standardize}{If \code{standardize = TRUE}, standardize the columns of genotype and outcomes to unit variance.}
 
+\item{effect_est}{Matrix of variable regression coefficients (i.e. regression beta values) in the genomic region}
+
+\item{effect_se}{Matrix of standard errors associated with the beta values}
+
+\item{effect_n}{A scalar or a vector of sample sizes for estimating regression coefficients. Highly recommended!}
+
+\item{M}{The maximum number of gradient boosting rounds. If the number of outcomes are large, it will be automatically increased to a larger number.}
+
+\item{stop_thresh}{The stop criterion for overall profile loglikelihood function.}
+
+\item{tau}{The smooth parameter for proximity adaptive smoothing weights for the best update jk-star.}
+
+\item{learning_rate_init}{The minimum learning rate for updating in each iteration.}
+
+\item{learning_rate_decay}{The decayrate for learning rate. If the objective function is large at the early iterations,
+we need to have the higher learning rate to improve the computational efficiency.}
+
+\item{prioritize_jkstar}{When \code{prioritize_jkstar = TRUE}, the selected outcomes will prioritize best update j_k^star in SEC.}
+
+\item{func_compare}{The criterion when we update jk-star in SEC (default is "min_max").}
+
+\item{jk_equiv_corr}{The LD cutoff between overall best update jk-star and marginal best update jk-l for lth outcome}
+
+\item{jk_equiv_loglik}{The change of loglikelihood cutoff between overall best update jk-star and marginal best update jk-l for lth outcome}
+
+\item{coloc_thresh}{The cutoff of checking if the best update jk-star is the potential causal variable for outcome l if jk-l is not similar to jk-star (used in Delayed SEC).}
+
+\item{lambda}{The ratio \link{0,1} for z^2 and z in fun_prior simplex, defult is 0.5}
+
+\item{lambda_target_outcome}{The ratio for z^2 and z in fun_prior simplex for the target outcome, default is 1}
+
+\item{func_simplex}{The data-driven local association simplex \eqn{\delta} for smoothing the weights. Default is "LD_z2z" is the elastic net for z-score and also weighted by LD.}
+
+\item{func_multi_test}{The alternative method to check the stop criteria. When \code{func_multi_test = "lfdr"}, boosting iterations will be stopped
+if the local FDR for all variables are greater than \code{lfsr_max}.}
+
+\item{stop_null}{The cutoff of nominal p-value when \code{func_multi_test = "Z"}.}
+
+\item{multi_test_max}{The cutoff of the smallest FDR for pre-filtering the outcomes when \code{func_multi_test = "lfdr"} or \code{func_multi_test = "lfsr"}.}
+
+\item{multi_test_thresh}{The cutoff of the smallest FDR for stop criteria when \code{func_multi_test = "lfdr"} or \code{func_multi_test = "lfsr"}.}
+
+\item{ash_prior}{The prior distribution for calculating lfsr when \code{func_multi_test = "lfsr"}.}
+
+\item{p.adjust.methods}{The adjusted pvalue method in stats:p.adj  when \code{func_multi_test = "fdr"}}
+
+\item{residual_correlation}{The residual correlation based on the sample overlap, it is diagonal if it is NULL.}
+
 \item{coverage}{A number between 0 and 1 specifying the \dQuote{coverage} of the estimated colocalization confidence sets (CoS) (default is 0.95).}
 
-\item{between_cluster}{The small correlation for the weights distributions across different iterations to be decided having only one cluster.}
+\item{min_cluster_corr}{The small correlation for the weights distributions across different iterations to be decided having only one cluster.}
 
 \item{dedup}{If \code{dedup = TRUE}, the duplicate confidence sets will be removed in the post-processing.}
 
@@ -136,43 +162,16 @@ which is a commonly used threshold for genotype data in genetic studies.}
 threshold will be filtered out and not reported. When both min_abs_corr and median_abs_corr are set,
 a CS will only be removed if it fails both filters. Default set to NULL but it is recommended to set it to 0.8 in practice.}
 
-\item{between_purity}{Minimum absolute correlation allowed to merge multiple colocalized sets. The default is 0.8 corresponding to a stringent threshold
+\item{median_cos_abs_corr}{Median absolute correlation between variants allowed to merge multiple colocalized sets. The default is 0.8 corresponding to a stringent threshold
 to merge colocalized sets, which may resulting in a huge set.}
 
 \item{tol}{A small, non-negative number specifying the convergence tolerance for checking the overlap of the variables in different sets.}
 
-\item{merging}{When \code{merging = TRUE}, the sets for only one outcome will be merged if passed the \code{between_purity}.}
+\item{merge_cos}{When \code{merge_cos = TRUE}, the sets for only one outcome will be merged if passed the \code{median_cos_abs_corr}.}
 
-\item{coverage_singlew}{A number between 0 and 1 specifying the weight in each SEC (default is 0.8).}
+\item{sec_coverage_thresh}{A number between 0 and 1 specifying the weight in each SEC (default is 0.8).}
 
-\item{lambda}{The ratio \link{0,1} for z^2 and z in fun_prior simplex, defult is 0.5}
-
-\item{lambda_target}{The ratio for z^2 and z in fun_prior simplex for the target outcome, default is 1}
-
-\item{func_intw}{The integrated weight method. The default is "fun_R", indicating the same log-scale for different colocalized outcomes.}
-
-\item{alpha}{The strenght to integrate weight from differnt outcomes, default is 1.5}
-
-\item{func_prior}{The data-drive local association simplex \eqn{\delta} for smoothing the weights. Default is "LD_z2z" is the elastic net for z-score and also weighted by LD.}
-
-\item{func_multicorrection}{The alternative method to check the stop criteria. When \code{func_multicorrection = "lfdr"}, boosting iterations will be stopped
-if the local FDR for all variables are greater than \code{lfsr_max}.}
-
-\item{target_idx}{The index of the target outcome if perform targeted ColocBoost}
-
-\item{target_variables}{If \code{target_variables = TRUE}, only consider the variables exsit in the target outcome.}
-
-\item{overlap_variables}{If \code{overlap_variables = TRUE}, only perform colocalization in the overlapped region.}
-
-\item{stop_null}{The cutoff of nominal p-value when \code{func_multicorrection = "Z"}.}
-
-\item{multicorrection_max}{The cutoff of the smallest FDR for pre-filtering the outcomes when \code{func_multicorrection = "lfdr"} or \code{func_multicorrection = "lfsr"}.}
-
-\item{multicorrection_cut}{The cutoff of the smallest FDR for stop criteria when \code{func_multicorrection = "lfdr"} or \code{func_multicorrection = "lfsr"}.}
-
-\item{ash_prior}{The prior distribution for calculating lfsr when \code{func_multicorrection = "lfsr"}.}
-
-\item{p.adjust.methods}{The adjusted pvalue method in stats:p.adj  when \code{func_multicorrection = "fdr"}}
+\item{weight_fudge_factor}{The strenght to integrate weight from differnt outcomes, default is 1.5}
 
 \item{check_null}{The cut off value for change conditional objective function. Default is 0.1.}
 
@@ -180,11 +179,9 @@ if the local FDR for all variables are greater than \code{lfsr_max}.}
 
 \item{check_null_max}{The smallest value of change of profile loglikelihood for each outcome.}
 
-\item{residual_correlation}{The residual correlation based on the sample overlap, it is diagonal if it is NULL.}
+\item{weaker_effect}{If \code{weaker_effect = TRUE}, consider the weaker single effect due to coupling effects}
 
-\item{LD_obj}{When \code{LD_obj = FALSE}, objective fuunction doesn't include LD information.}
-
-\item{weaker_ucos}{If \code{weaker_ucos = TRUE}, consider the weaker single effect due to coupling effects}
+\item{LD_free}{When \code{LD_free = FALSE}, objective function doesn't include LD information.}
 
 \item{output_level}{When \code{output_level = 2}, return the ucos details for the single specific effects.
 When \code{output_level = 3}, return the entire Colocboost model to diagnostic results (more space).}
@@ -193,9 +190,10 @@ When \code{output_level = 3}, return the entire Colocboost model to diagnostic r
 A \code{"colocboost"} object with some or all of the following elements:
 
 \item{cos_summary}{A summary table for colocalization events.}
-\item{cos_details}{A object with all information for colocalization results.}
 \item{vcp}{The variable colocalized probability for each variable.}
+\item{cos_details}{A object with all information for colocalization results.}
 \item{data_info}{A object with detailed information from input data}
+\item{model_info}{A object with detailed information for colocboost model}
 }
 \description{
 \code{colocboost} implements a proximity adaptive smoothing gradient boosting approach for multi-trait colocalization at gene loci,
@@ -218,7 +216,7 @@ that may arise from small sample sizes or discrepancies in minor allele frequenc
 NA
 }
 
-\section{Post-processing Parameters}{
+\section{Post Inference Parameters}{
 NA
 }
 

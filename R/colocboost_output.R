@@ -1,35 +1,34 @@
-#' @title Set of functions for post inferences from ColocBoost
+#' @rdname get_cos_summary
 #'
-#' @description
-#' The `colocboost_get_methods` functions access basic properties inferences from a fitted ColocBoost model. This documentation serves as a summary for all related post-inference functions.
+#' @title Get colocalization summary table from a ColocBoost output.
 #'
+#' @description `get_cos_summary` get the colocalization summary table with or without the outcomes of interest.
 #'
-#' @details
-#' The following functions are included in this set:
-#' `get_cos_summary` get the colocalization summary table with or without the specific outcomes.
-#'
-#' These functions are not exported individually and are accessed via `colocboost_get_methods`.
-#'
-#' @rdname colocboost_get_methods
-#' @keywords cb_get_functions
-#' @export
-colocboost_get_methods <- function() {
-    message("This function post inferences of colocboost output. See details for more information.")
-}
-
-
-#' @rdname colocboost_get_methods
-#' @title Extract colocalization summary table
-#'
-#' @description
-#' Get the colocalization summary table with or without the specific outcomes.
+#' @param cb_output Output object from `colocboost` analysis
+#' @param outcome_names Optional vector of names of outcomes, which has the same order as Y in the original analysis.
+#' @param interest_outcome Optional vector specifying a subset of outcomes from \code{outcome_names} to focus on. When provided, only colocalization events that include at least one of these outcomes will be returned.
+#' @param gene_name Optional character string. When provided, adds a column with this gene name to the output table for easier filtering in downstream analyses.
+#' 
+#' @return A summary table for colocalization events with the following columns:
+#' \item{target_outcome}{The target outcome being analyzed if exists. Otherwise, it is \code{FALSE}.}
+#' \item{colocalized_outcomes}{Colocalized outcomes for colocalization confidence set (CoS) }
+#' \item{cos_id}{Unique identifier for colocalization confidence set (CoS) }
+#' \item{purity}{Minimum absolute correlation of variables with in colocalization confidence set (CoS) }
+#' \item{top_variable}{The variable with highest variant colocalization probability (VCP) }
+#' \item{top_variable_vcp}{Variant colocalization probability for the top variable}
+#' \item{cos_npc}{Normalized probability of colocalization}
+#' \item{min_npc_outcome}{Minimum normalized probability of colocalized traits}
+#' \item{n_variables}{Number of variables in colocalization confidence set (CoS)}
+#' \item{colocalized_index}{Indices of colocalized variables}
+#' \item{colocalized_variables}{List of colocalized variables}
+#' \item{colocalized_variables_vcp}{Variant colocalization probabilities for all colocalized variables}
 #'
 #' @examples
 #' get_cos_summary(cb_output)
-#' get_cos_summary(cb_output, target_outcome = c("Y1", "Y2"))
+#' get_cos_summary(cb_output, interest_outcome = c("Y1", "Y2"))
 #'
-#' @noRd
 #' @keywords cb_get_functions
+#' @export
 get_cos_summary <- function(cb_output, 
                             outcome_names = NULL, 
                             interest_outcome = NULL,
@@ -104,7 +103,32 @@ get_cos_summary <- function(cb_output,
 }
 
 
-
+#' @rdname get_strong_colocalization
+#'
+#' @title Get colocalization summary table from a ColocBoost output.
+#'
+#' @description `get_strong_colocalization` get the colocalization by discarding the weaker colocalization events or colocalized outcomes
+#'
+#' @param cb_output Output object from `colocboost` analysis
+#' @param cos_npc_cutoff Minimum threshold of normalized probability of colocalization (NPC) for CoS.
+#' @param npc_outcome_cutoff Minimum threshold of normalized probability of colocalized traits in each CoS.
+#' @param pvalue_cutoff Maximum threshold of margianl p-values of colocalized variants on colocalized traits in each CoS.
+#' @param weight_fudge_factor The strenght to integrate weight from differnt outcomes, default is 1.5
+#' @param coverage A number between 0 and 1 specifying the \dQuote{coverage} of the estimated colocalization confidence sets (CoS) (default is 0.95).
+#' 
+#' @return A \code{"colocboost"} object with some or all of the following elements:
+#'
+#' \item{cos_summary}{A summary table for colocalization events.}
+#' \item{vcp}{The variable colocalized probability for each variable.}
+#' \item{cos_details}{A object with all information for colocalization results.}
+#' \item{data_info}{A object with detailed information from input data}
+#' \item{model_info}{A object with detailed information for colocboost model}
+#'
+#' @examples
+#' get_strong_colocalization(cb_output, cos_npc_cutoff = 0.5, npc_outcome_cutoff = 0.25)
+#'
+#' @keywords cb_get_functions
+#' @export
 get_strong_colocalization <- function(cb_output, 
                                       cos_npc_cutoff = 0.5, 
                                       npc_outcome_cutoff = 0.25, 
@@ -119,12 +143,28 @@ get_strong_colocalization <- function(cb_output,
     warnings("No colocalization results in this region!")
     return(cb_output)
   }
-  if (npc_outcome_cutoff == 0 && cos_npc_cutoff == 0){
+  
+  if (npc_outcome_cutoff == 0 && cos_npc_cutoff == 0 && is.null(pvalue_cutoff)){
     message("All possible colocalization events are reported regardless of their relative evidence compared to uncolocalized events (cos_npc_cutoff = 0 and npc_outcome_cutoff = 0).")
     return(cb_output)
+  } else {
+    if (is.null(pvalue_cutoff)){
+        message(paste("Extracting colocalization results with cos_npc_cutoff =", cos_npc_cutoff, "and npc_outcome_cutoff =", npc_outcome_cutoff, ".\n",
+                      "For each CoS, keep the outcomes configurations that the npc_outcome >", npc_outcome_cutoff, "."))
+    } else {
+        if (pvalue_cutoff>1 | pvalue_cutoff<0){
+            warnings("Please check the pvalue cutoff in [0,1].")
+            return(cb_output)
+        }
+        if (npc_outcome_cutoff == 0 && cos_npc_cutoff == 0){
+           message(paste("Extracting colocalization results with pvalue_cutoff =", pvalue_cutoff, ".\n",
+                          "For each CoS, keep the outcomes configurations that pvalue of variants for the outcome <", pvalue_cutoff, "."))
+        } else {
+            message(paste("Extracting colocalization results with pvalue_cutoff =", pvalue_cutoff, ", cos_npc_cutoff =", cos_npc_cutoff, ", and npc_outcome_cutoff =", npc_outcome_cutoff, ".\n",
+                          "For each CoS, keep the outcomes configurations that pvalue of variants for the outcome <", pvalue_cutoff, " and npc_outcome >", npc_outcome_cutoff, "."))
+        }
+    }
   }
-  message(paste("Extracting colocalization results with cos_npc_cutoff =", cos_npc_cutoff, "and npc_outcome_cutoff =", npc_outcome_cutoff, ".\n",
-                "For each CoS, keep the outcomes configurations that the npc_outcome >", npc_outcome_cutoff, "."))
   
   remove_cos <- function(cb_output, remove_idx = NULL){
     if (length(remove_idx)==0){
@@ -158,13 +198,28 @@ get_strong_colocalization <- function(cb_output,
   }
   
   cos_details <- cb_output$cos_details
-  
   coloc_outcome_index <- coloc_outcome <- list()
   colocset_names <- cos_min_npc_outcome <- c()
   for (i in 1:length(cos_details$cos$cos_index)){
     cos_npc_config <-  cos_details$cos_outcomes_npc[[i]]
     npc_outcome <- cos_npc_config$npc_outcome
     pos_pass <- which(npc_outcome>=npc_outcome_cutoff)
+    if (!is.null(pvalue_cutoff)){
+        cos_tmp <- cos_details$cos$cos_index[[i]]
+        cos_trait <- cos_details$cos_outcomes$outcome_index[[i]]
+        minPV <- sapply(cos_trait, function(tmp){
+            z <- cb_output$data_info$z[[tmp]][cos_tmp]
+            pv <- pchisq(z^2, 1, lower.tail = FALSE)
+            min(pv)
+        })
+        pos_pass_pvalue <- which(minPV <= pvalue_cutoff)
+        if (length(pos_pass_pvalue)==0){
+            pos_pass = NULL
+        } else {
+            pos_pass_pvalue <- match(cos_trait[pos_pass_pvalue], cos_npc_config$outcomes_index )
+            pos_pass <- intersect( pos_pass_pvalue, pos_pass)
+        }
+    }
     if (length(pos_pass) == 0 ){
       coloc_outcome_index[[i]] <- 0
       coloc_outcome[[i]] <- 0
@@ -283,118 +338,33 @@ get_strong_colocalization <- function(cb_output,
 
 
 
-
-#' @importFrom stats pchisq # remove
-cos_pvalue_filter <- function(cos_results, data_info = NULL, pvalue_cutoff = 1e-4){
-  
-  if (!inherits(cb_output, "colocboost")){
-    stop("Input must from colocboost object!")}
-  
-  if (is.null(data_info))
-    data_info <- get_data_info(cb_obj)
-  
-  n_cos <- length(cos_results$cos_results$cos$cos_index)
-  filtered_cos <- list("cos_index" = NULL,
-                       "cos_variables" = NULL)
-  filtered_traits <- list("outcome_index" = NULL,
-                          "outcome_name" = NULL)
-  filtered_cos_vcp <- list()
-  pp_remove <- c()
-  for (i in 1:n_cos){
-    cos_tmp <- cos_results$cos_results$cos$cos_index[[i]]
-    cos_trait <- cos_results$cos_results$cos_outcomes$outcome_index[[i]]
-    minPV <- sapply(cos_trait, function(tmp){
-      z <- data_info$z[[tmp]]
-      z <- z[cos_tmp]
-      pv <- pchisq(z^2, 1, lower.tail = FALSE)
-      min(pv)
-    })
-    pp <- which(minPV < pvalue_cutoff)
-    if (length(pp) == 0 | length(pp) == 1) {
-      pp_remove <- c(pp_remove, i)
-      next
-    }
-    filtered_cos$cos_index <- c(filtered_cos$cos_index, 
-                                cos_results$cos_results$cos$cos_index[i])
-    filtered_cos$cos_variables <- c(filtered_cos$cos_variables, 
-                                    cos_results$cos_results$cos$cos_variables[i])
-    filtered_cos_vcp <- c(filtered_cos_vcp, cos_results$cos_results$cos_vcp[i])
-    if (length(pp) == length(cos_trait)){
-      filtered_traits$outcome_index <- c(filtered_traits$outcome_index, 
-                                         cos_results$cos_results$cos_outcomes$outcome_index[i])
-      filtered_traits$outcome_name <- c(filtered_traits$outcome_name, 
-                                        cos_results$cos_results$cos_outcomes$outcome_name[i])
-    } else {
-      filtered_traits$outcome_index <- c(filtered_traits$outcome_index, 
-                                         list(cos_results$cos_results$cos_outcomes$outcome_index[[i]][pp]))
-      filtered_traits$outcome_name <- c(filtered_traits$outcome_name, 
-                                        list(cos_results$cos_results$cos_outcomes$outcome_name[[i]][pp]))
-    }
-  }
-  if (length(filtered_cos$cos_index)==0){
-    cos_results <- list("cos_results" = NULL, "vcp" = NULL)
-  } else {
-    cos_results$cos_results$cos <- filtered_cos
-    names(filtered_traits$outcome_index) <- names(cos_results$cos_results$cos$cos_index)
-    names(filtered_traits$outcome_name) <- names(cos_results$cos_results$cos$cos_index)
-    cos_results$cos_results$cos_outcomes <- filtered_traits
-    cos_results$cos_results$cos_vcp <- filtered_cos_vcp
-    coloc_hits <- coloc_hits_variablenames <- coloc_hits_names <- c()
-    for (i in 1:length(filtered_cos_vcp)){
-      inw <- filtered_cos_vcp[[i]]
-      pp1 <- which(inw == max(inw))
-      coloc_hits <- c(coloc_hits, pp1)
-      coloc_hits_variablenames <- c(coloc_hits_variablenames, data_info$variables[pp1])
-      if (length(pp1)==1){
-        coloc_hits_names <- c(coloc_hits_names, names(filtered_cos_vcp)[i])
-      } else {
-        coloc_hits_names <- c(coloc_hits_names, paste0(names(filtered_cos_vcp)[i], ".", 1:length(pp1)))
-      }
-    }
-    coloc_hits <- data.frame("top_index" = coloc_hits, "top_variables" = coloc_hits_variablenames) 
-    rownames(coloc_hits) <- coloc_hits_names
-    cos_results$cos_results$cos_top_variables <- coloc_hits
-    
-    # - change purity
-    if (length(pp_remove)!=0){
-      cos_results$cos_results$cos_purity$min_abs_cor <- as.matrix(cos_results$cos_results$cos_purity$min_abs_cor)[-pp_remove, -pp_remove, drop=FALSE]
-      cos_results$cos_results$cos_purity$median_abs_cor <- as.matrix(cos_results$cos_results$cos_purity$median_abs_cor)[-pp_remove, -pp_remove, drop=FALSE]
-      cos_results$cos_results$cos_purity$max_abs_cor <- as.matrix(cos_results$cos_results$cos_purity$max_abs_cor)[-pp_remove, -pp_remove, drop=FALSE]
-      cos_results$cos_results$cos_PPC <- cos_results$cos_results$cos_PPC[-pp_remove]
-    }
-    
-  }
-  return(cos_results)
-  
-}
-
-exchange_results <- function(cb_output){
-  logLR_normalization <- function(ratio) { 1 - exp( - 2*ratio ) }
-  get_npuc <- function(npc_outcome, type = "old"){
-    if (type == "new"){
-      npuc_outcome <- sapply(1:length(npc_outcome), function(i) npc_outcome[i]*prod(1-npc_outcome[-i]) )
-      1 - prod(1-npuc_outcome)
-    } else {
-      max_idx <- which.max(npc_outcome)
-      npc_outcome[max_idx] * prod(1 - npc_outcome[-max_idx])
-    }
-  }
-  cos_npc_outcome <- lapply(result$cos_details$cos_blem_config, function(cp){
-    ratio = cp$relative_change_outcome
-    cp$npc_outcome <- logLR_normalization(ratio)
-    return(cp)
-  })
-  cb_output$cos_details$cos_outcomes_npc <- cos_npc_outcome
-  cb_output$cos_details$cos_npc <- 1-sapply(cos_npc_outcome, function(cp) get_npuc(cp$npc_outcome))
-  return(cb_output)
-}
-
-
-
-#' @noRd
+#' @rdname get_ucos_summary
+#'
+#' @title Get fine-mapping summary table from a ColocBoost output with only one single trait fine-mapping analysis.
+#'
+#' @description `get_ucos_summary` get the fine-mapping summary table
+#'
+#' @param cb_output Output object from `colocboost` analysis
+#' @param outcome_names Optional vector of names of outcomes, which has the same order as Y in the original analysis.
+#' @param gene_name Optional character string. When provided, adds a column with this gene name to the output table for easier filtering in downstream analyses.
+#' 
+#' @return A summary table for fine-mapped events with the following columns:
+#' \item{outcomes}{Outcomes analyzed }
+#' \item{ucos_id}{Unique identifier for fine-mapped confidence sets }
+#' \item{purity}{Minimum absolute correlation of variables with in fine-mapped confidence sets }
+#' \item{top_variable}{The variable with highest posterior inclusion probability (PIP) }
+#' \item{top_variable_pip}{Posterior inclusion probability (PIP) for the top variable}
+#' \item{n_variables}{Number of variables in colocalization confidence set (CoS)}
+#' \item{ucos_index}{Indices of fine-mapped variables}
+#' \item{ucos_variables}{List of fine-mapped variables}
+#' \item{ucos_variables_pip}{Posterior inclusion probability (PIP) for all fine-mapped variables}
+#'
+#' @examples
+#' get_ucos_summary(cb_output)
+#'
 #' @keywords cb_get_functions
-# get_fineboost_summary
-get_summary_table_fm <- function(cb_output, outcome_names = NULL, gene_name = NULL){
+#' @noRd
+get_ucos_summary <- function(cb_output, outcome_names = NULL, gene_name = NULL){
   
   if (!inherits(cb_output, "colocboost")){
     stop("Input must from colocboost object!")}
@@ -429,48 +399,42 @@ get_summary_table_fm <- function(cb_output, outcome_names = NULL, gene_name = NU
   
 }
 
-
-
-
-
-
-get_integrated_weight <- function(avWeight, weight_fudge_factor = 1.5){
-  av <- apply(avWeight, 1, function(w) prod(w^(weight_fudge_factor/ncol(avWeight))))
-  return(av / sum(av))
+#' Extract CoS simply change the coverage without checking purity
+#' @keywords cb_get_functions
+#' @noRd
+get_cos_different_coverage <- function(cb_output, coverage = 0.95){
+  
+  cos_vcp <- cb_output$cos_details$cos_vcp
+  cos_diff_coverage <- lapply(cos_vcp, function(w){
+      temp <- order(w, decreasing=T)
+      temp[1:min(which(cumsum(w[temp]) > coverage))] # 95%
+  })
+  return(cos_diff_coverage)
 }
 
 
-get_in_cos <- function(weights, coverage = 0.95){
-  
-  temp <- order(weights, decreasing=T)
-  csets <- temp[1:min(which(cumsum(weights[temp]) > coverage))] # 95%
-  return(list(csets))
-  
-}
-
-
-
-
-#' @title Set of functions of re-organization of ColocBoost output format
+#' @title Set of internal functions to re-organize ColocBoost output format
 #'
 #' @description
 #' The `colocboost_output_reorganization` functions access basic properties inferences from a fitted ColocBoost model. This documentation serves as a summary for all related post-inference functions.
 #'
-#'
 #' @details
 #' The following functions are included in this set:
-#' ``get_data_info get the colocalization summary table with or without the specific outcomes.
+#' `get_data_info` get formatted \code{data_info} in ColocBoost output
+#' `get_cos_details` get formatted \code{cos_details} in ColocBoost output
+#' `get_model_info` get formatted \code{model_info} in ColocBoost output
+#' `get_full_output` get formatted additional information in ColocBoost output when \code{output_level!=1}
 #'
 #' These functions are not exported individually and are accessed via `colocboost_output_reorganization`.
 #'
 #' @rdname colocboost_output_reorganization
 #' @keywords cb_reorganization
-#' @export
+#' @noRd
 colocboost_output_reorganization <- function() {
-  message("This function post inferences of colocboost output. See details for more information.")
+  message("This function re-formats colocboost output as internal used. See details for more information.")
 }
 
-
+#' Get formatted \code{data_info} in ColocBoost output
 #' @noRd
 #' @keywords cb_reorganization
 get_data_info <- function(cb_obj){
@@ -525,6 +489,7 @@ get_data_info <- function(cb_obj){
   
 }
 
+#' Get formatted \code{cos_details} in ColocBoost output
 #' @noRd
 #' @keywords cb_reorganization
 get_cos_details <- function(cb_obj, coloc_out, data_info = NULL){
@@ -693,7 +658,7 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL){
   
 }
 
-
+#' Get formatted \code{model_info} in ColocBoost output
 #' @noRd
 #' @keywords cb_reorganization
 get_model_info <- function(cb_obj, outcome_names = NULL){
@@ -723,8 +688,7 @@ get_model_info <- function(cb_obj, outcome_names = NULL){
   
 }
 
-
-
+#' Get formatted additional information in ColocBoost output when \code{output_level!=1}
 #' @noRd
 #' @keywords cb_reorganization
 get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output = NULL, weaker_ucos = FALSE){
@@ -950,19 +914,5 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
   return(ll)
   
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

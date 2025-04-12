@@ -385,5 +385,97 @@ w_cs <- function(w, coverage = 0.95){
   return(result)
 }
 
+get_integrated_weight <- function(avWeight, weight_fudge_factor = 1.5){
+  av <- apply(avWeight, 1, function(w) prod(w^(weight_fudge_factor/ncol(avWeight))))
+  return(av / sum(av))
+}
+
+get_in_cos <- function(weights, coverage = 0.95){
+  
+  temp <- order(weights, decreasing=T)
+  csets <- temp[1:min(which(cumsum(weights[temp]) > coverage))] # 95%
+  return(list(csets))
+  
+}
+
+#' Pure R implementation (fallback)
+#' @keywords internal
+merge_ordered_with_indices <- function(vector_list) {
+  # Quick validation
+  if (!is.list(vector_list) || length(vector_list) == 0) {
+    stop("Input must be a non-empty list of vectors")
+  }
+  
+  # Convert all vectors to character
+  vector_list <- lapply(vector_list, as.character)
+  n_vectors <- length(vector_list)
+  
+  # Estimate total and unique elements
+  total_elements <- sum(sapply(vector_list, length))
+  
+  # Phase 1: Build merged vector
+  seen <- new.env(hash = TRUE, parent = emptyenv(), size = total_elements)
+  merged <- character(total_elements)  # Pre-allocate maximum size
+  merge_idx <- 1
+  
+  # Process each vector to create the merged vector
+  for (i in seq_len(n_vectors)) {
+    vec <- vector_list[[i]]
+    for (j in seq_along(vec)) {
+      elem <- vec[j]
+      if (!exists(elem, envir = seen, inherits = FALSE)) {
+        seen[[elem]] <- merge_idx  # Store position directly (optimization)
+        merged[merge_idx] <- elem
+        merge_idx <- merge_idx + 1
+      }
+    }
+  }
+  
+  # Trim merged result to actual size
+  merged_length <- merge_idx - 1
+  if (merged_length < length(merged)) {
+    merged <- merged[1:merged_length]
+  }
+  
+  # Phase 2: Compute missing indices efficiently
+  missing_indices <- vector("list", n_vectors)
+  
+  for (i in seq_len(n_vectors)) {
+    vec <- vector_list[[i]]
+    
+    # Optimization: For short vectors, use direct comparison
+    if (length(vec) < 50 || length(merged) < 100) {
+      # Simple approach for small vectors
+      is_present <- logical(length(merged))
+      for (elem in vec) {
+        is_present[merged == elem] <- TRUE
+      }
+      missing_indices[[i]] <- which(!is_present)
+    } else {
+      # For larger vectors, use hash-based approach
+      present <- new.env(hash = TRUE, parent = emptyenv(), size = length(vec))
+      for (elem in vec) {
+        present[[elem]] <- TRUE
+      }
+      
+      missing <- integer(length(merged))
+      missing_count <- 0
+      
+      for (j in seq_along(merged)) {
+        if (!exists(merged[j], envir = present, inherits = FALSE)) {
+          missing_count <- missing_count + 1
+          missing[missing_count] <- j
+        }
+      }
+      
+      missing_indices[[i]] <- if (missing_count > 0) missing[1:missing_count] else integer(0)
+    }
+  }
+  
+  list(
+    merged = merged,
+    missing_indices = missing_indices
+  )
+}
 
 
