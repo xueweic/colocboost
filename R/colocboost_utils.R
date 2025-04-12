@@ -393,7 +393,7 @@ get_integrated_weight <- function(avWeight, weight_fudge_factor = 1.5){
 get_in_cos <- function(weights, coverage = 0.95){
   
   temp <- order(weights, decreasing=T)
-  csets <- temp[1:min(which(cumsum(weights[temp]) > coverage))] # 95%
+  csets <- temp[1:min(which(cumsum(weights[temp]) >= coverage))] # 95%
   return(list(csets))
   
 }
