@@ -68,7 +68,9 @@ jobs:
         run: pixi run --environment ${{ matrix.environment }} devtools_test
 
       - name: Run R CMD CHECK
-        run: pixi run rcmdcheck
+        run: |
+          pixi run --environment ${{ matrix.environment }} build
+          pixi run --environment ${{ matrix.environment }} rcmdcheck
   
   ci_osx-arm64:
     name: osx-arm64 CI
@@ -94,4 +96,6 @@ jobs:
         run: pixi run --environment ${{ matrix.environment }} devtools_test
 
       - name: Run R CMD CHECK
-        run: pixi run rcmdcheck
+        run: |
+          pixi run --environment ${{ matrix.environment }} build
+          pixi run --environment ${{ matrix.environment }} rcmdcheck
