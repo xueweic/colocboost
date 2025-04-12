@@ -7,11 +7,11 @@
 #'
 #' Un-colocalization signal - `colocboost_assemble_ucos` - identify the causal confidence sets for each outcome only.
 #'
-#' Add-hoc merging functions including
+#' Add-hoc merge_cos functions including
 #'
 #' \itemize{
-#'  \item{merge_coloc_single}{merge the colocalized sets and the single causal set if pass the \code{between_purity}}
-#'  \item{merge_single}{merge the single causal sets for different outcomes if pass the \code{between_purity}}
+#'  \item{merge_coloc_single}{merge the colocalized sets and the single causal set if pass the \code{median_cos_abs_corr}}
+#'  \item{merge_single}{merge the single causal sets for different outcomes if pass the \code{median_cos_abs_corr}}
 #' }
 #'
 #' Refine of the colocalization sets (TO-DO-LIST)
@@ -21,8 +21,7 @@
 #' @export
 colocboost_assemble <- function(cb_obj,
                                 coverage = 0.95,
-                                func_intw = "fun_R",
-                                alpha = 1.5,
+                                weight_fudge_factor = 1.5,
                                 check_null = 0.1,
                                 check_null_method = "profile",
                                 check_null_max=2e-5,
@@ -30,12 +29,12 @@ colocboost_assemble <- function(cb_obj,
                                 overlap = TRUE,
                                 n_purity = 100,
                                 min_abs_corr = 0.5,
-                                coverage_singlew = 0.8,
+                                sec_coverage_thresh = 0.8,
                                 median_abs_corr = NULL,
-                                between_cluster = 0.8,
-                                between_purity = 0.8,
-                                weaker_ucos = TRUE,
-                                merging = TRUE,
+                                min_cluster_corr = 0.8,
+                                median_cos_abs_corr = 0.8,
+                                weaker_effect = TRUE,
+                                merge_cos = TRUE,
                                 tol = 1e-9,
                                 output_level = 1){
 
@@ -47,7 +46,7 @@ colocboost_assemble <- function(cb_obj,
     model_info <- get_model_info(cb_obj, outcome_names = data_info$outcome_info$outcome_names)
     if (data_info$n_outcomes == 1 & output_level == 1){ output_level = 2 }
     if (cb_obj$cb_model_para$num_updates == 1){
-        cb_output <- list("cos_summary" = NULL,
+        cb_output <- list("cos_summary" = NULL, 
                           "vcp" = NULL,
                           "cos_details" = NULL,
                           "data_info" = data_info,
@@ -64,8 +63,7 @@ colocboost_assemble <- function(cb_obj,
                 cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "model_info", "ucos_details", "diagnostic_details")]
             }
             if (data_info$n_outcome == 1){
-              cb_output <- list("ucos_summary" = NULL, "pip" = NULL,
-                                "ucos_details" = NULL, "data_info" = data_info)
+              cb_output <- list("ucos_summary", "pip" = NULL, "ucos_details" = NULL, "data_info" = data_info)
             }
         }
 
@@ -79,23 +77,22 @@ colocboost_assemble <- function(cb_obj,
         # --------- about colocalized confidence sets ---------------------------------
         out_cos <- colocboost_assemble_cos(cb_obj,
                                            coverage = coverage,
-                                           func_intw = func_intw,
-                                           alpha = alpha,
+                                           weight_fudge_factor = weight_fudge_factor,
                                            check_null = check_null,
                                            check_null_method = check_null_method,
                                            dedup = dedup,
                                            overlap = overlap,
                                            n_purity = n_purity,
                                            min_abs_corr = min_abs_corr,
-                                           coverage_singlew = coverage_singlew,
+                                           sec_coverage_thresh = sec_coverage_thresh,
                                            median_abs_corr = median_abs_corr,
-                                           between_cluster = between_cluster,
-                                           between_purity = between_purity,
+                                           min_cluster_corr = min_cluster_corr,
+                                           median_cos_abs_corr = median_cos_abs_corr,
                                            tol = tol)
         
         # --------- about non-colocalized confidence sets ---------------------------------
         L <- cb_obj$cb_model_para$L
-        if (L == 1){ weaker_ucos = FALSE }
+        if (L == 1){ weaker_effect = FALSE }
         update <- cb_obj$cb_model_para$update_status
         ucos_each <- list()
         change_obj_each <- purity_each <- vector(mode='list', length=L)
@@ -135,9 +132,9 @@ colocboost_assemble <- function(cb_obj,
                                                           n_purity = n_purity,
                                                           min_abs_corr = min_abs_corr,
                                                           median_abs_corr = median_abs_corr,
-                                                          between_cluster = between_cluster,
-                                                          between_purity = between_purity,
-                                                          weaker_ucos = weaker_ucos,
+                                                          min_cluster_corr = min_cluster_corr,
+                                                          median_cos_abs_corr = median_cos_abs_corr,
+                                                          weaker_effect = weaker_effect,
                                                           tol = tol)
                 aaa <- out_ucos_each$ucos$ucos
                 if (length(aaa) != 0){
@@ -168,7 +165,7 @@ colocboost_assemble <- function(cb_obj,
         if ( length(out_cos$cos$cos)!=0 & length(out_ucos$ucos_each)!=0){
             past_out <- merge_cos_ucos(cb_obj, out_cos, out_ucos, coverage = coverage,
                                        min_abs_corr = min_abs_corr,tol = tol,
-                                       between_purity = between_purity)
+                                       median_cos_abs_corr = median_cos_abs_corr)
         } else if (length(out_cos$cos$cos)!=0 & length(out_ucos$ucos_each)==0) {
             past_out <- list("ucos" = NULL, "cos" = out_cos)
         } else if (length(out_cos$cos$cos)==0 & length(out_ucos$ucos_each)!=0){
@@ -178,29 +175,34 @@ colocboost_assemble <- function(cb_obj,
         }
         # ----- Merge two ucos sets
         if (length(past_out$ucos$ucos_each) > 1){
-            if (merging) {
+            if (merge_cos) {
                 past_out <- merge_ucos(cb_obj, past_out,
                                        min_abs_corr = min_abs_corr,
                                        median_abs_corr = median_abs_corr,
                                        n_purity = n_purity,
-                                       between_purity = between_purity,
+                                       median_cos_abs_corr = median_cos_abs_corr,
                                        tol = tol)
             }
         }
 
         ############# - extract colocboost output - ####################
         # - colocalization results
-        cb_obj$cb_model_para$alpha <- alpha
+        cb_obj$cb_model_para$weight_fudge_factor <- weight_fudge_factor
         cb_obj$cb_model_para$coverage <- coverage
+        if (cb_obj$cb_model_para$M==1){
+            # fixme for single iteration model
+            cb_obj <- get_max_profile(cb_obj, check_null_max=0.01, check_null_method = "profile")
+        }
         cos_results <- get_cos_details(cb_obj, coloc_out = past_out$cos$cos, data_info = data_info)
         cb_output <- list("vcp" = cos_results$vcp,
                           "cos_details" = cos_results$cos_results,
                           "data_info" = data_info,
                           "model_info" = model_info)
+        class(cb_output) <- "colocboost"
         
         ### - extract summary table
-        target_idx <- cb_obj$cb_model_para$target_idx
-        summary_table <- get_cos_summary(cb_output, target_outcome = data_info$outcome_info$outcome_names[target_idx])
+        target_outcome_idx <- cb_obj$cb_model_para$target_outcome_idx
+        summary_table <- get_cos_summary(cb_output)
         cb_output <- c(cb_output, list(cos_summary = summary_table))
         cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "model_info")]
 
@@ -223,7 +225,7 @@ colocboost_assemble <- function(cb_obj,
             if (!is.null(cb_output$ucos_details$ucos)){
               cb_output$pip <- apply(do.call(cbind,cb_output$ucos_details$ucos_weight), 1, function(w0) 1-prod(1-w0))
               names(cb_output$pip) <- data_info$variables
-              cb_output$ucos_summary <- get_summary_table_fm(cb_output)
+              cb_output$ucos_summary <- get_ucos_summary(cb_output)
             } else {
               tmp <- list("pip" = NULL, "ucos_summary" = NULL)
               cb_output <- c(cb_output, tmp)
@@ -232,7 +234,6 @@ colocboost_assemble <- function(cb_obj,
           }
         }
     }
-    
     return(cb_output)
 
 }

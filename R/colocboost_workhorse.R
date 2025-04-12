@@ -13,27 +13,27 @@
 #' @export
 colocboost_workhorse <- function(cb_data,
                                  M=NULL,
-                                 step = 0.01,
                                  tau = 0.01,
                                  prioritize_jkstar = TRUE,
-                                 decayrate = 1,
-                                 func_prior = "z2z",
+                                 learning_rate_init = 0.01,
+                                 learning_rate_decay = 1,
+                                 func_simplex = "z2z",
                                  lambda = 0.5,
-                                 lambda_target = 1,
-                                 jk_equiv_cor = 0.8,
+                                 lambda_target_outcome = 1,
+                                 jk_equiv_corr = 0.8,
                                  jk_equiv_loglik = 1,
                                  stop_thresh = 1e-06,
-                                 func_multicorrection = "lfdr",
+                                 func_multi_test = "lfdr",
                                  stop_null = 0.05,
-                                 multicorrection_max = 1,
-                                 multicorrection_cut = 1,
+                                 multi_test_max = 1,
+                                 multi_test_thresh = 1,
                                  ash_prior = "normal",
                                  p.adjust.methods = "fdr",
                                  func_compare = "min_max",
-                                 coloc_thres = 0.1,
-                                 LD_obj = FALSE,
-                                 dynamic_step = TRUE,
-                                 target_idx = NULL,
+                                 coloc_thresh = 0.1,
+                                 LD_free = FALSE,
+                                 dynamic_learning_rate = TRUE,
+                                 target_outcome_idx = NULL,
                                  outcome_names = NULL){
 
 
@@ -41,44 +41,44 @@ colocboost_workhorse <- function(cb_data,
         stop("Input must from colocboost function!")}
 
     cb_model <- colocboost_init_model(cb_data,
-                                      step = step,
+                                      learning_rate_init = learning_rate_init,
                                       stop_thresh = stop_thresh,
-                                      func_multicorrection = func_multicorrection,
+                                      func_multi_test = func_multi_test,
                                       stop_null = stop_null,
-                                      multicorrection_max = multicorrection_max,
+                                      multi_test_max = multi_test_max,
                                       ash_prior = ash_prior,
                                       p.adjust.methods = p.adjust.methods,
-                                      target_idx = target_idx)
+                                      target_outcome_idx = target_outcome_idx)
     
     cb_model_para <- colocboost_init_para(cb_data, cb_model, tau=tau,
-                                          func_prior = func_prior,
+                                          func_simplex = func_simplex,
                                           lambda = lambda,
-                                          lambda_target = lambda_target,
-                                          multicorrection_cut = multicorrection_cut,
-                                          func_multicorrection = func_multicorrection,
-                                          LD_obj = LD_obj,
+                                          lambda_target_outcome = lambda_target_outcome,
+                                          multi_test_thresh = multi_test_thresh,
+                                          func_multi_test = func_multi_test,
+                                          LD_free = LD_free,
                                           outcome_names = outcome_names,
-                                          target_idx = target_idx)
+                                          target_outcome_idx = target_outcome_idx)
     
     
 
     if (is.null(M)){M <- cb_model_para$L*200}
     cb_model_para$M <- M
-    # - if multicorrection value > multicorrection cutoff for some outcomes, we will not update them.
+    # - if multi_test value > multi_test cutoff for some outcomes, we will not update them.
     if (!is.null(cb_model_para$true_stop)){
         if (sum(cb_model_para$update_y == 1) == 0){
           # - if all outcomes do not have signals, STOP
-          message(paste("Using multiple correction method :", func_multicorrection,
-                        ". Stop ColocBoost since the no outcomes", target_idx, "have signals!"))
+          message(paste("Using multiple correction method :", func_multi_test,
+                        ". Stop ColocBoost since the no outcomes", target_outcome_idx, "have signals!"))
         } else {
-          message(paste("Using multiple correction method :", func_multicorrection,
+          message(paste("Using multiple correction method :", func_multi_test,
                         ". Outcome", paste(cb_model_para$true_stop, collapse = ", "), 
                         "for all variants are greater than",
-                        multicorrection_cut, ". Will not update it!"))
+                        multi_test_thresh, ". Will not update it!"))
         }
-        if (!is.null(target_idx) & (M!= 1)){
-            if (sum(cb_model_para$true_stop==target_idx)!=0){
-              message(paste("Stop ColocBoost since the target outcome", target_idx, "do not have signals!"))
+        if (!is.null(target_outcome_idx) & (M!= 1)){
+            if (sum(cb_model_para$true_stop==target_outcome_idx)!=0){
+              message(paste("Stop ColocBoost since the target outcome", target_outcome_idx, "do not have signals!"))
               cb_model_para$update_y <- 0
             }
         }
@@ -94,14 +94,14 @@ colocboost_workhorse <- function(cb_data,
       # single effect with or without LD matrix
       message("Running colocboost with assumption of one causal per outcome!")
       cb_obj <- colocboost_one_causal(cb_model, cb_model_para, cb_data,
-                                      jk_equiv_cor = jk_equiv_cor,
+                                      jk_equiv_corr = jk_equiv_corr,
                                       jk_equiv_loglik = jk_equiv_loglik,
                                       tau = tau,
-                                      decayrate = decayrate,
-                                      func_prior = func_prior,
+                                      learning_rate_decay = learning_rate_decay,
+                                      func_simplex = func_simplex,
                                       lambda = lambda,
-                                      lambda_target = lambda_target,
-                                      LD_obj = LD_obj)
+                                      lambda_target_outcome = lambda_target_outcome,
+                                      LD_free = LD_free)
       cb_obj$cb_model_para$coveraged = "one_causal"
     } else {
       
@@ -115,22 +115,20 @@ colocboost_workhorse <- function(cb_data,
             # step 1: check which outcomes need to be updated at which variant
             cb_model_para <- colocboost_check_update_jk(cb_model, cb_model_para, cb_data,
                                                         prioritize_jkstar = prioritize_jkstar,
-                                                        jk_equiv_cor = jk_equiv_cor,
+                                                        jk_equiv_corr = jk_equiv_corr,
                                                         jk_equiv_loglik = jk_equiv_loglik,
                                                         func_compare = func_compare,
-                                                        coloc_thres = coloc_thres)
+                                                        coloc_thresh = coloc_thresh)
             
             # step 2: gradient boosting for the updated outcomes
             cb_model <- colocboost_update(cb_model, cb_model_para, cb_data,
                                           tau = tau,
-                                          decayrate = decayrate,
-                                          func_prior = func_prior,
+                                          learning_rate_decay = learning_rate_decay,
+                                          func_simplex = func_simplex,
                                           lambda = lambda,
-                                          lambda_target = lambda_target,
-                                          LD_obj = LD_obj,
-                                          dynamic_step = dynamic_step)
-            
-            # print(paste("m: update", which(cb_model_para$update_temp$update_status != 0), "at", cb_model_para$update_temp$real_update_jk[which(cb_model_para$update_temp$update_status != 0)]))
+                                          lambda_target_outcome = lambda_target_outcome,
+                                          LD_free = LD_free,
+                                          dynamic_learning_rate = dynamic_learning_rate)
             
             # step 3: check stop for the updated ones
             # # - update cb_model and cb_model_parameter
@@ -160,7 +158,7 @@ colocboost_workhorse <- function(cb_data,
                   cb_model[[i]]$profile_loglike_each[M_i-1]  < cb_model[[i]]$stop_thresh
                 # stop2 = tail(abs(diff(cb_model[[i]]$obj_path)), n=1) < cb_model[[i]]$stop_thresh
                 multiple_correction <- get_multiple_correction(z=cb_model[[i]]$z, miss_idx = cb_data$data[[i]]$variable_miss, 
-                                                               func_multicorrection = func_multicorrection, 
+                                                               func_multi_test = func_multi_test, 
                                                                ash_prior = ash_prior,
                                                                p.adjust.methods = p.adjust.methods)
                 cb_model[[i]]$multi_correction <- multiple_correction
@@ -173,8 +171,8 @@ colocboost_workhorse <- function(cb_data,
                 }
               }
             }
-            # if (!is.null(target_idx)){
-            #     if (!is.na(stop[target_idx]) & stop[target_idx]){ stop = TRUE }
+            # if (!is.null(target_outcome_idx)){
+            #     if (!is.na(stop[target_outcome_idx]) & stop[target_outcome_idx]){ stop = TRUE }
             # }
             
             if (all(length(stop)==1 & stop)){
@@ -191,7 +189,7 @@ colocboost_workhorse <- function(cb_data,
                 
                 pos_stop <- which(stop) # which outcome reach the stop criterion
                 ttmp <- boost_check_stop(cb_model, cb_model_para, pos_stop,
-                                         multicorrection_max = multicorrection_max)
+                                         multi_test_max = multi_test_max)
                 cb_model_para <- ttmp$cb_model_para
                 cb_model <- ttmp$cb_model
                 # - if there is some outcomes need stop
@@ -200,15 +198,15 @@ colocboost_workhorse <- function(cb_data,
                   # calculate objective function of Y for the last iteration.
                   cb_model <- boost_obj_last(cb_data, cb_model, cb_model_para,
                                              tau = tau,
-                                             func_prior = func_prior,
+                                             func_simplex = func_simplex,
                                              lambda = lambda,
-                                             lambda_target = lambda_target)
-                  if ( !is.null(target_idx) ){
-                    if (target_idx %in% cb_model_para$true_stop){
-                      message(paste("Boosting iterations for target outcome", target_idx,
+                                             lambda_target_outcome = lambda_target_outcome)
+                  if ( !is.null(target_outcome_idx) ){
+                    if (target_outcome_idx %in% cb_model_para$true_stop){
+                      message(paste("Boosting iterations for target outcome", target_outcome_idx,
                                     "converge after", m, "iterations!"))
-                      if (length(setdiff(cb_model_para$true_stop, target_idx))!=0){
-                        message(paste("Boosting iterations for outcome", paste(setdiff(cb_model_para$true_stop, target_idx), collapse = ", "),
+                      if (length(setdiff(cb_model_para$true_stop, target_outcome_idx))!=0){
+                        message(paste("Boosting iterations for outcome", paste(setdiff(cb_model_para$true_stop, target_outcome_idx), collapse = ", "),
                                       "converge after", m, "iterations!"))
                       }
                     } else {
@@ -240,9 +238,9 @@ colocboost_workhorse <- function(cb_data,
           # calculate objective function of Y for the last iteration.
           cb_model <- boost_obj_last(cb_data, cb_model, cb_model_para,
                                      tau = tau,
-                                     func_prior = func_prior,
+                                     func_simplex = func_simplex,
                                      lambda = lambda,
-                                     lambda_target = lambda_target)
+                                     lambda_target_outcome = lambda_target_outcome)
           warning(paste("COLOC-BOOST updates did not converge in", M, "iterations; checkpoint at last iteration"))
           cb_model_para$coveraged = FALSE
         }

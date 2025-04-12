@@ -31,39 +31,42 @@
 #'                  The first column should be 1:L for L sumstat The second column should be the index of \code{LD} corresponding to the sumstat.
 #'                  The innovation: do not provide the same matrix in \code{LD} to reduce the computational burden.
 #' @param outcome_names The names of outcomes, which has the same order for Y.
-#' @param target_idx The index of the target outcome if perform targeted ColocBoost
-#' @param effect_est Matrix of variable regression coefficients (i.e. regression beta values) in the genomic region
-#' @param effect_se Matrix of standard errors associated with the beta values
-#' @param effect_n A scalar or a vector of sample sizes for estimating regression coefficients. Highly recommendated!
-#' @param target_variables If \code{target_variables = TRUE}, only consider the variables exsit in the target outcome.
+#' @param target_outcome_idx The index of the target outcome if perform GWAS-xQTL ColocBoost
+#' @param target_outcome_variables If \code{target_outcome_variables = TRUE}, only consider the variables exist in the target outcome.
 #' @param overlap_variables If \code{overlap_variables = TRUE}, only perform colocalization in the overlapped region.
 #' @param intercept If \code{intercept = TRUE}, the intercept is fitted. Setting \code{intercept = FALSE} is generally not recommended.
 #' @param standardize If \code{standardize = TRUE}, standardize the columns of genotype and outcomes to unit variance.
+#' @param effect_est Matrix of variable regression coefficients (i.e. regression beta values) in the genomic region
+#' @param effect_se Matrix of standard errors associated with the beta values
+#' @param effect_n A scalar or a vector of sample sizes for estimating regression coefficients. Highly recommended!
 #' 
 #' @section Model Parameters
-#' @param M The maximum number of gradient boosting iterations. If the number of outcomes are large, it will be automatically increased to a larger number.
+#' @param M The maximum number of gradient boosting rounds. If the number of outcomes are large, it will be automatically increased to a larger number.
 #' @param stop_thresh The stop criterion for overall profile loglikelihood function.
-#' @param step The minimum step size (learning rate) for updating in each iteration.
-#' @param decayrate The decayrate for step size. If the objective function is large at the early iterations,
-#'                  we need to have the higher step size to improve the computational efficiency.
 #' @param tau The smooth parameter for proximity adaptive smoothing weights for the best update jk-star.
+#' @param learning_rate_init The minimum learning rate for updating in each iteration.
+#' @param learning_rate_decay The decayrate for learning rate. If the objective function is large at the early iterations,
+#'                  we need to have the higher learning rate to improve the computational efficiency.
 #' @param prioritize_jkstar When \code{prioritize_jkstar = TRUE}, the selected outcomes will prioritize best update j_k^star in SEC.
 #' @param func_compare The criterion when we update jk-star in SEC (default is "min_max").
-#' @param jk_equiv_cor The LD cutoff between overall best update jk-star and marginal best update jk-l for lth outcome
+#' @param jk_equiv_corr The LD cutoff between overall best update jk-star and marginal best update jk-l for lth outcome
 #' @param jk_equiv_loglik The change of loglikelihood cutoff between overall best update jk-star and marginal best update jk-l for lth outcome
-#' @param coloc_thres The cutoff of checking if the best update jk-star is the potential causal variable for outcome l if jk-l is not similar to jk-star (used in Delayed SEC).
+#' @param coloc_thresh The cutoff of checking if the best update jk-star is the potential causal variable for outcome l if jk-l is not similar to jk-star (used in Delayed SEC).
 #' @param lambda The ratio [0,1] for z^2 and z in fun_prior simplex, defult is 0.5
-#' @param lambda_target The ratio for z^2 and z in fun_prior simplex for the target outcome, default is 1
-#' @param func_prior The data-drive local association simplex \eqn{\delta} for smoothing the weights. Default is "LD_z2z" is the elastic net for z-score and also weighted by LD.
-#' @param func_multicorrection The alternative method to check the stop criteria. When \code{func_multicorrection = "lfdr"}, boosting iterations will be stopped
+#' @param lambda_target_outcome The ratio for z^2 and z in fun_prior simplex for the target outcome, default is 1
+#' @param func_simplex The data-driven local association simplex \eqn{\delta} for smoothing the weights. Default is "LD_z2z" is the elastic net for z-score and also weighted by LD.
+#' @param func_multi_test The alternative method to check the stop criteria. When \code{func_multi_test = "lfdr"}, boosting iterations will be stopped
 #'                      if the local FDR for all variables are greater than \code{lfsr_max}.
-#' @param stop_null The cutoff of nominal p-value when \code{func_multicorrection = "Z"}.
-#' @param multicorrection_max The cutoff of the smallest FDR for pre-filtering the outcomes when \code{func_multicorrection = "lfdr"} or \code{func_multicorrection = "lfsr"}.
-#' @param multicorrection_cut The cutoff of the smallest FDR for stop criteria when \code{func_multicorrection = "lfdr"} or \code{func_multicorrection = "lfsr"}.
+#' @param stop_null The cutoff of nominal p-value when \code{func_multi_test = "Z"}.
+#' @param multi_test_max The cutoff of the smallest FDR for pre-filtering the outcomes when \code{func_multi_test = "lfdr"} or \code{func_multi_test = "lfsr"}.
+#' @param multi_test_thresh The cutoff of the smallest FDR for stop criteria when \code{func_multi_test = "lfdr"} or \code{func_multi_test = "lfsr"}.
+#' @param ash_prior The prior distribution for calculating lfsr when \code{func_multi_test = "lfsr"}.
+#' @param p.adjust.methods The adjusted pvalue method in stats:p.adj  when \code{func_multi_test = "fdr"}
+#' @param residual_correlation The residual correlation based on the sample overlap, it is diagonal if it is NULL.
 #' 
-#' @section Post-processing Parameters
+#' @section Post Inference Parameters
 #' @param coverage A number between 0 and 1 specifying the \dQuote{coverage} of the estimated colocalization confidence sets (CoS) (default is 0.95).
-#' @param between_cluster The small correlation for the weights distributions across different iterations to be decided having only one cluster.
+#' @param min_cluster_corr The small correlation for the weights distributions across different iterations to be decided having only one cluster.
 #' @param dedup If \code{dedup = TRUE}, the duplicate confidence sets will be removed in the post-processing.
 #' @param overlap If \code{overlap = TRUE}, the overlapped confidence sets will be removed in the post-processing.
 #' @param n_purity The maximum number of confidence set (CS) variables used in calculating the correlation (\dQuote{purity}) statistics.
@@ -73,30 +76,27 @@
 #' @param median_abs_corr An alternative "purity" threshold for the CS. Median correlation between pairs of variables in a CS less than this
 #'                          threshold will be filtered out and not reported. When both min_abs_corr and median_abs_corr are set,
 #'                          a CS will only be removed if it fails both filters. Default set to NULL but it is recommended to set it to 0.8 in practice.
-#' @param between_purity Minimum absolute correlation allowed to merge multiple colocalized sets. The default is 0.8 corresponding to a stringent threshold
+#' @param median_cos_abs_corr Median absolute correlation between variants allowed to merge multiple colocalized sets. The default is 0.8 corresponding to a stringent threshold
 #'                          to merge colocalized sets, which may resulting in a huge set.
 #' @param tol A small, non-negative number specifying the convergence tolerance for checking the overlap of the variables in different sets.
-#' @param merging When \code{merging = TRUE}, the sets for only one outcome will be merged if passed the \code{between_purity}.
-#' @param coverage_singlew A number between 0 and 1 specifying the weight in each SEC (default is 0.8).
-#' @param func_intw The integrated weight method. The default is "fun_R", indicating the same log-scale for different colocalized outcomes.
-#' @param alpha The strenght to integrate weight from differnt outcomes, default is 1.5
-#' @param ash_prior The prior distribution for calculating lfsr when \code{func_multicorrection = "lfsr"}.
-#' @param p.adjust.methods The adjusted pvalue method in stats:p.adj  when \code{func_multicorrection = "fdr"}
+#' @param merge_cos When \code{merge_cos = TRUE}, the sets for only one outcome will be merged if passed the \code{median_cos_abs_corr}.
+#' @param sec_coverage_thresh A number between 0 and 1 specifying the weight in each SEC (default is 0.8).
+#' @param weight_fudge_factor The strenght to integrate weight from differnt outcomes, default is 1.5
 #' @param check_null The cut off value for change conditional objective function. Default is 0.1.
 #' @param check_null_method The metric to check the null sets. Default is "profile"
 #' @param check_null_max The smallest value of change of profile loglikelihood for each outcome.
-#' @param residual_correlation The residual correlation based on the sample overlap, it is diagonal if it is NULL.
-#' @param weaker_ucos If \code{weaker_ucos = TRUE}, consider the weaker single effect due to coupling effects
-#' @param LD_obj When \code{LD_obj = FALSE}, objective fuunction doesn't include LD information.
+#' @param weaker_effect If \code{weaker_effect = TRUE}, consider the weaker single effect due to coupling effects
+#' @param LD_free When \code{LD_free = FALSE}, objective function doesn't include LD information.
 #' @param output_level When \code{output_level = 2}, return the ucos details for the single specific effects. 
 #'                      When \code{output_level = 3}, return the entire Colocboost model to diagnostic results (more space).
 #'
 #' @return A \code{"colocboost"} object with some or all of the following elements:
 #'
 #' \item{cos_summary}{A summary table for colocalization events.}
-#' \item{cos_details}{A object with all information for colocalization results.}
 #' \item{vcp}{The variable colocalized probability for each variable.}
+#' \item{cos_details}{A object with all information for colocalization results.}
 #' \item{data_info}{A object with detailed information from input data}
+#' \item{model_info}{A object with detailed information for colocboost model}
 #'
 #' @importFrom stats na.omit
 #' @export
@@ -110,61 +110,58 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                        dict_YX = NULL, # Y index for 1st column, X index for 2nd column
                        dict_sumstatLD = NULL, # sumstat index for 1st column, LD index for 2nd column
                        outcome_names = NULL, # the names of outcomes
+                       ###### - GWAS-xQTL verison
+                       target_outcome_idx = NULL, 
+                       target_outcome_variables = TRUE,
+                       overlap_variables = FALSE,
+                       intercept=TRUE, # centered genotype and phenotype
+                       standardize=TRUE, # standardized genotype and phenotype
                        ###### - HyPrColoc input
                        effect_est = NULL, # same as HyPrColoc, beta hat matrix: with rowname of variable names
                        effect_se = NULL, # same as HyPrColoc, sebeta hat matrix with rowname of variable names
                        effect_n = NULL,
 
-                       ###### - fixed argument - ###########
-                       # - about stop
+                       ###### - Model Parameters
                        M = NULL, # maximum iteration time
                        stop_thresh = 1e-06, # stop criterion for profile_log and objective functions
-                       # - about update
-                       step = 0.01, # minimum step size for updating in each iteration; supplefigure?
-                       decayrate = 1, # decayrate for step size
-                       tau = 0.01, # kernal_tau parameter for smoothing weights; supplefigure?
+                       tau = 0.01, # kernal_tau parameter for proximity smoothing weight
+                       learning_rate_init = 0.01, # minimum step size for updating in each boosting round
+                       learning_rate_decay = 1, # decay of learning rate
+                       dynamic_learning_rate = TRUE, # if dynamic learning rate
                        prioritize_jkstar = TRUE, # if prioritize j_k^star for updating
-                       func_compare = "min_max", # the criterion when we update j_k^star; supplefigure?
-                       jk_equiv_cor = 0.8, # check if jk_star ~ jk_r
+                       func_compare = "min_max", # the criterion when we update j_k^star in Logic 3
+                       jk_equiv_corr = 0.8, # check if jk_star ~ jk_r
                        jk_equiv_loglik = 1, # check if jk_star ~ jk_r.
-                       coloc_thres = 0.1,
-                       # - about data
-                       intercept=TRUE, # centered genotype and phenotype
-                       standardize=TRUE, # standardized genotype and phenotype
-                       # - about post-processing
-                       coverage = 0.95, # coverage of the confident set
-                       between_cluster = 0.8, # only one cluster if all weights correlations bigger than this cut off
-                       dedup = TRUE, # if remove the duplicate csets in the post-processing
-                       overlap = TRUE, # if remove the overlapped csets
-                       n_purity = 100, # the number of variables in purity
-                       min_abs_corr = 0.5, # the cut off value of purity in each cset
-                       median_abs_corr = NULL,
-                       between_purity = 0.8, # minimum LD between two csets
-                       tol = 1e-9, # tol for LD
-                       merging = TRUE, # if merge two sets for one outcome
-                       coverage_singlew = 0.8,
+                       coloc_thresh = 0.1,
                        lambda = 0.5, # the ratio for z^2 and z in weight penalty
-                       lambda_target = 1,
-                       func_intw = "fun_R", # integrated weight method
-                       alpha = 1.5, # integrated weight smooth ratio
-                       func_prior = "LD_z2z", # penalty for weights
-                       func_multicorrection = "lfdr",
-                       # --- add-hoc
-                       target_idx = NULL, # important now for sumstat
-                       target_variables = TRUE,
-                       overlap_variables = FALSE,
+                       lambda_target_outcome = 1, # the ratio for z^2 and z in weight penalty for target outcome
+                       func_simplex = "LD_z2z", # data-driven association simplex
+                       func_multi_test = "lfdr", 
                        stop_null = 1,
-                       multicorrection_max = 1,
-                       multicorrection_cut = 1,
-                       ash_prior = "normal", # only applicable if func_multicorrection = lfsr
+                       multi_test_max = 1,
+                       multi_test_thresh = 1,
+                       ash_prior = "normal", # only applicable if func_multi_test = lfsr
                        p.adjust.methods = "fdr",
+                       residual_correlation = NULL, # phenotypic correlation, it is diagonal if it is NULL
+                       
+                       ###### - Post Inference Parameters
+                       coverage = 0.95, # coverage of CoS
+                       min_cluster_corr = 0.8, # only one cluster if all weights correlations bigger than this cut off
+                       dedup = TRUE, # if remove the duplicate CoS in the post-processing
+                       overlap = TRUE, # if remove the overlapped CoS
+                       n_purity = 100, # the number of variables in purity
+                       min_abs_corr = 0.5, # the cut off value of purity in each CoS
+                       median_abs_corr = NULL,
+                       median_cos_abs_corr = 0.8, # minimum LD between two CoS
+                       tol = 1e-9, # tol for LD
+                       merge_cos = TRUE, # if merge two sets for one outcome
+                       sec_coverage_thresh = 0.8,
+                       weight_fudge_factor = 1.5, # integrative weight
                        check_null = 0.1, # the cut off value for change conditional objective function
-                       check_null_method = "profile",
-                       check_null_max = 0.02,
-                       residual_correlation = NULL, # sample overlap, it is diagonal if it is NULL
-                       LD_obj = FALSE,
-                       dynamic_step = TRUE,
-                       weaker_ucos = TRUE,
+                       check_null_method = "profile", # the metric to check the null sets.
+                       check_null_max = 0.02, # the smallest value of change of profile loglikelihood for each outcome.
+                       weaker_effect = TRUE,
+                       LD_free = FALSE,
                        output_level = 1){
 
 
@@ -234,7 +231,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
             })
         }
         
-        keep.variable.individual <- lapply(X, colnames)
+        keep_variable_individual <- lapply(X, colnames)
         if (!is.list(X) & !is.list(Y)){
             warning("Error: Input X and Y must be the list containing genotype matrics and all phenotype vectors!")
             return(NULL)
@@ -270,7 +267,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                 }
             }
         }
-        # keep.variable.individual <- lapply(yx_dict, function(i) keep.variable.individual[[i]] )
+        # keep_variable_individual <- lapply(yx_dict, function(i) keep_variable_individual[[i]] )
         if (any(sapply(X, anyNA))) {
             warning("Error: Input X must not contain missing values.")
             return(NULL)
@@ -307,7 +304,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                 }
             }
         }
-    } else {yx_dict <- keep.variable.individual <- NULL}
+    } else {yx_dict <- keep_variable_individual <- NULL}
 
     # - check summary-level data
     if ( (!is.null(sumstat)) | (!is.null(effect_est) & !is.null(effect_se)) ){
@@ -361,7 +358,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                 })
             }
         }
-        keep.variable.sumstat <- lapply(sumstat, function(xx){ xx$variant})
+        keep_variable_sumstat <- lapply(sumstat, function(xx){ xx$variant})
         
         # --- check input of LD
         if (is.null(LD)){
@@ -371,15 +368,15 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                   "Without LD, only a single iteration will be performed under the assumption of one causal variable per outcome. ",
                   "Additionally, the purity of CoS cannot be evaluated!")
           
-          p.sumstat <- sapply(keep.variable.sumstat, length)
+          p.sumstat <- sapply(keep_variable_sumstat, length)
           p.unique <- unique(p.sumstat)
           if (length(p.unique)==1){
               ld <- diag(1, nrow = p.unique)
-              colnames(ld) <- rownames(ld) <- keep.variable.sumstat[[1]]
+              colnames(ld) <- rownames(ld) <- keep_variable_sumstat[[1]]
               LD <- list(ld)
               sumstatLD_dict <- rep(1, length(sumstat))
           } else {
-              LD <- lapply(keep.variable.sumstat, function(sn){
+              LD <- lapply(keep_variable_sumstat, function(sn){
                   ld <- diag(1, nrow = length(sn))
                   colnames(ld) <- rownames(ld) <- sn
                   return(ld)
@@ -390,9 +387,9 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
           # change some algorithm parameters
           M <- 1 # one iteration
           min_abs_corr = 0 # remove purity checking
-          jk_equiv_cor = 0
+          jk_equiv_corr = 0
           jk_equiv_loglik = 0.1
-          func_prior = "only_z2z"
+          func_simplex = "only_z2z"
           
         } else {
           
@@ -500,13 +497,13 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
           Z[[i.summstat]] <- z
         }
     } else {
-        Z <- N_sumstat <- Var_y <- SeBhat <- sumstatLD_dict <- keep.variable.sumstat <- NULL
+        Z <- N_sumstat <- Var_y <- SeBhat <- sumstatLD_dict <- keep_variable_sumstat <- NULL
     }
     # - initial colocboost object
-    keep.variables <- c(keep.variable.individual, keep.variable.sumstat)
-    overlapped_variables <- Reduce("intersect", keep.variables)
-    mean_variables <- mean(sapply(keep.variables, length))
-    min_variables <- min(sapply(keep.variables, length))
+    keep_variables <- c(keep_variable_individual, keep_variable_sumstat)
+    overlapped_variables <- Reduce("intersect", keep_variables)
+    mean_variables <- mean(sapply(keep_variables, length))
+    min_variables <- min(sapply(keep_variables, length))
     if (min_variables < 100){
       warning("Warning message about the number of variables.\n",
               "The smallest number of variables across outcomes is ", min_variables, " <100. ",
@@ -527,9 +524,9 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
     cb_data <- colocboost_init_data(X = X, Y = Y, dict_YX = yx_dict,
                                     Z = Z, LD = LD, N_sumstat = N_sumstat, dict_sumstatLD = sumstatLD_dict,
                                     Var_y = Var_y, SeBhat = SeBhat,
-                                    keep.variables = keep.variables,
-                                    target_idx = target_idx,
-                                    target_variables = target_variables,
+                                    keep_variables = keep_variables,
+                                    target_outcome_idx = target_outcome_idx,
+                                    target_outcome_variables = target_outcome_variables,
                                     overlap_variables = overlap_variables,
                                     intercept = intercept,
                                     standardize = standardize,
@@ -540,34 +537,33 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
     cb_obj <- colocboost_workhorse(cb_data,
                                    M = M,
                                    prioritize_jkstar = prioritize_jkstar,
-                                   step = step,
                                    tau = tau,
-                                   decayrate = decayrate,
-                                   func_prior = func_prior,
+                                   learning_rate_init = learning_rate_init,
+                                   learning_rate_decay = learning_rate_decay,
+                                   func_simplex = func_simplex,
                                    lambda = lambda,
-                                   lambda_target = lambda_target,
+                                   lambda_target_outcome = lambda_target_outcome,
                                    stop_thresh = stop_thresh,
-                                   func_multicorrection = func_multicorrection,
+                                   func_multi_test = func_multi_test,
                                    stop_null = stop_null,
-                                   multicorrection_max = multicorrection_max,
-                                   multicorrection_cut = multicorrection_cut,
+                                   multi_test_max = multi_test_max,
+                                   multi_test_thresh = multi_test_thresh,
                                    ash_prior = ash_prior,
                                    p.adjust.methods = p.adjust.methods,
-                                   jk_equiv_cor = jk_equiv_cor,
+                                   jk_equiv_corr = jk_equiv_corr,
                                    jk_equiv_loglik = jk_equiv_loglik,
                                    func_compare = func_compare,
-                                   coloc_thres = coloc_thres,
-                                   LD_obj = LD_obj,
-                                   dynamic_step = dynamic_step,
-                                   target_idx = target_idx,
+                                   coloc_thresh = coloc_thresh,
+                                   LD_free = LD_free,
+                                   dynamic_learning_rate = dynamic_learning_rate,
+                                   target_outcome_idx = target_outcome_idx,
                                    outcome_names = outcome_names)
 
     # --- post-processing of the colocboost updates
     message("Starting assemble analyses and results summary.")
     cb_output <- colocboost_assemble(cb_obj, 
                                      coverage = coverage,
-                                     func_intw = func_intw,
-                                     alpha = alpha,
+                                     weight_fudge_factor = weight_fudge_factor,
                                      check_null = check_null,
                                      check_null_method = check_null_method,
                                      check_null_max = check_null_max,
@@ -575,16 +571,15 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                                      overlap = overlap,
                                      n_purity = n_purity,
                                      min_abs_corr = min_abs_corr,
-                                     coverage_singlew = coverage_singlew,
+                                     sec_coverage_thresh = sec_coverage_thresh,
                                      median_abs_corr = median_abs_corr,
-                                     between_cluster = between_cluster,
-                                     between_purity = between_purity,
-                                     weaker_ucos = weaker_ucos,
-                                     merging =  merging,
+                                     min_cluster_corr = min_cluster_corr,
+                                     median_cos_abs_corr = median_cos_abs_corr,
+                                     weaker_effect = weaker_effect,
+                                     merge_cos =  merge_cos,
                                      tol = tol,
                                      output_level = output_level)
     class(cb_output) <- "colocboost"
-    
     return(cb_output)
 }
 

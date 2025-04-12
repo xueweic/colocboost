@@ -32,9 +32,9 @@ colocboost_inits <- function() {
 colocboost_init_data <- function(X, Y, dict_YX,
                                  Z, LD, N_sumstat, dict_sumstatLD,
                                  Var_y, SeBhat,
-                                 keep.variables = NULL,
-                                 target_idx = NULL,
-                                 target_variables = TRUE,
+                                 keep_variables = NULL,
+                                 target_outcome_idx = NULL,
+                                 target_outcome_variables = TRUE,
                                  overlap_variables = FALSE,
                                  intercept=TRUE, standardize=TRUE,
                                  residual_correlation = NULL){
@@ -49,25 +49,25 @@ colocboost_init_data <- function(X, Y, dict_YX,
     } else if (is.null(dict_YX) & !is.null(dict_sumstatLD)){
         dict <- dict_sumstatLD
     }
-    if (target_variables & !is.null(target_idx)){
-        if (target_idx > length(dict)){
+    if (target_outcome_variables & !is.null(target_outcome_idx)){
+        if (target_outcome_idx > length(dict)){
           stop("Target outcome index is over the total number of outcomes! please check!")
         }
-        keep.variable.names <- keep.variables[[dict[target_idx]]]
+        keep_variable_names <- keep_variables[[dict[target_outcome_idx]]]
         if (overlap_variables){
-          keep.tmp <- lapply(keep.variables[-dict[target_idx]], function(tm){
-            intersect(keep.variable.names, tm)
+          keep_tmp <- lapply(keep_variables[-dict[target_outcome_idx]], function(tm){
+            intersect(keep_variable_names, tm)
           })
-          keep.variable.names <- Reduce(union, keep.tmp)
+          keep_variable_names <- Reduce(union, keep_tmp)
         }
     } else {
       if (overlap_variables){
-        keep.variable.names <- Reduce(intersect, keep.variables)
+        keep_variable_names <- Reduce(intersect, keep_variables)
       } else {
-        keep.variable.names <- Reduce(union, keep.variables)
+        keep_variable_names <- get_merge_ordered_with_indices(keep_variables)
       }
     }
-    cb_data$variable.names <- keep.variable.names
+    cb_data$variable.names <- keep_variable_names
     flag <- 1
     # if individual: X, Y
     if (!is.null(X) & !is.null(Y)){
@@ -103,14 +103,14 @@ colocboost_init_data <- function(X, Y, dict_YX,
                 }
 
             }
-            # - if missing X - FIXME
-            variable.name <- keep.variables[[dict_YX[i]]]
-            if (length(variable.name) != length(keep.variable.names)){
-                x_extend <- matrix(0, nrow = nrow(x_tmp), ncol = length(keep.variable.names),
-                                   dimnames = list(rownames(x_tmp), keep.variable.names))
-                variable.tmp <- intersect(keep.variable.names, variable.name)
-                pos <- match(variable.tmp, keep.variable.names)
-                tmp$variable_miss <- setdiff(1:length(keep.variable.names), pos)
+            # - if missing X 
+            variable.name <- keep_variables[[dict_YX[i]]]
+            if (length(variable.name) != length(keep_variable_names)){
+                x_extend <- matrix(0, nrow = nrow(x_tmp), ncol = length(keep_variable_names),
+                                   dimnames = list(rownames(x_tmp), keep_variable_names))
+                variable.tmp <- intersect(keep_variable_names, variable.name)
+                pos <- match(variable.tmp, keep_variable_names)
+                tmp$variable_miss <- setdiff(1:length(keep_variable_names), pos)
                 poss <- match(variable.tmp, variable.name)
                 x_extend[,pos] <- x_tmp[,poss]
                 x_tmp <- x_extend
@@ -152,35 +152,30 @@ colocboost_init_data <- function(X, Y, dict_YX,
             # check LD
             if (dict_sumstatLD[i] == i){
 
-                # --- final rank: keep.variable.names (N > M) N / M
-                # --- current list: final_variables (M = M1 n M2)  <- LD (M1 x M1), Z (M2 x 1) >> LD (M x M)
                 # - intersect variables
-                tmp_variables <- intersect(keep.variables[[flag1]], colnames(LD[[i]]))
-                pos.final <- sort(match(tmp_variables, keep.variable.names))
-                final_variables <- keep.variable.names[pos.final] # keep the same rank with keep.variable.names
+                tmp_variables <- intersect(keep_variables[[flag1]], colnames(LD[[i]]))
+                pos.final <- sort(match(tmp_variables, keep_variable_names))
+                final_variables <- keep_variable_names[pos.final] # keep the same rank with keep_variable_names
                 # - check missing variables
-                tmp$variable_miss <- setdiff(1:length(keep.variable.names), pos.final)
+                tmp$variable_miss <- setdiff(1:length(keep_variable_names), pos.final)
                 # - set 0 to LD
                 pos.LD <- match(final_variables, colnames(LD[[i]]))
-                # LD_sparse <- as(LD[[i]], "sparseMatrix")
-                # LD_tmp <- LD_sparse[pos.LD, pos.LD]
                 LD_tmp <- LD[[i]][pos.LD, pos.LD]
 
             } else {
 
-                variable_i <- keep.variables[[flag1]]
-                variable_LD <- keep.variables[[dict_sumstatLD[i]+ind_idx]]
+                variable_i <- keep_variables[[flag1]]
+                variable_LD <- keep_variables[[dict_sumstatLD[i]+ind_idx]]
                 if (length(which(is.na(match(variable_i, variable_LD)))) != 0){
                     # - intersect variables
-                    tmp_variables <- intersect(keep.variables[[flag]], colnames(LD[[dict_sumstatLD[i]]]))
-                    pos.final <- sort(match(tmp_variables, keep.variable.names))
-                    final_variables <- keep.variable.names[pos.final] # keep the same rank with keep.variable.names
+                    tmp_variables <- intersect(keep_variables[[flag]], colnames(LD[[dict_sumstatLD[i]]]))
+                    pos.final <- sort(match(tmp_variables, keep_variable_names))
+                    final_variables <- keep_variable_names[pos.final] # keep the same rank with keep_variable_names
                     # - check missing variables
-                    tmp$variable_miss <- setdiff(1:length(keep.variable.names), pos.final)
+                    tmp$variable_miss <- setdiff(1:length(keep_variable_names), pos.final)
                     # - set 0 to LD
                     pos.LD <- match(final_variables, colnames(LD[[dict_sumstatLD[i]]]))
                     LD_tmp <- LD[[dict_sumstatLD[i]]][pos.LD, pos.LD]
-
                     # - need to change LD
                     dict_sumstatLD[i] <- i
 
@@ -191,8 +186,8 @@ colocboost_init_data <- function(X, Y, dict_YX,
             }
 
             # - set 0 to Z
-            Z_extend <- rep(0, length(keep.variable.names)) # N
-            pos.z <- match(final_variables, keep.variables[[flag1]]) # M <- M2
+            Z_extend <- rep(0, length(keep_variable_names)) # N
+            pos.z <- match(final_variables, keep_variables[[flag1]]) # M <- M2
             Z_extend[pos.final] <- Z[[i]][pos.z]
 
             # - organize data
@@ -253,14 +248,14 @@ colocboost_init_data <- function(X, Y, dict_YX,
 #' @noRd
 #' @keywords cb_objects
 colocboost_init_model <- function(cb_data,
-                                  step = 0.01,
+                                  learning_rate_init = 0.01,
                                   stop_thresh = 1e-06,
-                                  func_multicorrection = "lfdr",
+                                  func_multi_test = "lfdr",
                                   stop_null = 0.05,
-                                  multicorrection_max = 1,
+                                  multi_test_max = 1,
                                   ash_prior = "normal",
                                   p.adjust.methods = "fdr",
-                                  target_idx = NULL){
+                                  target_outcome_idx = NULL){
 
     #################  initialization #######################################
     cb_model = list()
@@ -279,7 +274,7 @@ colocboost_init_model <- function(cb_data,
                     "change_loglike" = NULL,
                     "correlation" = NULL,
                     "z" = NULL,
-                    "step" = step,
+                    "learning_rate_init" = learning_rate_init,
                     "stop_thresh" = stop_thresh,
                     "ld_jk" = c(),
                     "jk" = c())
@@ -308,7 +303,7 @@ colocboost_init_model <- function(cb_data,
           multiple_correction <- 1
         } else {
           multiple_correction <- get_multiple_correction(z=tmp$z, miss_idx = data_each$variable_miss, 
-                                                         func_multicorrection = func_multicorrection, 
+                                                         func_multi_test = func_multi_test, 
                                                          ash_prior = ash_prior,
                                                          p.adjust.methods = p.adjust.methods)
         }
@@ -316,13 +311,13 @@ colocboost_init_model <- function(cb_data,
         tmp$multi_correction_univariate <- multiple_correction
         if (all(multiple_correction==1)){
             tmp$stop_null <- 1
-        } else if (min(multiple_correction) > multicorrection_max){
+        } else if (min(multiple_correction) > multi_test_max){
             tmp$stop_null <- min(multiple_correction)
         } else {
-            if (min(multiple_correction) < multicorrection_max){
-                tmp$stop_null <- multicorrection_max
+            if (min(multiple_correction) < multi_test_max){
+                tmp$stop_null <- multi_test_max
             } else {
-                tmp$stop_null <- min(min(multiple_correction)+0.1, multicorrection_max)
+                tmp$stop_null <- min(min(multiple_correction)+0.1, multi_test_max)
             }
         }
         
@@ -337,13 +332,13 @@ colocboost_init_model <- function(cb_data,
 #' @keywords cb_objects
 #' @importFrom utils tail
 colocboost_init_para <- function(cb_data, cb_model,tau=0.01,
-                                 func_prior = "z2z",
-                                 lambda = 0.5, lambda_target = 1,
-                                 multicorrection_cut=1,
-                                 func_multicorrection = "lfdr",
-                                 LD_obj = FALSE,
+                                 func_simplex = "z2z",
+                                 lambda = 0.5, lambda_target_outcome = 1,
+                                 multi_test_thresh=1,
+                                 func_multi_test = "lfdr",
+                                 LD_free = FALSE,
                                  outcome_names = NULL,
-                                 target_idx = NULL){
+                                 target_outcome_idx = NULL){
 
 
     #################  initialization #######################################
@@ -357,7 +352,7 @@ colocboost_init_para <- function(cb_data, cb_model,tau=0.01,
     profile_loglike <- sum(sapply(1:length(cb_model), function(i) tail(cb_model[[i]]$profile_loglike_each, n=1)))
     # - check initial update outcome
     stop_null <- sapply(cb_model, function(tmp) min(tmp$multi_correction_univariate))
-    pos_stop <- which(stop_null >= multicorrection_cut)
+    pos_stop <- which(stop_null >= multi_test_thresh)
     update_y = rep(1, L)
     if (length(pos_stop) != 0){ update_y[pos_stop] <- 0 } else {pos_stop = NULL}
     
@@ -375,19 +370,19 @@ colocboost_init_para <- function(cb_data, cb_model,tau=0.01,
                          "P" = P,
                          "N" = N,
                          "tau" = tau,
-                         "func_prior" = func_prior,
+                         "func_simplex" = func_simplex,
                          "lambda" = lambda,
-                         "lambda_target" = lambda_target,
+                         "lambda_target_outcome" = lambda_target_outcome,
                          "profile_loglike" = profile_loglike,
                          "update_status" = c(),
                          "jk" = c(),
                          "update_y" = update_y,
                          "true_stop" = pos_stop,
-                         "LD_obj" = LD_obj,
+                         "LD_free" = LD_free,
                          "real_update_jk" = c(),
                          "outcome_names" = outcome_names,
                          "variables" = cb_data$variable.names,
-                         "target_idx" = target_idx,
+                         "target_outcome_idx" = target_outcome_idx,
                          "coveraged" = TRUE,
                          "num_updates" = 1)
     class(cb_model_para) = "colocboost"
@@ -560,17 +555,17 @@ get_padj <- function(z, miss_idx = NULL, p.adjust.methods = "fdr"){ # test also 
 
                                                                                                                    
                                                                                                                    
-get_multiple_correction <- function(z, miss_idx = NULL, func_multicorrection = "lfdr", 
+get_multiple_correction <- function(z, miss_idx = NULL, func_multi_test = "lfdr", 
                                     ash_prior = "normal", 
                                     p.adjust.methods = "fdr"){
     
-   if (func_multicorrection == "lfsr"){
+   if (func_multi_test == "lfsr"){
         lfsr = get_lfsr(z=z, miss_idx = miss_idx, ash_prior = ash_prior)
         return(lfsr)
-    } else if (func_multicorrection == "lfdr"){
+    } else if (func_multi_test == "lfdr"){
         lfdr <- get_lfdr(z = z, miss_idx = miss_idx)
         return(lfdr)
-    } else if (func_multicorrection == "padj"){
+    } else if (func_multi_test == "padj"){
         fdr = get_padj(z = z, miss_idx = miss_idx, p.adjust.methods = p.adjust.methods)
         return(fdr)
     }

@@ -1,21 +1,65 @@
+#' @rdname colocboost_plot
+#'
+#' @title Plot visualization plot from a ColocBoost output.
+#'
+#' @description `colocboost_plot` generates visualization plots for colocalization events from a ColocBoost analysis.
+#'
+#' @param Output object from `colocboost` analysis 
+#' @param y Specifies the y-axis values, default is "log10p" for -log10 transformed marginal association p-values. 
+#' @param pos Optional plotting range of x-axis to zoom in to a specific region.
+#' @param plot_target_only Logical, if TRUE only plots colocalization with target outcome, default is FALSE.
+#' @param plot_cos_idx Optional indices of CoS to plot
+#' @param outcome_idx Optional indices of outcomes to include in the plot. \code{outcome_idx=NULL} to plot only the outcomes having colocalization.
+#' @param points_color Background color for non-colocalized variables, default is "grey80".
+#' @param cos_color Optional custom colors for CoS.
+#' @param add_vertical Logical, if TRUE adds vertical lines at specified positions, default is FALSE
+#' @param add_vertical_idx Optional indices for vertical lines.
+#' @param outcome_names Optional vector of outcomes names for the subtitle of each figure. \code{outcome_names=NULL} for the outcome name shown in \code{data_info}.
+#' @param plot_cols Number of columns in the plot grid, default is 2. If you have many colocalization. please consider increasing this.
+#' @param variant_coord Logical, if TRUE uses variant coordinates on x-axis, default is FALSE. This is required the variable names including position information.
+#' @param show_hits Logical, if TRUE shows top variables for each CoS, default is FALSE
+#' @param show_cos_to_uncoloc Logical, if TRUE shows colocalization to uncolocalized outcomes to diagnose, default is FALSE
+#' @param show_cos_to_uncoloc_idx Optional indices for showing CoS to all uncolocalized outcomes
+#' @param show_cos_to_uncoloc_outcome Optional outcomes for showing CoS to uncolocalized outcomes
+#' @param gene_name Optional gene name to display in plot title
+#' @param ylim_each Logical, if TRUE uses separate y-axis limits for each plot, default is TRUE
+#' @param outcome_legend_pos Position for outcome legend, default is "top"
+#' @param outcome_legend_size Size for outcome legend text, default is 1.2
+#' @param cos_legend_pos Position for colocalization set legend, default is "bottomleft"
+#' @param show_variable Logical, if TRUE displays variant IDs, default is FALSE
+#' @param lab_style Vector of two numbers for label style (size, boldness), default is c(2, 1)
+#' @param axis_style Vector of two numbers for axis style (size, boldness), default is c(2, 1)
+#' @param title_style Vector of two numbers for title style (size, boldness), default is c(2.5, 2)
+#' @param ... Additional parameters passed to `plot` functions
+#' 
+#' @return Visualization plot for each colcoalization event.
+#' 
 #' @importFrom utils head tail
 #' @importFrom graphics abline axis legend mtext par points text
 #' @importFrom grDevices adjustcolor
+#' 
+#' @examples
+#' colocboost_plot(cb_output)
+#'
+#' @keywords cb_plot
+#' @export
 colocboost_plot <- function(cb_output, y = "log10p", 
-                            gene_name = NULL,
+                            pos = NULL,
+                            plot_target_only = FALSE,
+                            plot_cos_idx = NULL,
                             outcome_idx = NULL, 
+                            points_color = "grey80", 
+                            cos_color = NULL,
+                            add_vertical = FALSE, 
+                            add_vertical_idx = NULL, 
                             outcome_names = NULL,
                             plot_cols = 2,
-                            pos = NULL,
-                            plot_cos_idx = NULL,
-                            plot_target_only = FALSE,
                             variant_coord = FALSE,
-                            show_coloc = TRUE,
                             show_hits = FALSE,
                             show_cos_to_uncoloc = FALSE,
                             show_cos_to_uncoloc_idx = NULL,
                             show_cos_to_uncoloc_outcome = NULL,
-                            points_color = "grey90", cos_color = NULL,
+                            gene_name = NULL,
                             ylim_each = TRUE, 
                             outcome_legend_pos = "top",
                             outcome_legend_size = 1.2,
@@ -24,8 +68,6 @@ colocboost_plot <- function(cb_output, y = "log10p",
                             lab_style = c(2, 1),
                             axis_style = c(2, 1),
                             title_style = c(2.5, 2), 
-                            add_vertical = FALSE, add_vertical_idx = NULL, 
-                            add_genetrack = FALSE,
                             ...){
                     
   
@@ -110,7 +152,7 @@ colocboost_plot <- function(cb_output, y = "log10p",
       }
       for (iy in outcome_idx){
         args$y = y[[iy]]
-        args$ylim = c(0, cb_plot_init$ymax[iy])
+        args$ylim = c(cb_plot_init$ymin[iy], cb_plot_init$ymax[iy])
         if (!is.null(cb_plot_init$xtext)){
           args$xaxt = "n"
           do.call(plot, args)
@@ -213,9 +255,9 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
   
   # extract results from colocboost
   analysis_outcome <- cb_output$data_info$outcome_info$outcome_names
-  target_idx <- which(cb_output$data_info$outcome_info$is_target)
-  if ( length(target_idx)!=0 ){
-      target_outcome <- analysis_outcome[target_idx]
+  target_outcome_idx <- which(cb_output$data_info$outcome_info$is_target)
+  if ( length(target_outcome_idx)!=0 ){
+      target_outcome <- analysis_outcome[target_outcome_idx]
   } else { target_outcome <- NULL }
   # check if target cos
   target_cos <- cb_output$cos_summary$cos_id[cb_output$cos_summary$target_outcome!=FALSE]
@@ -223,6 +265,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
   # extract z-scores
   variables <- cb_output$data_info$variables
   Z <- cb_output$data_info$z
+  coef <- cb_output$data_info$coef
     
   # if finemapping
   if (cb_output$data_info$n_outcomes==1){
@@ -305,6 +348,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
                      "x" = x,
                      "Zscores" = Z,
                      "vcp" = vcp,
+                     "coef" = coef,
                      "cos" = coloc_cos,
                      "cos_hits" = coloc_hits,
                      "coloc_index" = coloc_index)
@@ -375,7 +419,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
 
 #' @importFrom stats pnorm
 plot_initial <- function(cb_plot_input, y = "log10p", 
-                         points_color = "grey90", cos_color = NULL,
+                         points_color = "grey80", cos_color = NULL,
                          ylim_each = TRUE, gene_name = NULL,
                          outcome_legend_size = 1.5,
                          outcome_legend_pos = "right",
@@ -424,6 +468,9 @@ plot_initial <- function(cb_plot_input, y = "log10p",
     ylab = "VCP"
     if (length(cb_plot_input$outcomes)==1){ ylab = "PIP" }
     args$ylim <- c(0,1)
+  } else if (y == "coef"){
+    plot_data <- cb_plot_input$coef
+    ylab = "Coefficients"
   } else {
     stop("Invalid y value! Choose from 'z' or 'z_original'")
   }
@@ -448,7 +495,13 @@ plot_initial <- function(cb_plot_input, y = "log10p",
   args$axis_face <- axis_style[2]
   
   # - set ylim for each subfigure
-  if (exists("ylim", args)) ymax = rep(args$ylim[2],length(args$y)) else ymax = NULL
+  if (exists("ylim", args)){
+    ymax = rep(args$ylim[2],length(args$y))
+    ymin = rep(args$ylim[1],length(args$y))
+  } else {
+    ymax = NULL
+    ymin = rep(0,length(args$y))
+  }
   if (ylim_each & is.null(ymax)) {
     ymax <- sapply(plot_data, function(p){
       valid_values <- p[is.finite(p)]
@@ -459,8 +512,12 @@ plot_initial <- function(cb_plot_input, y = "log10p",
       }
       return(ymax)
     })
+    if (y == "coef"){
+      ymin <- sapply(plot_data, function(p) min(p)*1.05)
+    }
   } 
   args$ymax = ymax
+  args$ymin = ymin
   
   # - set legend text position and format
   args$outcome_legend_pos <- outcome_legend_pos

@@ -7,8 +7,7 @@
 colocboost_assemble(
   cb_obj,
   coverage = 0.95,
-  func_intw = "fun_R",
-  alpha = 1.5,
+  weight_fudge_factor = 1.5,
   check_null = 0.1,
   check_null_method = "profile",
   check_null_max = 2e-05,
@@ -16,12 +15,12 @@ colocboost_assemble(
   overlap = TRUE,
   n_purity = 100,
   min_abs_corr = 0.5,
-  coverage_singlew = 0.8,
+  sec_coverage_thresh = 0.8,
   median_abs_corr = NULL,
-  between_cluster = 0.8,
-  between_purity = 0.8,
-  weaker_ucos = TRUE,
-  merging = TRUE,
+  min_cluster_corr = 0.8,
+  median_cos_abs_corr = 0.8,
+  weaker_effect = TRUE,
+  merge_cos = TRUE,
   tol = 1e-09,
   output_level = 1
 )
@@ -36,11 +35,11 @@ Colocalization signal - \code{colocboost_assemble_cos} - identify the colocalize
 
 Un-colocalization signal - \code{colocboost_assemble_ucos} - identify the causal confidence sets for each outcome only.
 
-Add-hoc merging functions including
+Add-hoc merge_cos functions including
 
 \itemize{
-\item{merge_coloc_single}{merge the colocalized sets and the single causal set if pass the \code{between_purity}}
-\item{merge_single}{merge the single causal sets for different outcomes if pass the \code{between_purity}}
+\item{merge_coloc_single}{merge the colocalized sets and the single causal set if pass the \code{median_cos_abs_corr}}
+\item{merge_single}{merge the single causal sets for different outcomes if pass the \code{median_cos_abs_corr}}
 }
 
 Refine of the colocalization sets (TO-DO-LIST)

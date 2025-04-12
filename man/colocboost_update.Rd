@@ -9,12 +9,12 @@ colocboost_update(
   cb_model_para,
   cb_data,
   tau = 0.01,
-  decayrate = 1,
-  func_prior = "z2z",
+  learning_rate_decay = 1,
+  func_simplex = "z2z",
   lambda = 0.5,
-  lambda_target = 1,
-  LD_obj = FALSE,
-  dynamic_step = TRUE
+  lambda_target_outcome = 1,
+  LD_free = FALSE,
+  dynamic_learning_rate = TRUE
 )
 }
 \value{

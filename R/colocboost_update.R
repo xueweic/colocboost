@@ -10,16 +10,16 @@
 #' @export
 colocboost_update <- function(cb_model, cb_model_para, cb_data,
                               tau = 0.01,
-                              decayrate = 1,
-                              func_prior = "z2z",
+                              learning_rate_decay = 1,
+                              func_simplex = "z2z",
                               lambda = 0.5,
-                              lambda_target = 1,
-                              LD_obj = FALSE,
-                              dynamic_step = TRUE){
+                              lambda_target_outcome = 1,
+                              LD_free = FALSE,
+                              dynamic_learning_rate = TRUE){
 
     # - clear which outcome need to be updated at which jk
     pos.update <- which(cb_model_para$update_temp$update_status != 0)
-    target_idx <- cb_model_para$target_idx
+    target_outcome_idx <- cb_model_para$target_outcome_idx
 
     for (i in pos.update){
 
@@ -47,14 +47,14 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data,
         ld_feature <- sqrt(abs(ld_jk))
 
         # - calculate delta
-        if (is.null(target_idx)){
+        if (is.null(target_outcome_idx)){
             lambda_outcome <- lambda
         } else {
-            lambda_outcome <- ifelse(i==target_idx, lambda_target, lambda)
+            lambda_outcome <- ifelse(i==target_outcome_idx, lambda_target_outcome, lambda)
         }
         delta <- boost_KL_delta(z = cb_model[[i]]$z,
                                 ld_feature = ld_feature, adj_dep = adj_dep,
-                                func_prior = func_prior, lambda = lambda_outcome)
+                                func_simplex = func_simplex, lambda = lambda_outcome)
         
         x_tmp <- cb_data$data[[X_dict]]$X
         scaling_factor <- if (!is.null(cb_data$data[[i]]$N)) (cb_data$data[[i]]$N - 1) else 1
@@ -63,7 +63,7 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data,
         } else {
           cb_model[[i]]$res / scaling_factor
         }
-        obj_ld <- if (LD_obj) ld_feature else rep(1, length(ld_feature))
+        obj_ld <- if (LD_free) ld_feature else rep(1, length(ld_feature))
         if (length(cb_data$data[[i]]$variable_miss)!=0){
             obj_ld[cb_data$data[[i]]$variable_miss] <- 0
         }
@@ -84,14 +84,14 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data,
         ########## BEGIN: MAIN UPDATE ######################
         # - Gradient ascent on beta
         beta_grad <- weights * sign(cb_model[[i]]$correlation)
-        if (dynamic_step){
+        if (dynamic_learning_rate){
           if (tail(cb_model[[i]]$obj_path, n=1) > 0.5){
-            step1 = max(0.5 * (1 / ( 1 + decayrate*(length(cb_model[[i]]$obj_path)-1) )), cb_model[[i]]$step)
+            step1 = max(0.5 * (1 / ( 1 + learning_rate_decay*(length(cb_model[[i]]$obj_path)-1) )), cb_model[[i]]$learning_rate_init)
           } else {
-            step1 = cb_model[[i]]$step
+            step1 = cb_model[[i]]$learning_rate_init
           }
         } else {
-          step1 = cb_model[[i]]$step
+          step1 = cb_model[[i]]$learning_rate_init
         }
         cb_model[[i]]$beta <- cb_model[[i]]$beta + step1 * beta_grad
 
@@ -149,32 +149,32 @@ get_LD_jk <- function(jk1, X = NULL, XtX = NULL, N = NULL, remain_idx = NULL, P 
 
 
 boost_KL_delta <- function(z, ld_feature, adj_dep,
-                           func_prior = "LD_z2z",
+                           func_simplex = "LD_z2z",
                            lambda = 0.5){
 
     # if (!is.null(n)){ z <- z * sqrt( (n-1)/(z^2+n-2) ) }
 
 
-    if (func_prior == "Range_Z"){
+    if (func_simplex == "Range_Z"){
 
         z2z <- lambda*0.5*z^2+(1-lambda)*abs(z)
         z2z <- (z2z - min(z2z)) / (max(z2z) - min(z2z)) * 5
         z2z <- adj_dep*ld_feature*z2z
         delta <- exp(z2z - max(z2z))
 
-    } else if (func_prior == "LD_z2z"){
+    } else if (func_simplex == "LD_z2z"){
 
         z2z <- lambda*0.5*z^2+(1-lambda)*abs(z)
         z2z <- adj_dep*ld_feature*z2z
         delta <- exp(z2z - max(z2z))
 
-    } else if (func_prior == "only_z2z"){
+    } else if (func_simplex == "only_z2z"){
 
         z2z <- lambda*0.5*z^2+(1-lambda)*abs(z)
         z2z <- adj_dep*z2z
         delta <- exp(z2z - max(z2z))
 
-    } else if (func_prior == "entropy"){
+    } else if (func_simplex == "entropy"){
 
         delta <- rep(1, length(z))
 
@@ -187,11 +187,11 @@ boost_KL_delta <- function(z, ld_feature, adj_dep,
 
 
 boost_check_stop <- function(cb_model, cb_model_para, pos_stop,
-                             multicorrection_max = 1){
+                             multi_test_max = 1){
 
     # - check the iteration for the stop outcome (pos_stop has the same jk with original data)
     iter_each <- sapply(pos_stop, function(i){ length(cb_model[[i]]$obj_path)-1 })
-    lfsr_each <- sapply(pos_stop, function(i) cb_model[[i]]$stop_null < multicorrection_max)
+    lfsr_each <- sapply(pos_stop, function(i) cb_model[[i]]$stop_null < multi_test_max)
     pos_need_more <- which(iter_each <= 10 & lfsr_each)
 
     # pos_need_more <- which(iter_each <= 10)
@@ -211,7 +211,7 @@ boost_check_stop <- function(cb_model, cb_model_para, pos_stop,
             } else if (stop_method == "lfsr" | stop_method == "lfdr"){
                 cb_model[[i]]$stop_null <- cb_model[[i]]$stop_null + 0.05
             }
-            cb_model[[i]]$step <- cb_model[[i]]$step*0.5
+            cb_model[[i]]$learning_rate_init <- cb_model[[i]]$learning_rate_init*0.5
         }
 
         # stop update for outcome with > 10 iterations
@@ -229,13 +229,13 @@ boost_check_stop <- function(cb_model, cb_model_para, pos_stop,
 
 boost_obj_last <- function(cb_data, cb_model, cb_model_para,
                            tau = 0.01,
-                           func_prior = "z2z",
+                           func_simplex = "z2z",
                            lambda = 0.5,
-                           lambda_target = 1,
-                           LD_obj = TRUE){
+                           lambda_target_outcome = 1,
+                           LD_free = TRUE){
 
     pos.stop <- cb_model_para$true_stop
-    target_idx <- cb_model_para$target_idx
+    target_outcome_idx <- cb_model_para$target_outcome_idx
     
     for (i in pos.stop){
         # - check which jk update
@@ -258,14 +258,14 @@ boost_obj_last <- function(cb_data, cb_model, cb_model_para,
             ld_feature <- sqrt(abs(ld_jk))
 
             # - calculate delta
-            if (is.null(target_idx)){
+            if (is.null(target_outcome_idx)){
                 lambda_outcome <- lambda
             } else {
-                lambda_outcome <- ifelse(i==target_idx, lambda_target, lambda)
+                lambda_outcome <- ifelse(i==target_outcome_idx, lambda_target_outcome, lambda)
             }
             delta <- boost_KL_delta(z = cb_model[[i]]$z,
                                     ld_feature = ld_feature, adj_dep = adj_dep,
-                                    func_prior = func_prior, lambda = lambda_outcome)
+                                    func_simplex = func_simplex, lambda = lambda_outcome)
             
             x_tmp <- cb_data$data[[X_dict]]$X
             scaling_factor <- if (!is.null(cb_data$data[[i]]$N)) (cb_data$data[[i]]$N - 1) else 1
@@ -275,7 +275,7 @@ boost_obj_last <- function(cb_data, cb_model, cb_model_para,
               cb_model[[i]]$res / scaling_factor
             }
 
-            obj_ld <- if (LD_obj) ld_feature else rep(1, length(ld_feature))
+            obj_ld <- if (LD_free) ld_feature else rep(1, length(ld_feature))
             if (length(cb_data$data[[i]]$variable_miss)!=0){
                 obj_ld[cb_data$data[[i]]$variable_miss] <- 0
             }

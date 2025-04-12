@@ -9,10 +9,10 @@ colocboost_check_update_jk(
   cb_model_para,
   cb_data,
   prioritize_jkstar = TRUE,
-  jk_equiv_cor = 0.8,
+  jk_equiv_corr = 0.8,
   jk_equiv_loglik = 1,
   func_compare = "min_max",
-  coloc_thres = 0.1
+  coloc_thresh = 0.1
 )
 }
 \value{
