@@ -460,24 +460,6 @@ get_data_info <- function(cb_obj){
   z_scores <- lapply(cb_obj$cb_model, function(cb){ as.numeric(cb$z_univariate) })
   betas <- lapply(cb_obj$cb_model, function(cb){ as.numeric(cb$beta) })
   names(z_scores) <- names(betas) <- analysis_outcome
-  if (all(grepl("chr", variables))){
-    # need to check with AI
-    # chr:pos:a1:a2
-    # 1:pos:a1
-    # chr_pos_
-    # chr.pos
-    # y1: A, B, D, F, G
-    # y2: B, C, D, E
-    # A,B,C,D,E,F,G
-    
-    # - if variables_name has position informtaion, re-order all_info based on positions
-    # position <- as.numeric(sapply(variables, function(tmp) strsplit(tmp, ":")[[1]][2]))
-    position <- as.numeric(gsub(".*:(\\d+).*", "\\1", variables))
-    ordered <- order(position, decreasing = FALSE)
-    z_scores <- lapply(z_scores, function(z) z[ordered])
-    variables <- variables[ordered]
-  }
-  
   ## - output data info
   data.info <- list("n_outcomes" = n_outcome,
                     "n_variables" = n_variables,

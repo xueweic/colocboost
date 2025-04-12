@@ -398,9 +398,10 @@ get_in_cos <- function(weights, coverage = 0.95){
   
 }
 
+
 #' Pure R implementation (fallback)
 #' @keywords internal
-merge_ordered_with_indices <- function(vector_list) {
+get_merge_ordered_with_indices <- function(vector_list) {
   # Quick validation
   if (!is.list(vector_list) || length(vector_list) == 0) {
     stop("Input must be a non-empty list of vectors")
@@ -437,45 +438,8 @@ merge_ordered_with_indices <- function(vector_list) {
     merged <- merged[1:merged_length]
   }
   
-  # Phase 2: Compute missing indices efficiently
-  missing_indices <- vector("list", n_vectors)
-  
-  for (i in seq_len(n_vectors)) {
-    vec <- vector_list[[i]]
-    
-    # Optimization: For short vectors, use direct comparison
-    if (length(vec) < 50 || length(merged) < 100) {
-      # Simple approach for small vectors
-      is_present <- logical(length(merged))
-      for (elem in vec) {
-        is_present[merged == elem] <- TRUE
-      }
-      missing_indices[[i]] <- which(!is_present)
-    } else {
-      # For larger vectors, use hash-based approach
-      present <- new.env(hash = TRUE, parent = emptyenv(), size = length(vec))
-      for (elem in vec) {
-        present[[elem]] <- TRUE
-      }
-      
-      missing <- integer(length(merged))
-      missing_count <- 0
-      
-      for (j in seq_along(merged)) {
-        if (!exists(merged[j], envir = present, inherits = FALSE)) {
-          missing_count <- missing_count + 1
-          missing[missing_count] <- j
-        }
-      }
-      
-      missing_indices[[i]] <- if (missing_count > 0) missing[1:missing_count] else integer(0)
-    }
-  }
-  
-  list(
-    merged = merged,
-    missing_indices = missing_indices
-  )
+  merged
 }
+
 
 

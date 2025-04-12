@@ -64,7 +64,7 @@ colocboost_init_data <- function(X, Y, dict_YX,
       if (overlap_variables){
         keep_variable_names <- Reduce(intersect, keep_variables)
       } else {
-        keep_variable_names <- Reduce(union, keep_variables)
+        keep_variable_names <- get_merge_ordered_with_indices(keep_variables)
       }
     }
     cb_data$variable.names <- keep_variable_names
@@ -103,7 +103,7 @@ colocboost_init_data <- function(X, Y, dict_YX,
                 }
 
             }
-            # - if missing X - FIXME
+            # - if missing X 
             variable.name <- keep_variables[[dict_YX[i]]]
             if (length(variable.name) != length(keep_variable_names)){
                 x_extend <- matrix(0, nrow = nrow(x_tmp), ncol = length(keep_variable_names),
@@ -152,8 +152,6 @@ colocboost_init_data <- function(X, Y, dict_YX,
             # check LD
             if (dict_sumstatLD[i] == i){
 
-                # --- final rank: keep_variable_names (N > M) N / M
-                # --- current list: final_variables (M = M1 n M2)  <- LD (M1 x M1), Z (M2 x 1) >> LD (M x M)
                 # - intersect variables
                 tmp_variables <- intersect(keep_variables[[flag1]], colnames(LD[[i]]))
                 pos.final <- sort(match(tmp_variables, keep_variable_names))
@@ -162,8 +160,6 @@ colocboost_init_data <- function(X, Y, dict_YX,
                 tmp$variable_miss <- setdiff(1:length(keep_variable_names), pos.final)
                 # - set 0 to LD
                 pos.LD <- match(final_variables, colnames(LD[[i]]))
-                # LD_sparse <- as(LD[[i]], "sparseMatrix")
-                # LD_tmp <- LD_sparse[pos.LD, pos.LD]
                 LD_tmp <- LD[[i]][pos.LD, pos.LD]
 
             } else {
@@ -180,7 +176,6 @@ colocboost_init_data <- function(X, Y, dict_YX,
                     # - set 0 to LD
                     pos.LD <- match(final_variables, colnames(LD[[dict_sumstatLD[i]]]))
                     LD_tmp <- LD[[dict_sumstatLD[i]]][pos.LD, pos.LD]
-
                     # - need to change LD
                     dict_sumstatLD[i] <- i
 
