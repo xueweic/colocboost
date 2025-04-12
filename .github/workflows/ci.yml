@@ -33,11 +33,11 @@ jobs:
       - name: Run unit tests
         run: pixi run --environment ${{ matrix.environment }} devtools_test
 
-      - name: Check unit test code coverage
-        run: pixi run --environment ${{ matrix.environment }} codecov
-
       - name: Run R CMD CHECK
         run: pixi run rcmdcheck
+
+      - name: Check unit test code coverage
+        run: pixi run --environment ${{ matrix.environment }} codecov
 
   ci_osx-64:
     name: osx-64 CI
