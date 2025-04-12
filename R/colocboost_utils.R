@@ -400,7 +400,7 @@ get_in_cos <- function(weights, coverage = 0.95){
 
 
 #' Pure R implementation (fallback)
-#' @keywords internal
+#' @noRd
 get_merge_ordered_with_indices <- function(vector_list) {
   # Quick validation
   if (!is.list(vector_list) || length(vector_list) == 0) {
