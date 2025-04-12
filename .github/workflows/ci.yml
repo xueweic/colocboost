@@ -34,7 +34,11 @@ jobs:
         run: pixi run --environment ${{ matrix.environment }} devtools_test
 
       - name: Run R CMD CHECK
-        run: pixi run rcmdcheck
+        run: |
+          pixi install --environment ${{ matrix.environment }}
+          ln -sf $(pwd)/.pixi/envs/default/lib/libhwasan.so.0 $(pwd)/.pixi/envs/default/lib/libhwasan.so
+          ln -sf $(pwd)/.pixi/envs/${{ matrix.environment }}/lib/libhwasan.so.0 $(pwd)/.pixi/envs/${{ matrix.environment }}/lib/libhwasan.so
+          pixi run --environment ${{ matrix.environment }} rcmdcheck
 
       - name: Check unit test code coverage
         run: pixi run --environment ${{ matrix.environment }} codecov
