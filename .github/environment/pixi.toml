@@ -10,7 +10,8 @@ libc = { family="glibc", version="2.17" }
 devtools_document = "R -e 'devtools::document()'"
 devtools_test = "R -e 'devtools::test()'"
 codecov = "R -e 'covr::codecov(quiet = FALSE)'"
-rcmdcheck = "R -e 'devtools::build()'; mv ./colocboost_*.tar.gz ./colocboost.tar.gz; R -e 'rcmdcheck::rcmdcheck(path = \"./colocboost.tar.gz\", args = c(\"--as-cran\", \"--no-manual\"))'"
+build = "R -e 'devtools::build()'"
+rcmdcheck = "R -e 'pkg <- list.files(\"..\", pattern = \".tar.gz\", full.names = TRUE); rcmdcheck::rcmdcheck(path = pkg[1], args = c(\"--as-cran\"))'"
 use_major_version = "R -e 'usethis::Use_version(which = \"major\", push = FALSE)'"
 use_minor_version = "R -e 'usethis::use_version(which = \"minor\", push = FALSE)'"
 use_patch_version = "R -e 'usethis::use_version(which = \"patch\", push = FALSE)'"
@@ -26,7 +27,9 @@ r43 = {features = ["r43"]}
 r44 = {features = ["r44"]}
 
 [dependencies]
-"r-devtools" = "*"
-"r-rcmdcheck" = "*"
+"r-ashr" = "*"
 "r-covr" = "*"
+"r-devtools" = "*"
+"r-mass" = "*"
+"r-rcmdcheck" = "*"
 "r-tidyverse" = "*"
