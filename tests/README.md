@@ -20,7 +20,7 @@ This repository contains a comprehensive testing framework for the [colocboost](
    ```
    or test one file using `pixi run`:
    ```bash
-   pixi run R -e 'devtools::test_active_file("tests/testthat/test_colocboost.R")' 
+   pixi run R -e 'devtools::test_active_file("tests/testthat/test_colocboost.R")'
    ```
 
 ## Files and Structure
@@ -71,7 +71,7 @@ This testing framework includes GitHub Actions workflows that automatically run 
 
 The workflow is defined in `.github/workflows/ci.yaml` and automatically runs:
 - `R CMD check`
-- Test coverage reporting with codecov.io
+- Test coverage reporting with [codecov.io](codecov.io)
 
 Test results and coverage statistics are available on the GitHub Actions page after each pull request.
 
