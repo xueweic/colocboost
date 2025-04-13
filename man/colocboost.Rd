@@ -208,18 +208,6 @@ There is an additional step to help merge the confidence sets with small \code{b
 (default is 0.8) but within the same locus. This step addresses potential instabilities in linkage disequilibrium (LD) estimation
 that may arise from small sample sizes or discrepancies in minor allele frequencies (MAF) across different confidence sets.
 }
-\section{Input Data}{
-
-}
-
-\section{Model Parameters}{
-NA
-}
-
-\section{Post Inference Parameters}{
-NA
-}
-
 \examples{
 colocboost(X=X, Y=Y)
 
