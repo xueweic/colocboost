@@ -37,8 +37,10 @@ Un-colocalization signal - \code{colocboost_assemble_ucos} - identify the causal
 
 Add-hoc merge_cos functions including
 
+\itemize{
 \item{merge_coloc_single}{merge the colocalized sets and the single causal set if pass the \code{median_cos_abs_corr}}
 \item{merge_single}{merge the single causal sets for different outcomes if pass the \code{median_cos_abs_corr}}
+}
 
 Refine of the colocalization sets (TO-DO-LIST)
 
