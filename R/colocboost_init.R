@@ -571,5 +571,3 @@ get_multiple_correction <- function(z, miss_idx = NULL, func_multi_test = "lfdr"
     }
 
 }
-          
-

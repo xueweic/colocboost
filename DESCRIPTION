@@ -1,6 +1,6 @@
 Package: colocboost
 Type: Package
-Date: 2024-09-01
+Date: 2025-04-13
 Title: Multi-Context Colocalization Analysis Tool for Molecular QTL and GWAS Studies
 Version: 0.1.0
 Authors@R: c(
@@ -28,8 +28,8 @@ Suggests:
     testthat (>= 3.0.0),
     knitr,
     rmarkdown,
-    susieR,
-    ashr
+    ashr,
+    MASS
 VignetteBuilder: knitr
 Roxygen: list(markdown = TRUE)
 Config/testthat/edition: 3

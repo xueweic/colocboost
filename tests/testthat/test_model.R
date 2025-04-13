@@ -28,11 +28,12 @@ generate_test_model <- function(n = 100, p = 20, L = 2, seed = 42) {
   
   # Convert Y to list
   Y_list <- list(Y[,1], Y[,2])
+  X_list <- list(X, X)
   
   # Run colocboost with minimal parameters to get a model object
   suppressWarnings({
     result <- colocboost(
-      X = X, 
+      X = X_list, 
       Y = Y_list,
       M = 5,  # Small number of iterations for faster testing
       output_level = 3  # Include full model details
@@ -157,11 +158,12 @@ test_that("colocboost_workhorse performs boosting iterations", {
   colnames(X) <- paste0("SNP", 1:p)
   Y <- matrix(rnorm(n*2), n, 2)
   Y_list <- list(Y[,1], Y[,2])
+  X_list <- list(X, X)
   
   # Initialize CB objects
   suppressWarnings({
     # First get the data object by running colocboost with M=0
-    temp <- colocboost(X = X, Y = Y_list, M = 0)
+    temp <- colocboost(X = X_list, Y = Y_list, M = 0)
     
     # If the workhorse function is exported
     if (exists("colocboost_workhorse")) {

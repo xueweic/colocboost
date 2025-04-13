@@ -84,11 +84,12 @@ test_that("colocboost handles missing values in Y", {
   
   # Convert Y to list
   Y_list <- list(test_data$Y[,1], test_data$Y[,2])
+  X_list <- list(test_data$X, test_data$X)
   
   # Run colocboost - should handle NAs automatically
   expect_warning(
     result <- colocboost(
-      X = test_data$X, 
+      X = X_list, 
       Y = Y_list,
       M = 5  # Small number of iterations for testing
     ),
@@ -161,11 +162,12 @@ test_that("colocboost correctly identifies absence of colocalization", {
   
   # Convert Y to list
   Y_list <- list(test_data$Y[,1], test_data$Y[,2])
+  X_list <- list(test_data$X, test_data$X)
   
   # Run colocboost
   suppressWarnings({
     result <- colocboost(
-      X = test_data$X, 
+      X = X_list, 
       Y = Y_list,
       M = 10  # Need more iterations for this test
     )
@@ -192,6 +194,7 @@ test_that("colocboost handles highly correlated traits", {
   
   # Convert Y to list
   Y_list <- list(test_data$Y[,1], test_data$Y[,2])
+  X_list <- list(test_data$X, test_data$X)
   
   # Create correlation matrix for residuals
   residual_corr <- matrix(c(1, 0.9, 0.9, 1), nrow=2)
@@ -199,7 +202,7 @@ test_that("colocboost handles highly correlated traits", {
   # Run colocboost with residual correlation
   suppressWarnings({
     result <- colocboost(
-      X = test_data$X, 
+      X = X_list, 
       Y = Y_list,
       residual_correlation = residual_corr,
       M = 10  # Need more iterations for this test
@@ -220,11 +223,12 @@ test_that("colocboost handles very small datasets", {
   colnames(X_small) <- paste0("SNP", 1:5)
   Y_small <- matrix(rnorm(10*2), 10, 2)
   Y_list_small <- list(Y_small[,1], Y_small[,2])
+  X_list_small <- list(test_data$X_small, test_data$X_small)
   
   # Run colocboost
   suppressWarnings({
     result <- colocboost(
-      X = X_small, 
+      X = X_list_small, 
       Y = Y_list_small,
       M = 5  # Small number of iterations for testing
     )
@@ -244,11 +248,12 @@ test_that("colocboost works with custom parameters", {
   colnames(X) <- paste0("SNP", 1:10)
   Y <- matrix(rnorm(50*2), 50, 2)
   Y_list <- list(Y[,1], Y[,2])
+  X_list <- list(X, X)
   
   # Run colocboost with custom parameters
   suppressWarnings({
     result <- colocboost(
-      X = X, 
+      X = X_list, 
       Y = Y_list,
       M = 5,  # Small number of iterations for testing
       lambda = 0.7,  # Custom lambda
@@ -287,11 +292,12 @@ test_that("colocboost prioritizes target outcome correctly", {
   Y2 <- X %*% b2 + rnorm(100, 0, 1)
   
   Y_list <- list(Y1, Y2)
+  X_list <- list(X, X)
   
   # Run colocboost with Y1 as target
   suppressWarnings({
     result_target1 <- colocboost(
-      X = X, 
+      X = X_list, 
       Y = Y_list,
       target_outcome_idx = 1,
       lambda_target_outcome = 0.9,  # Higher lambda for target
@@ -302,7 +308,7 @@ test_that("colocboost prioritizes target outcome correctly", {
   # Run colocboost with Y2 as target
   suppressWarnings({
     result_target2 <- colocboost(
-      X = X, 
+      X = X_list, 
       Y = Y_list,
       target_outcome_idx = 2,
       lambda_target_outcome = 0.9,  # Higher lambda for target

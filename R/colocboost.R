@@ -13,7 +13,6 @@
 #' (default is 0.8) but within the same locus. This step addresses potential instabilities in linkage disequilibrium (LD) estimation
 #' that may arise from small sample sizes or discrepancies in minor allele frequencies (MAF) across different confidence sets.
 #'
-#' @section Input Data:
 #' @param X A list of genotype matrices for different outcomes, or a single matrix if all outcomes share the same genotypes.
 #'          Each matrix should have column names, if sample sizes and variables possibly differing across matrices.
 #' @param Y A list of vectors of outcomes or an N by L matrix if it is considered for the same X and multiple outcomes.
@@ -40,7 +39,6 @@
 #' @param effect_se Matrix of standard errors associated with the beta values
 #' @param effect_n A scalar or a vector of sample sizes for estimating regression coefficients. Highly recommended!
 #' 
-#' @section Model Parameters
 #' @param M The maximum number of gradient boosting rounds. If the number of outcomes are large, it will be automatically increased to a larger number.
 #' @param stop_thresh The stop criterion for overall profile loglikelihood function.
 #' @param tau The smooth parameter for proximity adaptive smoothing weights for the best update jk-star.
@@ -64,7 +62,6 @@
 #' @param p.adjust.methods The adjusted pvalue method in stats:p.adj  when \code{func_multi_test = "fdr"}
 #' @param residual_correlation The residual correlation based on the sample overlap, it is diagonal if it is NULL.
 #' 
-#' @section Post Inference Parameters
 #' @param coverage A number between 0 and 1 specifying the \dQuote{coverage} of the estimated colocalization confidence sets (CoS) (default is 0.95).
 #' @param min_cluster_corr The small correlation for the weights distributions across different iterations to be decided having only one cluster.
 #' @param dedup If \code{dedup = TRUE}, the duplicate confidence sets will be removed in the post-processing.
