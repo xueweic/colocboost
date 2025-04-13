@@ -1,4 +1,4 @@
-# ColocBoost for multi-context colocalization in molecular QTL and GWAS studies
+# ColocBoost for multi-trait colocalization in molecular QTL and GWAS studies
 [![Codecov test coverage](https://codecov.io/gh/StatFunGen/colocboost/branch/master/graph/badge.svg)](https://codecov.io/gh/StatFunGen/colocboost?branch=master)
 [![CRAN Version](https://www.r-pkg.org/badges/version/colocboost)](https://cran.r-project.org/package=colocboost)
 
