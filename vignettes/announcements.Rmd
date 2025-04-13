@@ -1,0 +1,12 @@
+---
+title: "News"
+output:
+  html_document:
+    theme: united
+    df_print: kable
+---
+
+## **Initial release in ColocBoost**
+
+We are excited to release ColocBoost, where it is now the default version for new installs. 
+
