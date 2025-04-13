@@ -16,3 +16,4 @@
 ^\.pixi
 ^cran-comments\.md$
 ^LICENSE\.md$
+^README\.md$
