@@ -1,0 +1,31 @@
+---
+title: "Handling partial overlapping variants across traits in ColocBoost"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Handling partial overlapping variants across traits in ColocBoost}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+This vignette demonstrates how to handle partial overlapping variants across traits in ColocBoost.
+
+
+```{r setup}
+library(colocboost)
+```
+
+![](../man/figures/missing_representation.png)
+
+
+TO-DO-LIST
+
+
+
+

@@ -75,6 +75,9 @@ res <- colocboost(X = X, Y = Y)
 
 # Identified CoS
 res$cos_details$cos$cos_index
+
+# Plotting the results
+colocboost_plot(res)
 ```
 
 

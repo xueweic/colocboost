@@ -26,6 +26,7 @@ articles:
     - Disease_Prioritized_Colocalization
     - Interpret_ColocBoost_Output
     - Visualization_ColocBoost_Output
+    - Partial_Overlap_Variants
 
   - title: internal
     contents:
