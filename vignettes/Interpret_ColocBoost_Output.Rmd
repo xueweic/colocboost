@@ -1,0 +1,101 @@
+---
+title: "Interpret ColocBoost Output"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Interpret ColocBoost Output}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+This vignette demonstrates how to interpret the output of ColocBoost, specifically to get the summary of colocalization and filtering our the weak signals.
+
+```{r setup}
+library(colocboost)
+```
+
+## 1. Look at summary of colocalization
+
+### Causal variant structure
+The dataset features two causal variants with indices 644 and 2289.
+
+- Causal variant 644 is associated with traits 1, 2, 3, and 4.
+- Causal variant 2289 is associated with traits 2, 3, and 5.
+
+```{r run-colocboost}
+# Loading the Dataset
+data(Ind_5traits)
+# Run colocboost 
+res <- colocboost(X = Ind_5traits$X, Y = Ind_5traits$Y)
+cos_summary <- res$cos_summary
+names(cos_summary)
+```
+
+The `cos_summary` object contains the colocalization summary for all colocalization events, with each row representing a single colocalization event.
+The summary includes the following columns:
+
+
+- **focal_outcome**: The focal outcome being analyzed, or `FALSE` if no focal outcome exists.
+- **colocalized_outcomes**: Traits that are colocalized within the 95% colocalization confidence set (CoS).
+- **cos_id**: A unique identifier for each 95% colocalization confidence set (CoS).
+- **purity**: The minimum absolute correlation of variants within the 95% colocalization confidence set (CoS).
+- **top_variable**: The variable with the highest variant colocalization probability (VCP).
+- **top_variable_vcp**: The variant colocalization probability for the top variable.
+- **cos_npc**: The normalized probability of colocalization for the 95% confidence set, providing empirical evidence in favor of colocalization over a trait-specific configuration.
+- **min_npc_outcome**: The minimum normalized probability among colocalized traits.
+- **n_variables**: The number of variables in the 95% colocalization confidence set (CoS).
+- **colocalized_index**: The indices of colocalized variables.
+- **colocalized_variables**: A list of colocalized variables.
+- **colocalized_variables_vcp**: The variant colocalization probabilities for all colocalized variables.
+
+
+To obtain the summary of colocalization with a specific focus on traits of interest, 
+you can use the `get_cos_summary`, see detailed usage of this function in [link](https://statfungen.github.io/colocboost/reference/get_cos_summary.html). 
+This function allows you to filter the colocalization summary based on a particular outcome of interest, 
+making it easier to interpret the results for specific traits. 
+For example, if you are interested in the colocalization events involving the traits `Y1` and `Y2`, you can use the following code:
+
+
+```{r summary-colocboost}
+# Get summary table of colocalization
+cos_interest_outcome <- get_cos_summary(res, interest_outcome = c("Y1", "Y2"))
+```
+
+
+
+## 2. Get strong colocalization signals
+
+In `cos_summary`, for each 95% CoS, the `cos_npc` column provides a normalized probability of colocalization and
+`min_npc_outcome` column provides the minimum normalized probability among colocalized traits.
+Those two metrices are measured as an empirical evidence of colocalization both in CoS-level and in trait-level.
+To obtain the best minimal colocalization configuration can be defined by using both `cos_npc` and `npc_outcome`
+See detailed usage of this function in [link](https://statfungen.github.io/colocboost/reference/get_strong_colocalization.html).
+
+
+```{r run-strong-colocalization}
+filter_res <- get_strong_colocalization(res, cos_npc_cutoff = 0.5, npc_outcome_cutoff = 0.2)
+```
+
+The output from `get_strong_colocalization` is the same as output from `colocboost`, which can be directly used in any post inference and visualization.
+
+
+## 3. Details of ColocBoost output
+
+The entire colocalization output from `colocboost` is stored in the `colocboost` object, which contains several components:
+
+- `cos_summary`: A summary table for colocalization events.
+- `vcp`: The variable colocalized probability for each variable.
+- `cos_details`: A object with all information for colocalization results.
+- `data_info`: A object with detailed information from input data.
+- `model_info`: A object with detailed information for colocboost model.
+
+
+
+

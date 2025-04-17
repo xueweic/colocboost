@@ -5,8 +5,6 @@ template:
 
 navbar:
   left:
-    - text: "Home"
-      href: index.html
     - text: "News"
       href: articles/announcements.html
     - text: "Installation"
@@ -24,15 +22,16 @@ articles:
     contents:
     - Input_Data_Format
     - Individual_Level_Colocalization
+    - Summary_Statistics_Colocalization
     - Disease_Prioritized_Colocalization
-    - ColocBoost_tutorial_advance
-    - ColocBoost_tutorial_strong_colocalization
-    - ColocBoost_tutorial_diagnostic
+    - Interpret_ColocBoost_Output
+    - Visualization_ColocBoost_Output
 
   - title: internal
     contents:
     - announcements
     - installation
+    - ColocBoost_tutorial_diagnostic
 
 reference:
   - title: "Example Data"

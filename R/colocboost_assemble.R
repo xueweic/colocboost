@@ -242,6 +242,7 @@ colocboost_assemble <- function(cb_obj,
         if (!is.null(cb_output$ucos_details$ucos)) {
           cb_output$vpa <- apply(do.call(cbind, cb_output$ucos_details$ucos_weight), 1, function(w0) 1 - prod(1 - w0))
           names(cb_output$vpa) <- data_info$variables
+          class(cb_output) <- "colocboost"
           cb_output$ucos_summary <- get_ucos_summary(cb_output)
         } else {
           tmp <- list("vpa" = NULL, "ucos_summary" = NULL)
