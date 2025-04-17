@@ -20,7 +20,7 @@ This vignette demonstrates how to visualize and interpret the output of ColocBoo
 library(colocboost)
 ```
 
-**Causal variant structure**
+**Causal variants (simulated)**
 
 The dataset features two causal variants with indices 644 and 2289.
 
@@ -34,7 +34,7 @@ data(Ind_5traits)
 res <- colocboost(X = Ind_5traits$X, Y = Ind_5traits$Y)
 ```
 
-## 1. Default plot and interpretation
+## 1. Default plot function
 
 The default plot of the colocboost results provides a visual representation of the colocalization events.
 

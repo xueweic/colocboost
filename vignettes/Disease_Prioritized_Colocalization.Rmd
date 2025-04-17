@@ -24,7 +24,7 @@ allowing to handle scenarios where the individual data is available for some tra
 library(colocboost)
 ```
 
-# 1. Loading and Analyzing Datasets
+# 1. Loading individual and summary statistics data
 
 To get started, load both Ind_5traits and Sumstat_5traits datasets into your R session. Once loaded, create a mixed dataset as follows:
 
@@ -55,7 +55,7 @@ tutorals [Individual Level Data Colocalization](https://statfungen.github.io/col
 [Summary Level Data Colocalization](https://statfungen.github.io/colocboost/articles/Summary_Level_Colocalization.html).
 
 
-# 2. Run ColocBoost (Basic usage)
+# 2. ColocBoost in disease-agnostic mode
 
 
 The preferred format for colocalization analysis in ColocBoost using mixed-type dataset:
@@ -89,7 +89,7 @@ For comprehensive tutorials on result interpretation and advanced visualization 
 
 
 
-# 3. Run ColocBoost (Disease Prioritized Colocalization)
+# 3. ColocBoost in disease-prioritized mode
 
 
 TO-DO-LIST

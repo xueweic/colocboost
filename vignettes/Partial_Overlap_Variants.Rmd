@@ -14,7 +14,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-This vignette demonstrates how to handle partial overlapping variants across traits in ColocBoost.
+This vignette demonstrates how ColocBoost handles partial overlapping variants across traits in ColocBoost.
 
 
 ```{r setup}
@@ -25,7 +25,3 @@ library(colocboost)
 
 
 TO-DO-LIST
-
-
-
-

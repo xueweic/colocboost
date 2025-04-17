@@ -21,7 +21,7 @@ This vignette demonstrates how to interpret the output of ColocBoost, specifical
 library(colocboost)
 ```
 
-## 1. Look at summary of colocalization
+## 1. Summarize ColocBoost results
 
 ### Causal variant structure
 The dataset features two causal variants with indices 644 and 2289.
@@ -70,7 +70,7 @@ cos_interest_outcome <- get_cos_summary(res, interest_outcome = c("Y1", "Y2"))
 
 
 
-## 2. Get strong colocalization signals
+## 2. Filter colocalization events by relative strength of evidence
 
 In `cos_summary`, for each 95% CoS, the `cos_npc` column provides a normalized probability of colocalization and
 `min_npc_outcome` column provides the minimum normalized probability among colocalized traits.
@@ -86,7 +86,7 @@ filter_res <- get_strong_colocalization(res, cos_npc_cutoff = 0.5, npc_outcome_c
 The output from `get_strong_colocalization` is the same as output from `colocboost`, which can be directly used in any post inference and visualization.
 
 
-## 3. Details of ColocBoost output
+## 3. More details on ColocBoost output
 
 TO-DO-LIST
 
