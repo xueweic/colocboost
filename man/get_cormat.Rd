@@ -20,8 +20,8 @@ This function calculates the correlation matrix (LD matrix) from individual leve
 \examples{
 # colocboost example
 set.seed(1)
-N = 1000
-P = 100
+N <- 1000
+P <- 100
 # Generate X with LD structure
 sigma <- 0.9^abs(outer(1:P, 1:P, "-"))
 X <- MASS::mvrnorm(N, rep(0, P), sigma)

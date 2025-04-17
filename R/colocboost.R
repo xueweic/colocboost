@@ -191,15 +191,9 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
   # - check individual level data
   if (!is.null(X) & !is.null(Y)) {
     # --- check input
-    if (is.data.frame(X)) {
-      X <- as.matrix(X)
-    }
-    if (is.data.frame(Y)) {
-      Y <- as.matrix(Y)
-    }
-    if (is.matrix(X)) {
-      X <- list(X)
-    }
+    if (is.data.frame(X))  X <- as.matrix(X)
+    if (is.data.frame(Y)) Y <- as.matrix(Y)
+    if (is.matrix(X))  X <- list(X)
     if (is.atomic(Y) && !is.list(Y)) {
       Y <- as.matrix(Y)
       if (ncol(Y) == 1) {
@@ -216,23 +210,17 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
       }
     } else {
       Y <- lapply(1:length(Y), function(ii) {
-        if (is.null(dict_YX)) {
-          idx <- ii
-        } else {
-          idx <- dict_YX[ii, 2]
-        }
-        n <- nrow(X[[idx]])
         y <- Y[[ii]]
         y <- as.matrix(y)
+        n <- length(y)
         if (nrow(y) == n) {
           return(y)
         } else if (ncol(y) == n) {
           return(t(y))
-        } else {
-          stop("X and Y do not have the same sample size!")
-        }
+        } 
       })
     }
+    
     # --- check if variables in individual data
     p.ind <- unique(sapply(X, ncol))
     if (length(p.ind) != 1) {

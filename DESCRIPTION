@@ -28,9 +28,10 @@ Suggests:
     testthat (>= 3.0.0),
     knitr,
     rmarkdown,
+    bookdown,
     ashr,
     MASS
-VignetteBuilder: knitr
+VignetteBuilder: knitr, bookdown
 Roxygen: list(markdown = TRUE)
 Config/testthat/edition: 3
 License: MIT + file LICENSE

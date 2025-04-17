@@ -41,20 +41,22 @@ A summary table for colocalization events with the following columns:
 \examples{
 # colocboost example
 set.seed(1)
-N = 1000
-P = 100
+N <- 1000
+P <- 100
 # Generate X with LD structure
 sigma <- 0.9^abs(outer(1:P, 1:P, "-"))
 X <- MASS::mvrnorm(N, rep(0, P), sigma)
 colnames(X) <- paste0("SNP", 1:P)
-L = 3
+L <- 3
 true_beta <- matrix(0, P, L)
-true_beta[10, 1] <- 0.5  # SNP10 affects trait 1
-true_beta[10, 2] <- 0.4  # SNP10 also affects trait 2 (colocalized)
+true_beta[10, 1] <- 0.5 # SNP10 affects trait 1
+true_beta[10, 2] <- 0.4 # SNP10 also affects trait 2 (colocalized)
 true_beta[50, 2] <- 0.3 # SNP50 only affects trait 2
 true_beta[80, 3] <- 0.6 # SNP80 only affects trait 3
 Y <- matrix(0, N, L)
-for (l in 1:L){  Y[, l] <- X \%*\% true_beta[, l] + rnorm(N, 0, 1) }
+for (l in 1:L) {
+  Y[, l] <- X \%*\% true_beta[, l] + rnorm(N, 0, 1)
+}
 res <- colocboost(X = X, Y = Y)
 get_cos_summary(res)
 

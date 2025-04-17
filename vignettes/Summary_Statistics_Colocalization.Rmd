@@ -88,7 +88,9 @@ colocboost_plot(res)
 
 ### Results Interpretation
 
-For comprehensive tutorials on result interpretation and advanced visualization techniques, please visit our documentation portal at FIXME (link).
+For comprehensive tutorials on result interpretation and advanced visualization techniques, please visit our documentation portal 
+at [Visualization of ColocBoost Results](https://statfungen.github.io/colocboost/articles/Visualization_ColocBoost_Output.html) and
+[Interpret ColocBoost Output](https://statfungen.github.io/colocboost/articles/Interpret_ColocBoost_Output.html).
 
 
 # 3. Other summary statistics and LD input combinations
