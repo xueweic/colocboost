@@ -87,7 +87,9 @@ colocboost_plot(res)
 
 ### Results Interpretation
 
-For comprehensive tutorials on result interpretation and advanced visualization techniques, please visit our documentation portal at FIXME (link).
+For comprehensive tutorials on result interpretation and advanced visualization techniques, please visit our documentation portal 
+at [Visualization of ColocBoost Results](https://statfungen.github.io/colocboost/articles/Visualization_ColocBoost_Output.html) and
+[Interpret ColocBoost Output](https://statfungen.github.io/colocboost/articles/Interpret_ColocBoost_Output.html).
 
 
 # 3. Other structures of individual level data
@@ -100,7 +102,7 @@ This is particularly useful when the same individuals are used for different tra
 
 - **Input Format**:
     - `X` is a single matrix containing genotype data for all individuals. 
-    - `Y` can be i) a matrix with N * L dimension; ii) a list of phenotype vectors for L traits.
+    - `Y` can be i) a matrix with $N \times L$ dimension; ii) a list of phenotype vectors for $L$ traits.
 
 
 ```{r single-x}
@@ -108,13 +110,43 @@ This is particularly useful when the same individuals are used for different tra
 X_single <- X[[1]]  # First SNP for all individuals
 
 # Run colocboost
-res <- colocboost(X = X, Y = Y)
+res <- colocboost(X = X_single, Y = Y)
 
 # Identified CoS
 res$cos_details$cos$cos_index
 ```
 
-## 3.2. Arbitrary input matrices with mapping provided
+
+## 3.2. Genotype matrix is a superset of samples across different phenotypes
+
+When the genotype matrix includes a superset of samples across different phenotypes, with **Input Format**:
+
+- `X` is a matrix of genotype data for all individuals.
+- `Y` is a list of phenotype vectors for different outcomes.
+- Row names of both `X` and `Y` should be provided to match individuals - same format of individual id.
+- It is bettern if `X` contain all samples present in the phenotype vectors (optional).
+- This is particularly useful when you have a large genotype matrix and want to use it for multiple phenotypes with different samples. 
+It allows for efficient analysis without redundancy.
+
+
+```{r superset-X}
+# Create phenotype with different samples - remove 50 samples trait 1 and trait 3.
+X_superset <- X[[1]] 
+Y_remove <- Y
+Y_remove[[1]] <- Y[[1]][-sample(1:length(Y[[1]]),50), , drop=F]
+Y_remove[[3]] <- Y[[3]][-sample(1:length(Y[[3]]),50), , drop=F]
+
+# Run colocboost
+res <- colocboost(X = X_superset, Y = Y_remove)
+
+# Identified CoS
+res$cos_details$cos$cos_index
+```
+
+
+
+
+## 3.3. Arbitrary input matrices with mapping provided
 
 When studying multiple traits with arbitrary genotype matrices for different traits, 
 we also provide the interface for arbitrary genotype matrices with multiple phenotypes. 

@@ -68,69 +68,18 @@ colocboost_init_data <- function(X, Y, dict_YX,
   flag <- 1
   # if individual: X, Y
   if (!is.null(X) & !is.null(Y)) {
-    drop_lowfreq <- c()
-    dict_YX_final <- dict_YX
-    for (ij in 1:length(X)) {
-      index <- which(dict_YX == ij)
-      dict_YX_final[index] <- index[1]
-    }
+    
+    ind_formated <- process_individual_data(
+      X, Y, dict_YX, target_variants = keep_variable_names,
+      intercept = intercept, standardize = standardize
+    )
     for (i in 1:length(Y)) {
-      tmp <- list(
-        "X" = NULL,
-        "Y" = scale(Y[[i]], center = intercept, scale = standardize),
-        "N" = length(Y[[i]]),
-        "variable_miss" = NULL
-      )
-      x_tmp <- X[[dict_YX[i]]]
-      change_x <- if (dict_YX_final[i] == i) TRUE else FALSE
-      # - if sample different
-      if (nrow(x_tmp) != length(Y[[i]])) {
-        change_x <- TRUE
-        ind_id_Y <- rownames(Y[[i]])
-        ind_id_X <- rownames(x_tmp)
-        if (is.null(ind_id_X) | is.null(ind_id_Y)) {
-          stop("Please provide the sample index of X and Y, since they do not have the same samples!")
-        } else {
-          pos <- match(ind_id_Y, ind_id_X)
-          x_tmp <- x_tmp[pos, , drop = FALSE]
-          if (sum(is.na(pos)) != 0) {
-            tmp$Y <- tmp$Y[-which(is.na(pos))]
-          }
-        }
-      }
-      # - if missing X
-      variable.name <- keep_variables[[dict_YX[i]]]
-      if (length(variable.name) != length(keep_variable_names)) {
-        x_extend <- matrix(0,
-          nrow = nrow(x_tmp), ncol = length(keep_variable_names),
-          dimnames = list(rownames(x_tmp), keep_variable_names)
-        )
-        variable.tmp <- intersect(keep_variable_names, variable.name)
-        pos <- match(variable.tmp, keep_variable_names)
-        tmp$variable_miss <- setdiff(1:length(keep_variable_names), pos)
-        poss <- match(variable.tmp, variable.name)
-        x_extend[, pos] <- x_tmp[, poss]
-        x_tmp <- x_extend
-      }
-      if (change_x) {
-        dict_YX_final[i] == i
-        if (!intercept & !standardize) {
-          x_stand <- x_tmp
-        } else {
-          x_stand <- Rfast::standardise(x_tmp, center = intercept, scale = standardize)
-        }
-        x_stand[which(is.na(x_stand))] <- 0
-        tmp$X <- x_stand
-      }
-      cb_data$data[[flag]] <- tmp
+      cb_data$data[[flag]] <- ind_formated$result[[i]]
       names(cb_data$data)[flag] <- paste0("ind_outcome_", i)
       flag <- flag + 1
     }
-    cb_data$dict <- c(dict_YX_final)
-    ind_idx <- max(dict_YX)
-  } else {
-    ind_idx <- 0
-  }
+    cb_data$dict <- c(ind_formated$new_dict)
+  } 
   n_ind <- flag - 1
   # if summary: XtX XtY, YtY
   if (!is.null(Z) & !is.null(LD)) {
@@ -647,5 +596,106 @@ process_sumstat <- function(Z, N, Var_y, SeBhat, ld_matrices, variant_lists, dic
     results = results,
     unified_dict = unified_dict,
     original_dict = dict
+  ))
+}
+
+#' process individual level input format
+#' @noRd
+process_individual_data <- function(X, Y, dict_YX, target_variants,
+                                    intercept = TRUE,
+                                    standardize = TRUE) {
+  
+  # Step 0: Check if sample IDs match between Y and corresponding X
+  for (i in 1:length(Y)) {
+    current_matrix_type <- dict_YX[i]
+    # If row counts match, we assume samples are in the same order
+    if (nrow(Y[[i]]) != nrow(X[[current_matrix_type]])) {
+      # Row counts don't match, so check rownames
+      ind_id_Y <- rownames(Y[[i]])
+      ind_id_X <- rownames(X[[current_matrix_type]])
+      if (is.null(ind_id_X) || is.null(ind_id_Y)) {
+        stop("Please provide the sample index of X and Y, since they do not have the same samples!")
+      }
+      # Find matching samples
+      pos <- match(ind_id_Y, ind_id_X)
+      if (sum(!is.na(pos)) == 0) {
+        stop("No samples in Y match any samples in the corresponding X matrix!")
+      }
+    }
+  }
+  
+  # Step 1: Update dictionary to handle duplicates samples
+  sample_lists <- lapply(Y, rownames)
+  new_dict <- 1:length(dict_YX)
+  # For each pair of Y indices
+  for (i in 1:(length(dict_YX)-1)) {
+    for (j in (i+1):length(dict_YX)) {
+      # Check if they map to the same X matrix AND have the same samples
+      if (dict_YX[i] == dict_YX[j] && identical(sample_lists[[i]], sample_lists[[j]])) {
+        # If same matrix and same samples, use the smaller index
+        new_dict[j] <- new_dict[i]
+      }
+    }
+  }
+  
+  # Step 2: Create result list
+  result <- list()
+  
+  for (i in 1:length(Y)) {
+    tmp <- list(
+      "X" = NULL,
+      "Y" = NULL,
+      "N" = NULL,
+      "variable_miss" = NULL
+    )
+    matrix_type <- dict_YX[i]
+    # Get the appropriate matrix from X list
+    current_X <- X[[matrix_type]]
+    current_Y <- Y[[i]]
+    # Check if we need to match samples or if we can use as-is
+    if (nrow(current_Y) == nrow(current_X)) {
+      # Same number of rows, assume same order
+      matched_X <- current_X
+      matched_Y <- scale(current_Y, center = intercept, scale = standardize)
+    } else {
+      # Different number of rows, find matching samples
+      overlap_samples <- intersect(rownames(current_Y), rownames(current_X))
+      matched_X <- current_X[match(overlap_samples, rownames(current_X)), , drop = FALSE]
+      matched_Y <- current_Y[match(overlap_samples, rownames(current_Y)), , drop = FALSE]
+      matched_Y <- scale(matched_Y, center = intercept, scale = standardize)
+    }
+    tmp$Y <- matched_Y
+    tmp$N <- length(matched_Y)
+    
+    # - if missing X
+    variable.name <- colnames(matched_X)
+    if (length(variable.name) != length(target_variants)) {
+      x_extend <- matrix(0, nrow = nrow(matched_X), ncol = length(target_variants),
+                         dimnames = list(rownames(matched_X), target_variants) )
+      variable.tmp <- intersect(target_variants, variable.name)
+      pos <- match(variable.tmp, target_variants)
+      tmp$variable_miss <- setdiff(1:length(target_variants), pos)
+      poss <- match(variable.tmp, variable.name)
+      x_extend[, pos] <- matched_X[, poss]
+      matched_X <- x_extend
+    }
+    if (new_dict[i] == i) {
+      if (!intercept & !standardize) {
+        x_stand <- matched_X
+      } else {
+        x_stand <- Rfast::standardise(matched_X, center = intercept, scale = standardize)
+      }
+      x_stand[which(is.na(x_stand))] <- 0
+      tmp$X <- x_stand
+    }
+    
+    # Create components for each list
+    result[[i]] <- tmp
+  }
+  # Return results with the unified dictionary
+  return(list(
+    result = result,
+    new_dict = new_dict,
+    original_dict = dict_YX
   ))
 }

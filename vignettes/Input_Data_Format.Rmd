@@ -2,7 +2,7 @@
 title: "Input Data Format"
 output: 
   bookdown::html_document2:
-    base_format: rmarkdown::html_vignette
+    # base_format: rmarkdown::html_vignette
     toc: true
     toc_depth: 2
     number_sections: true
@@ -26,7 +26,7 @@ library(colocboost)
 
 This vignette documents the standard input data formats of `colocboost`.
 
-## 1. Individual Level Data
+# 1. Individual Level Data
 
 For analyses using individual-level data, the basic format for single trait is as follows:
 
@@ -43,11 +43,11 @@ For example:
 `colocboost` also offers flexible input options (see detailed usage with different input formats, 
 refer to [Individual Level Data Colocalization](https://statfungen.github.io/colocboost/articles/Individual_Level_Colocalization.html).):
 
-- Single X matrix with N * P with Y matrix with N * L for L traits.
+- Single X matrix with $N \times P$ with Y matrix with $N \times L$ for $L$ traits.
 - Multiple X matrices and unmatched Y vectors with a mapping dictionary.
 
 
-## 2. Summary Statistics
+# 2. Summary Statistics
 
 For analyses using summary statistics, the basic format for single trait is as follows:
 
@@ -66,7 +66,7 @@ head(Sumstat_5traits$sumstat[[1]])
 
 The input format for multiple traits is similar, but `sumstat` should be a list of data frames `sumstat = list(sumstat1, sumstat2, sumstat3)`. 
 The flexibility of input format for multiple traits is as follows (see detailed usage with different input formats, 
-refer to [Summary Statistics Colocalization](https://statfungen.github.io/colocboost/articles/Summary_Level_Colocalization.html).)::
+refer to [Summary Statistics Colocalization](https://statfungen.github.io/colocboost/articles/Summary_Level_Colocalization.html).):
 
 - One LD matrix with a superset of variants in `sumstat` for all traits is allowed.
 - Multiple LD matrices, each corresponding to a different trait, are also allowed for the trait-specific LD structure.
@@ -74,10 +74,41 @@ refer to [Summary Statistics Colocalization](https://statfungen.github.io/colocb
 
 
 
-## 3. Optional: mapping between arbitary input $X$ and $Y$
+# 3. Optional: mapping between arbitary input $X$ and $Y$
 
-TO-DO-LIST
+For analysis when including multiple genotype matrices `X` with unmatched arbitary phenotype vectors `Y`, 
+a mapping dictionary `dict_YX` is required to indicate the relationship between `X` and `Y`.
+Similiarly, when multiple LD matrices with unmatched arbitrary multiple summary statistics `sumstat` are used,
+a mapping dictionary `dict_sumstatLD` is required to indicate the relationship between `sumstat` and `LD`.
 
-## 4. Hyprcoloc compatible format: effect size and standard error matrices
+For example, considering three genotype matrices `X = list(X1, X2, X3)` and 6 phenotype vectors `Y = list(Y1, Y2, Y3, Y4, Y5, Y6)`, where
 
-TO-DO-LIST
+- `X1` is for trait 1, trait 2, trait 3
+- `X2` is for trait 4, trait 5
+- `X3` is for trait 6
+
+Then, you need to define a 6 by 2 matrix mapping dictionary `dict_YX` as follows: 
+
+- The first column should be `c(1,2,3,4,5,6)` for 6 traits. 
+- The second column should be `c(1,1,1,2,2,3)` for 3 genotype matrices.
+
+Here, each row indicates the trait index and the corresponding genotype matrix index.
+
+```{r dict_YX}
+dict_YX <- cbind(c(1,2,3,4,5,6), c(1,1,1,2,2,3))
+dict_YX
+```
+
+
+# 4. Hyprcoloc compatible format: effect size and standard error matrices
+
+ColocBoost also provides a flexibility to use Hyprcoloc compatible format for summary statistics with and without LD matrix.
+For example, when anaylze L traits for the same P variants with the specified effect size and standard error matrices:
+
+- `effect_est` (required) is $P \times L$ matrix of variable regression coefficients (i.e. regression beta values) in the genomic region.
+- `effect_se` (required) is $P \times L$ matrix of standard errors for the regression coefficients.
+- `effect_n` (highly recommended) is either a scalar or a vector of sample sizes for estimating regression coefficients.
+- `LD` (optional) is LD matrix for the $P$ variants. If it is not provided, it will apply LD-free ColocBoost.
+
+See more details about data format to implement LD-free ColocBoost and LD-mistmatch diagnosis in FIXME.
+
