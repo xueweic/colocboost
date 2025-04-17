@@ -259,7 +259,8 @@ colocboost_init_para <- function(cb_data, cb_model, tau = 0.01,
   } else {
     outcome_names <- paste0("Y", 1:L)
   }
-
+  # - initial coloc_thresh
+  coloc_thresh <- (1 - coloc_thresh) * max(sapply(1:length(cb_model), function(i) max(cb_model[[i]]$change_loglike)))
   cb_model_para <- list(
     "L" = L,
     "P" = P,

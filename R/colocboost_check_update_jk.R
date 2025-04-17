@@ -39,15 +39,11 @@ boost_check_update_jk_nofocal <- function(cb_model, cb_model_para, cb_data) {
   update_status <- rep(0, cb_model_para$L)
   update_jk <- rep(NA, cb_model_para$L + 1)
   real_update_jk <- rep(NA, cb_model_para$L)
-  if (is.null(cb_model_para$coloc_thresh)) {
-    cb_model_para$coloc_thresh <- (1 - coloc_thresh) * max(sapply(1:length(cb_model), function(i) max(cb_model[[i]]$change_loglike)))
-  }
   # - initial parameter
   prioritize_jkstar <- cb_model_para$prioritize_jkstar 
   jk_equiv_corr <- cb_model_para$jk_equiv_corr 
   jk_equiv_loglik <- cb_model_para$jk_equiv_loglik 
   func_compare <- cb_model_para$func_compare 
-  coloc_thresh <- cb_model_para$coloc_thresh 
 
   # - update only Ys which is not stop
   pos.update <- which(cb_model_para$update_y == 1)
