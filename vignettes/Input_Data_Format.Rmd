@@ -1,12 +1,6 @@
 ---
 title: "Input Data Format"
-output: 
-  bookdown::html_document2:
-    # base_format: rmarkdown::html_vignette
-    toc: true
-    toc_depth: 2
-    number_sections: true
-    fig_caption: true
+output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Input Data Format}
   %\VignetteEngine{knitr::rmarkdown}
