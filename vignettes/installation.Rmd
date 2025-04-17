@@ -17,7 +17,7 @@ knitr::opts_chunk$set(
 ## Installation
 
 ### CRAN
-Install released versions from CRAN - pre-built packages are available on macOS and Windows
+Install released versions from CRAN (Linux, macOS and Windows)
 
 ```r
 install.packages("colocboost")

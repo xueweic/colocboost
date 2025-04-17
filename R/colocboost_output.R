@@ -22,24 +22,26 @@
 #' \item{colocalized_index}{Indices of colocalized variables}
 #' \item{colocalized_variables}{List of colocalized variables}
 #' \item{colocalized_variables_vcp}{Variant colocalization probabilities for all colocalized variables}
-#' 
+#'
 #' @examples
 #' # colocboost example
 #' set.seed(1)
-#' N = 1000
-#' P = 100
+#' N <- 1000
+#' P <- 100
 #' # Generate X with LD structure
 #' sigma <- 0.9^abs(outer(1:P, 1:P, "-"))
 #' X <- MASS::mvrnorm(N, rep(0, P), sigma)
 #' colnames(X) <- paste0("SNP", 1:P)
-#' L = 3
+#' L <- 3
 #' true_beta <- matrix(0, P, L)
-#' true_beta[10, 1] <- 0.5  # SNP10 affects trait 1
-#' true_beta[10, 2] <- 0.4  # SNP10 also affects trait 2 (colocalized)
+#' true_beta[10, 1] <- 0.5 # SNP10 affects trait 1
+#' true_beta[10, 2] <- 0.4 # SNP10 also affects trait 2 (colocalized)
 #' true_beta[50, 2] <- 0.3 # SNP50 only affects trait 2
 #' true_beta[80, 3] <- 0.6 # SNP80 only affects trait 3
 #' Y <- matrix(0, N, L)
-#' for (l in 1:L){  Y[, l] <- X %*% true_beta[, l] + rnorm(N, 0, 1) }
+#' for (l in 1:L) {
+#'   Y[, l] <- X %*% true_beta[, l] + rnorm(N, 0, 1)
+#' }
 #' res <- colocboost(X = X, Y = Y)
 #' get_cos_summary(res)
 #'
@@ -151,20 +153,22 @@ get_cos_summary <- function(cb_output,
 #' @examples
 #' # colocboost example
 #' set.seed(1)
-#' N = 1000
-#' P = 100
+#' N <- 1000
+#' P <- 100
 #' # Generate X with LD structure
 #' sigma <- 0.9^abs(outer(1:P, 1:P, "-"))
 #' X <- MASS::mvrnorm(N, rep(0, P), sigma)
 #' colnames(X) <- paste0("SNP", 1:P)
-#' L = 3
+#' L <- 3
 #' true_beta <- matrix(0, P, L)
-#' true_beta[10, 1] <- 0.5  # SNP10 affects trait 1
-#' true_beta[10, 2] <- 0.4  # SNP10 also affects trait 2 (colocalized)
+#' true_beta[10, 1] <- 0.5 # SNP10 affects trait 1
+#' true_beta[10, 2] <- 0.4 # SNP10 also affects trait 2 (colocalized)
 #' true_beta[50, 2] <- 0.3 # SNP50 only affects trait 2
 #' true_beta[80, 3] <- 0.6 # SNP80 only affects trait 3
 #' Y <- matrix(0, N, L)
-#' for (l in 1:L){  Y[, l] <- X %*% true_beta[, l] + rnorm(N, 0, 1) }
+#' for (l in 1:L) {
+#'   Y[, l] <- X %*% true_beta[, l] + rnorm(N, 0, 1)
+#' }
 #' res <- colocboost(X = X, Y = Y)
 #' res$cos_details$cos$cos_index
 #' filter_res <- get_strong_colocalization(res, cos_npc_cutoff = 0.5, npc_outcome_cutoff = 0.2)
@@ -455,34 +459,36 @@ get_ucos_summary <- function(cb_output, outcome_names = NULL, region_name = NULL
 }
 
 #' Extract CoS simply change the coverage without checking purity
-#' 
+#'
 #' @description `get_cos` get the colocalization confidence sets (CoS) with different coverage.
-#' 
+#'
 #' @param cb_output Output object from `colocboost` analysis
 #' @param coverage A number between 0 and 1 specifying the \dQuote{coverage} of the estimated colocalization confidence sets (CoS) (default is 0.95).
-#' 
+#'
 #' @return A list of indices of variables in each CoS.
-#' 
+#'
 #' @examples
 #' # colocboost example
 #' set.seed(1)
-#' N = 1000
-#' P = 100
+#' N <- 1000
+#' P <- 100
 #' # Generate X with LD structure
 #' sigma <- 0.9^abs(outer(1:P, 1:P, "-"))
 #' X <- MASS::mvrnorm(N, rep(0, P), sigma)
 #' colnames(X) <- paste0("SNP", 1:P)
-#' L = 3
+#' L <- 3
 #' true_beta <- matrix(0, P, L)
-#' true_beta[10, 1] <- 0.5  # SNP10 affects trait 1
-#' true_beta[10, 2] <- 0.4  # SNP10 also affects trait 2 (colocalized)
+#' true_beta[10, 1] <- 0.5 # SNP10 affects trait 1
+#' true_beta[10, 2] <- 0.4 # SNP10 also affects trait 2 (colocalized)
 #' true_beta[50, 2] <- 0.3 # SNP50 only affects trait 2
 #' true_beta[80, 3] <- 0.6 # SNP80 only affects trait 3
 #' Y <- matrix(0, N, L)
-#' for (l in 1:L){  Y[, l] <- X %*% true_beta[, l] + rnorm(N, 0, 1) }
+#' for (l in 1:L) {
+#'   Y[, l] <- X %*% true_beta[, l] + rnorm(N, 0, 1)
+#' }
 #' res <- colocboost(X = X, Y = Y)
 #' get_cos(res, coverage = 0.75)
-#' 
+#'
 #' @family colocboost_utilities
 #' @export
 get_cos <- function(cb_output, coverage = 0.95) {

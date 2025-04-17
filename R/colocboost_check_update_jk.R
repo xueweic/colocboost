@@ -48,11 +48,11 @@ colocboost_check_update_jk <- function(cb_model, cb_model_para, cb_data,
 
 #' @importFrom stats median
 boost_check_update_jk_nofocal <- function(cb_model, cb_model_para, cb_data,
-                                           prioritize_jkstar = TRUE,
-                                           jk_equiv_corr = 0.8, ##### more than 2 traits
-                                           jk_equiv_loglik = 1, ## more than 2 traits
-                                           func_compare = "min_max", ##### more than 3 traits
-                                           coloc_thresh = 0.1) {
+                                          prioritize_jkstar = TRUE,
+                                          jk_equiv_corr = 0.8, ##### more than 2 traits
+                                          jk_equiv_loglik = 1, ## more than 2 traits
+                                          func_compare = "min_max", ##### more than 3 traits
+                                          coloc_thresh = 0.1) {
   ############# Output #################
   # we will obtain and update the cb_model_para$update_status and cb_model_para$real_update_jk
   ######################################
@@ -328,12 +328,12 @@ boost_check_update_jk_nofocal <- function(cb_model, cb_model_para, cb_data,
 
 
 boost_check_update_jk_focal <- function(cb_model, cb_model_para, cb_data,
-                                         prioritize_jkstar = TRUE,
-                                         jk_equiv_corr = 0.8, ##### more than 2 traits
-                                         jk_equiv_loglik = 1, ## more than 2 traits
-                                         func_compare = "min_max", ##### more than 3 traits
-                                         coloc_thresh = 0.1,
-                                         focal_outcome_idx = 1) {
+                                        prioritize_jkstar = TRUE,
+                                        jk_equiv_corr = 0.8, ##### more than 2 traits
+                                        jk_equiv_loglik = 1, ## more than 2 traits
+                                        func_compare = "min_max", ##### more than 3 traits
+                                        coloc_thresh = 0.1,
+                                        focal_outcome_idx = 1) {
   ############# Output #################
   # we will obtain and update the cb_model_para$update_status and cb_model_para$real_update_jk
   ######################################

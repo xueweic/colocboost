@@ -1,6 +1,12 @@
 ---
 title: "Input Data Format"
-output: rmarkdown::html_vignette
+output: 
+  bookdown::html_document2:
+    base_format: rmarkdown::html_vignette
+    toc: true
+    toc_depth: 2
+    number_sections: true
+    fig_caption: true
 vignette: >
   %\VignetteIndexEntry{Input Data Format}
   %\VignetteEngine{knitr::rmarkdown}
@@ -18,15 +24,14 @@ knitr::opts_chunk$set(
 library(colocboost)
 ```
 
-
 This vignette documents the standard input data formats of `colocboost`.
 
 ## 1. Individual Level Data
 
 For analyses using individual-level data, the basic format for single trait is as follows:
 
-- `X` is an N * P matrix with N individuals and P variants. Including variant names as column names is highly recommended, especially when working with multiple X matrices and Y vectors.
-- `Y` is a length N vector containing phenotype values for the same N individuals with X.
+- `X` is an $N \times P$ matrix with $N$ individuals and $P$ variants. Including variant names as column names is highly recommended, especially when working with multiple $X$ matrices and $Y$ vectors.
+- `Y` is a length $N$ vector containing phenotype values for the same $N$ individuals as $X$.
 
 The input format for multiple traits is similar, but `X` matrix should be a list of matrices, each corresponding to a different trait. `Y` vector should also be a list of vectors. 
 For example:
@@ -36,7 +41,7 @@ For example:
 
 
 `colocboost` also offers flexible input options (see detailed usage with different input formats, 
-refer to [Individual Data Colocalization](https://statfungen.github.io/colocboost/articles/Individual_Level_Colocalization.html).):
+refer to [Individual Level Data Colocalization](https://statfungen.github.io/colocboost/articles/Individual_Level_Colocalization.html).):
 
 - Single X matrix with N * P with Y matrix with N * L for L traits.
 - Multiple X matrices and unmatched Y vectors with a mapping dictionary.
@@ -69,10 +74,10 @@ refer to [Summary Statistics Colocalization](https://statfungen.github.io/colocb
 
 
 
-## 3. Dictionary format for mapping
+## 3. Optional: mapping between arbitary input $X$ and $Y$
 
 TO-DO-LIST
 
-## 4. Effect size and standard error of effect size matrices
+## 4. Hyprcoloc compatible format: effect size and standard error matrices
 
 TO-DO-LIST

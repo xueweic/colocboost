@@ -14,9 +14,8 @@ knitr::opts_chunk$set(
 )
 ```
 
-This vignette demonstrates how to perform multi-trait colocalization analysis using summary statistics data in ColocBoost, 
+This vignette demonstrates how to perform multi-trait colocalization analysis using summary statistics data, 
 specifically focusing on the `Sumstat_5traits` dataset included in the package.
-
 
 
 ```{r setup}
@@ -60,7 +59,7 @@ class(Sumstat_5traits$sumstat[[1]])
 head(Sumstat_5traits$sumstat[[1]])
 ```
 
-# 2. Run ColocBoost (Basic usage)
+# 2. Multiple summary statistics data with shared LD reference
 
 
 The preferred format for colocalization analysis in ColocBoost using summary statistics data is where one LD matrix is provided for all traits, 
@@ -92,7 +91,7 @@ colocboost_plot(res)
 For comprehensive tutorials on result interpretation and advanced visualization techniques, please visit our documentation portal at FIXME (link).
 
 
-# 3. Run ColocBoost (Advance usage)
+# 3. Other summary statistics and LD input combinations
 
 ## 3.1. Matched LD with multiple sumstat (Trait-specific LD)   
 

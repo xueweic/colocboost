@@ -40,13 +40,13 @@ reference:
     contents:
     - has_concept("colocboost_data")
 
-  - title: "ColocBoost Main Function"
-    desc: "Core functions for colocalization analysis"
+  - title: "Model fitting"
+    desc: "Functions for fitting colocalization models"
     contents:
     - has_concept("colocboost")
 
-  - title: "Post Inference"
-    desc: "Functions for post-analysis inference of ColocBoost results"
+  - title: "Inference and summary"
+    desc: "Functions for inference and summary from fitted models"
     contents:
     - has_concept("colocboost_inference")
 

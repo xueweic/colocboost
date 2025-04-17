@@ -4,12 +4,12 @@
 ![](man/figures/colocboost.png)
 
 
-This R package implements ColocBoost --- motivated and designed for colocalization analysis of multiple genetic association studies --- as a multi-task learning approach to variable selection regression with highly correlated predictors and sparse effects, based on frequentist statistical inference. It provides statistical evidence to identify which subsets of predictors have non-zero effects on which subsets of response variables.
+This R package implements ColocBoost---motivated and designed for colocalization analysis of multiple genetic association studies---as a multi-task learning approach to variable selection regression with highly correlated predictors and sparse effects, based on frequentist statistical inference. It provides statistical evidence to identify which subsets of predictors have non-zero effects on which subsets of response variables.
 
 ## Quick Start
 
 ### CRAN Installation
-Install released versions from CRAN - pre-built packages are available on macOS and Windows
+Install released versions from CRAN (Linux, macOS and Windows)
 
 ```r
 install.packages("colocboost")
@@ -23,7 +23,6 @@ devtools::install_github("StatFunGen/colocboost")
 ```
 
 For a detailed installation guidance, please refer to [Installation](https://statfungen.github.io/colocboost/articles/installation.html).
-
 
 
 ## Tutorial Website

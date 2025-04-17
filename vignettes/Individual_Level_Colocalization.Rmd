@@ -14,6 +14,10 @@ knitr::opts_chunk$set(
 )
 ```
 
+
+ColocBoost provides flexible interface for individual-level colocalization analysis across multiple formats. 
+We recommend using individual level genotype and phenotype data when available, to gain both sensitivity and precision compared to summary statistics-based approaches.
+
 This vignette demonstrates how to perform multi-trait colocalization analysis using individual-level data in ColocBoost, 
 specifically focusing on the `Ind_5traits` dataset included in the package.
 
@@ -50,7 +54,7 @@ Ind_5traits$true_effect_variants
 ```
 
 
-# 2. Run ColocBoost (Basic usage)
+# 2. Matched individual level inputs $X$ and $Y$
 
 
 The preferred format for colocalization analysis in ColocBoost using individual level data is where genotype (X) and phenotype (Y) data are properly matched.
@@ -86,7 +90,7 @@ colocboost_plot(res)
 For comprehensive tutorials on result interpretation and advanced visualization techniques, please visit our documentation portal at FIXME (link).
 
 
-# 3. Run ColocBoost (Advance usage)
+# 3. Other structures of individual level data
 
 ## 3.1. Single genotype matrix
 
@@ -110,7 +114,7 @@ res <- colocboost(X = X, Y = Y)
 res$cos_details$cos$cos_index
 ```
 
-## 3.2. Arbitrary X and Y with dictionary provided
+## 3.2. Arbitrary input matrices with mapping provided
 
 When studying multiple traits with arbitrary genotype matrices for different traits, 
 we also provide the interface for arbitrary genotype matrices with multiple phenotypes. 
@@ -137,10 +141,3 @@ res <- colocboost(X = X_arbitrary, Y = Y, dict_YX = dict_YX)
 # Identified CoS
 res$cos_details$cos$cos_index
 ```
-
-
-## Conclusion
-
-ColocBoost provides flexible methods for individual-level colocalization analysis across multiple formats. 
-By working directly with raw genotype and phenotype data, you gain greater statistical power and more detailed insights compared to summary statistics-based approaches.
-

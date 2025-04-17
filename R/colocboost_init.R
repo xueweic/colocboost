@@ -137,9 +137,11 @@ colocboost_init_data <- function(X, Y, dict_YX,
     ####################### need to consider more #########################
     # ------ only code up one sumstat
     variant_lists <- keep_variables[c(flag:length(keep_variables))]
-    sumstat_formated <- process_sumstat(Z, N_sumstat, Var_y, SeBhat, LD, 
-                                        variant_lists, dict_sumstatLD, 
-                                        keep_variable_names)
+    sumstat_formated <- process_sumstat(
+      Z, N_sumstat, Var_y, SeBhat, LD,
+      variant_lists, dict_sumstatLD,
+      keep_variable_names
+    )
     for (i in 1:length(Z)) {
       cb_data$data[[flag]] <- sumstat_formated$results[[i]]
       names(cb_data$data)[flag] <- paste0("sumstat_outcome_", i)
@@ -529,38 +531,36 @@ get_multiple_testing_correction <- function(z, miss_idx = NULL, func_multi_test 
 #' @return List containing processed data with optimized LD submatrix storage
 #' @noRd
 process_sumstat <- function(Z, N, Var_y, SeBhat, ld_matrices, variant_lists, dict, target_variants) {
-  
   # Step 1: Identify unique combinations of (variant list, LD matrix)
   unified_dict <- integer(length(variant_lists))
-  
+
   # First item is always assigned its own position
   unified_dict[1] <- 1
-  
+
   # Process remaining items
-  if (length(variant_lists) > 1){
+  if (length(variant_lists) > 1) {
     for (i in 2:length(variant_lists)) {
       # Check if current combination is duplicate of any previous one
       is_duplicate <- FALSE
-      for (j in 1:(i-1)) {
+      for (j in 1:(i - 1)) {
         if (identical(variant_lists[[i]], variant_lists[[j]]) && dict[i] == dict[j]) {
           unified_dict[i] <- unified_dict[j]
           is_duplicate <- TRUE
           break
         }
       }
-      
+
       if (!is_duplicate) {
         # If not a duplicate, assign its exact index
         unified_dict[i] <- i
       }
     }
   }
-  
+
   # Step 2: Process each variant list
   results <- list()
-  
+
   for (i in 1:length(variant_lists)) {
-    
     tmp <- list(
       "XtX" = NULL,
       "XtY" = NULL,
@@ -568,32 +568,32 @@ process_sumstat <- function(Z, N, Var_y, SeBhat, ld_matrices, variant_lists, dic
       "N" = N[[i]],
       "variable_miss" = NULL
     )
-    
+
     # Get current status
     current_variants <- variant_lists[[i]]
     current_z <- Z[[i]]
     current_n <- N[[i]]
-    
+
     # Get corresponding LD matrix from original dictionary mapping
     ld_index <- dict[i]
     current_ld_matrix <- ld_matrices[[ld_index]]
-    
+
     # Find common variants between current list and target variants
     common_variants <- intersect(current_variants, target_variants)
-    
+
     # Find variants in target but not in current list
     missing_variants <- setdiff(target_variants, current_variants)
     tmp$variable_miss <- which(target_variants %in% missing_variants)
-    
+
     # - creat extend Z by setting 0 to missing variants
-    Z_extend <- rep(0, length(target_variants)) 
-    pos_z <- match(common_variants, current_variants) 
+    Z_extend <- rep(0, length(target_variants))
+    pos_z <- match(common_variants, current_variants)
     pos_target <- match(common_variants, target_variants)
     Z_extend[pos_target] <- current_z[pos_z]
-    
+
     # Calculate submatrix for each unique entry (not duplicates)
     ld_submatrix <- NULL
-    
+
     if (length(common_variants) > 0) {
       # Only include the submatrix if this entry is unique or is the first occurrence
       if (i == unified_dict[i]) {
@@ -610,7 +610,7 @@ process_sumstat <- function(Z, N, Var_y, SeBhat, ld_matrices, variant_lists, dic
         }
       }
     }
-    
+
     # Organize data
     if (is.null(current_n)) {
       tmp$XtX <- ld_submatrix
@@ -636,12 +636,12 @@ process_sumstat <- function(Z, N, Var_y, SeBhat, ld_matrices, variant_lists, dic
         tmp$XtY <- sqrt(current_n - 1) * Z_extend
       }
     }
-    
+
     # Store results for current list
     results[[i]] <- tmp
   }
-  
-  
+
+
   # Return results with the unified dictionary
   return(list(
     results = results,
