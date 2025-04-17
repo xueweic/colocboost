@@ -614,7 +614,7 @@ process_individual_data <- function(X, Y, dict_YX, target_variants,
       ind_id_Y <- rownames(Y[[i]])
       ind_id_X <- rownames(X[[current_matrix_type]])
       if (is.null(ind_id_X) || is.null(ind_id_Y)) {
-        stop("Please provide the sample index of X and Y, since they do not have the same samples!")
+        stop("Please provide the sample index of X and Y, since they do not have the same sample size!")
       }
       # Find matching samples
       pos <- match(ind_id_Y, ind_id_X)
