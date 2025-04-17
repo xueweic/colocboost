@@ -625,29 +625,16 @@ process_individual_data <- function(X, Y, dict_YX, target_variants,
   }
   
   # Step 1: Update dictionary to handle duplicates samples
-  unique_count <- 0
-  new_dict <- integer(length(dict_YX))
   sample_lists <- lapply(Y, rownames)
-  for (i in 1:length(sample_lists)) {
-    # Check if we've seen this list before with the same matrix type
-    found <- FALSE
-    current_matrix_type <- dict_YX[i]
-    # Only check previous lists if i > 1
-    if (i > 1) {
-      for (j in 1:(i-1)) {
-        # Only compare if they're from the same matrix
-        if (dict_YX[j] == current_matrix_type && 
-            identical(sample_lists[[i]], sample_lists[[j]])) {
-          new_dict[i] <- new_dict[j]
-          found <- TRUE
-          break
-        }
+  new_dict <- 1:length(dict_YX)
+  # For each pair of Y indices
+  for (i in 1:(length(dict_YX)-1)) {
+    for (j in (i+1):length(dict_YX)) {
+      # Check if they map to the same X matrix AND have the same samples
+      if (dict_YX[i] == dict_YX[j] && identical(sample_lists[[i]], sample_lists[[j]])) {
+        # If same matrix and same samples, use the smaller index
+        new_dict[j] <- new_dict[i]
       }
-    }
-    # If not seen before, assign new unique index
-    if (!found) {
-      unique_count <- unique_count + 1
-      new_dict[i] <- unique_count
     }
   }
   
