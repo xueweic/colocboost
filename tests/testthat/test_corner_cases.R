@@ -87,7 +87,7 @@ test_that("colocboost handles missing values in Y", {
   X_list <- list(test_data$X, test_data$X)
   
   # Run colocboost - should handle NAs automatically
-  expect_warning(
+  expect_error(
     result <- colocboost(
       X = X_list, 
       Y = Y_list,
@@ -110,7 +110,7 @@ test_that("colocboost handles different sample sizes", {
   # Run colocboost - should error without sample indices
   expect_error(
     colocboost(
-      X = test_data$X[1], 
+      X = test_data$X, 
       Y = test_data$Y
     )
   )

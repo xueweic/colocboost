@@ -241,5 +241,5 @@ test_that("colocboost handles missing/invalid inputs appropriately", {
   Y_list <- list(test_data$Y[,1], test_data$Y[,2])
   X_list <- list(X_bad, X_bad)
   
-  expect_error(colocboost(X = X_list, Y = Y_list), "do not have the same sample size")
+  expect_error(colocboost(X = X_list, Y = Y_list), "Please provide the sample index of X and Y, since they do not have the same samples!")
 })
