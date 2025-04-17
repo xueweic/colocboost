@@ -1,8 +1,8 @@
 ---
-title: "Summary Level Data Colocalization"
+title: "Summary Statistics Colocalization"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Summary Level Data Colocalization}
+  %\VignetteIndexEntry{Summary Statistics Colocalization}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---

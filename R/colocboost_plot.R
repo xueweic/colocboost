@@ -244,12 +244,12 @@ colocboost_plot <- function(cb_output, y = "log10p",
               x0 <- intersect(args$x, cs)
               y1 <- args$y[match(x0, args$x)]
               points(x0, y1,
-                pch = 4, col = adjustcolor(legend_text$col[i.uncoloc], alpha.f = 0.3),
+                pch = 4, col = adjustcolor(legend_text$col[uncoloc$cos_idx_to_uncoloc[i.uncoloc]], alpha.f = 0.3),
                 cex = 1.5, lwd = 1.5
               )
               texts <- c(texts, uncoloc$cos_uncoloc_texts[i.cs])
-              shape_col <- c(shape_col, adjustcolor(legend_text$col[i.uncoloc], alpha.f = 1))
-              texts_col <- c(texts_col, adjustcolor(legend_text$col[i.uncoloc], alpha.f = 0.8))
+              shape_col <- c(shape_col, adjustcolor(legend_text$col[uncoloc$cos_idx_to_uncoloc[i.uncoloc]], alpha.f = 1))
+              texts_col <- c(texts_col, adjustcolor(legend_text$col[uncoloc$cos_idx_to_uncoloc[i.uncoloc]], alpha.f = 0.8))
             }
           }
           if (length(texts) == 0) {
