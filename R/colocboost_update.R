@@ -6,17 +6,12 @@
 #' @importFrom utils head tail
 #' @return colocboost object after gradient boosting update
 #' @noRd
-colocboost_update <- function(cb_model, cb_model_para, cb_data,
-                              tau = 0.01,
-                              learning_rate_decay = 1,
-                              func_simplex = "z2z",
-                              lambda = 0.5,
-                              lambda_focal_outcome = 1,
-                              LD_free = FALSE,
-                              dynamic_learning_rate = TRUE) {
+colocboost_update <- function(cb_model, cb_model_para, cb_data) {
+  
   # - clear which outcome need to be updated at which jk
   pos.update <- which(cb_model_para$update_temp$update_status != 0)
   focal_outcome_idx <- cb_model_para$focal_outcome_idx
+  tau = cb_model_para$tau
 
   for (i in pos.update) {
     update_jk <- cb_model_para$update_temp$real_update_jk[i]
@@ -45,14 +40,17 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data,
 
     # - calculate delta
     if (is.null(focal_outcome_idx)) {
-      lambda_outcome <- lambda
+      lambda_outcome <- cb_model_para$lambda
     } else {
-      lambda_outcome <- ifelse(i == focal_outcome_idx, lambda_focal_outcome, lambda)
+      lambda_outcome <- ifelse(i == focal_outcome_idx, 
+                               cb_model_para$lambda_focal_outcome, 
+                               cb_model_para$lambda)
     }
     delta <- boost_KL_delta(
       z = cb_model[[i]]$z,
       ld_feature = ld_feature, adj_dep = adj_dep,
-      func_simplex = func_simplex, lambda = lambda_outcome
+      func_simplex = cb_model_para$func_simplex, 
+      lambda = lambda_outcome
     )
 
     x_tmp <- cb_data$data[[X_dict]]$X
@@ -62,7 +60,7 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data,
     } else {
       cb_model[[i]]$res / scaling_factor
     }
-    obj_ld <- if (LD_free) ld_feature else rep(1, length(ld_feature))
+    obj_ld <- if (cb_model_para$LD_free) ld_feature else rep(1, length(ld_feature))
     if (length(cb_data$data[[i]]$variable_miss) != 0) {
       obj_ld[cb_data$data[[i]]$variable_miss] <- 0
     }
@@ -83,9 +81,9 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data,
     ########## BEGIN: MAIN UPDATE ######################
     # - Gradient ascent on beta
     beta_grad <- weights * sign(cb_model[[i]]$correlation)
-    if (dynamic_learning_rate) {
+    if (cb_model_para$dynamic_learning_rate) {
       if (tail(cb_model[[i]]$obj_path, n = 1) > 0.5) {
-        step1 <- max(0.5 * (1 / (1 + learning_rate_decay * (length(cb_model[[i]]$obj_path) - 1))), cb_model[[i]]$learning_rate_init)
+        step1 <- max(0.5 * (1 / (1 + cb_model_para$learning_rate_decay * (length(cb_model[[i]]$obj_path) - 1))), cb_model[[i]]$learning_rate_init)
       } else {
         step1 <- cb_model[[i]]$learning_rate_init
       }
@@ -218,14 +216,11 @@ boost_check_stop <- function(cb_model, cb_model_para, pos_stop,
 }
 
 
-boost_obj_last <- function(cb_data, cb_model, cb_model_para,
-                           tau = 0.01,
-                           func_simplex = "z2z",
-                           lambda = 0.5,
-                           lambda_focal_outcome = 1,
-                           LD_free = TRUE) {
+boost_obj_last <- function(cb_data, cb_model, cb_model_para) {
+  
   pos.stop <- cb_model_para$true_stop
   focal_outcome_idx <- cb_model_para$focal_outcome_idx
+  tau <- cb_model_para$tau
 
   for (i in pos.stop) {
     # - check which jk update
@@ -250,14 +245,17 @@ boost_obj_last <- function(cb_data, cb_model, cb_model_para,
 
       # - calculate delta
       if (is.null(focal_outcome_idx)) {
-        lambda_outcome <- lambda
+        lambda_outcome <- cb_model_para$lambda
       } else {
-        lambda_outcome <- ifelse(i == focal_outcome_idx, lambda_focal_outcome, lambda)
+        lambda_outcome <- ifelse(i == focal_outcome_idx, 
+                                 cb_model_para$lambda_focal_outcome, 
+                                 cb_model_para$lambda)
       }
       delta <- boost_KL_delta(
         z = cb_model[[i]]$z,
         ld_feature = ld_feature, adj_dep = adj_dep,
-        func_simplex = func_simplex, lambda = lambda_outcome
+        func_simplex = cb_model_para$func_simplex, 
+        lambda = lambda_outcome
       )
 
       x_tmp <- cb_data$data[[X_dict]]$X
@@ -268,7 +266,7 @@ boost_obj_last <- function(cb_data, cb_model, cb_model_para,
         cb_model[[i]]$res / scaling_factor
       }
 
-      obj_ld <- if (LD_free) ld_feature else rep(1, length(ld_feature))
+      obj_ld <- if (cb_model_para$LD_free) ld_feature else rep(1, length(ld_feature))
       if (length(cb_data$data[[i]]$variable_miss) != 0) {
         obj_ld[cb_data$data[[i]]$variable_miss] <- 0
       }

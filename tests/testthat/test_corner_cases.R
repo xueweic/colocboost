@@ -118,14 +118,18 @@ test_that("colocboost handles different sample sizes", {
   # Test with proper row names to handle different sample sizes
   X <- test_data$X
   rownames(X) <- paste0("sample", 1:nrow(X))
-  Y1 <- test_data$Y[[1]]
-  Y2 <- test_data$Y[[2]]
+  Y1 <- as.matrix(test_data$Y[[1]])
+  Y2 <- as.matrix(test_data$Y[[2]])
   rownames(Y1) <- paste0("sample", 1:length(Y1))
   rownames(Y2) <- paste0("sample", 1:length(Y2))
+  Y <- list(Y1, Y2)
   
   # Skip test if function fails in unexpected ways
-  # (This test may require more complex setup than we can do here)
-  skip("Requires specialized setup for different sample sizes")
+  # (This test may require more complex setup than we can do here) 
+  # skip("Requires specialized setup for different sample sizes")
+  # Can handle on Apr 17, 2025 (News)
+  # Run colocboost - should only warning
+  expect_warning(colocboost(X = X, Y = Y))
 })
 
 # Test colocboost with different variant sets
@@ -135,9 +139,6 @@ test_that("colocboost handles different variant sets", {
   # Generate data with different variant sets
   test_data <- generate_edge_case_data("different_variants")
   
-  # Need to create dict_YX for this case
-  dict_YX <- matrix(c(1, 2, 1, 2), ncol=2)
-  
   # Run colocboost
   expect_warning(
     result <- colocboost(
@@ -145,8 +146,7 @@ test_that("colocboost handles different variant sets", {
       Y = test_data$Y,
       dict_YX = dict_YX,
       M = 5  # Small number of iterations for testing
-    ),
-    NA
+    )
   )
   
   # Test that we get a colocboost object

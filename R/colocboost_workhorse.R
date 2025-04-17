@@ -56,15 +56,20 @@ colocboost_workhorse <- function(cb_data,
     func_simplex = func_simplex,
     lambda = lambda,
     lambda_focal_outcome = lambda_focal_outcome,
+    learning_rate_decay = learning_rate_decay,
     multi_test_thresh = multi_test_thresh,
     func_multi_test = func_multi_test,
     LD_free = LD_free,
     outcome_names = outcome_names,
-    focal_outcome_idx = focal_outcome_idx
+    focal_outcome_idx = focal_outcome_idx,
+    dynamic_learning_rate = dynamic_learning_rate,
+    prioritize_jkstar = prioritize_jkstar,
+    jk_equiv_corr = jk_equiv_corr,
+    jk_equiv_loglik = jk_equiv_loglik,
+    func_compare = func_compare,
+    coloc_thresh = coloc_thresh
   )
-
-
-
+            
   if (is.null(M)) {
     M <- cb_model_para$L * 200
   }
@@ -102,16 +107,7 @@ colocboost_workhorse <- function(cb_data,
   if (M == 1) {
     # single effect with or without LD matrix
     message("Running colocboost with assumption of one causal per outcome!")
-    cb_obj <- colocboost_one_causal(cb_model, cb_model_para, cb_data,
-      jk_equiv_corr = jk_equiv_corr,
-      jk_equiv_loglik = jk_equiv_loglik,
-      tau = tau,
-      learning_rate_decay = learning_rate_decay,
-      func_simplex = func_simplex,
-      lambda = lambda,
-      lambda_focal_outcome = lambda_focal_outcome,
-      LD_free = LD_free
-    )
+    cb_obj <- colocboost_one_causal(cb_model, cb_model_para, cb_data)
     cb_obj$cb_model_para$coveraged <- "one_causal"
   } else {
     # - add more iterations for more outcomes
@@ -120,24 +116,10 @@ colocboost_workhorse <- function(cb_data,
         break
       } else {
         # step 1: check which outcomes need to be updated at which variant
-        cb_model_para <- colocboost_check_update_jk(cb_model, cb_model_para, cb_data,
-          prioritize_jkstar = prioritize_jkstar,
-          jk_equiv_corr = jk_equiv_corr,
-          jk_equiv_loglik = jk_equiv_loglik,
-          func_compare = func_compare,
-          coloc_thresh = coloc_thresh
-        )
+        cb_model_para <- colocboost_check_update_jk(cb_model, cb_model_para, cb_data)
 
         # step 2: gradient boosting for the updated outcomes
-        cb_model <- colocboost_update(cb_model, cb_model_para, cb_data,
-          tau = tau,
-          learning_rate_decay = learning_rate_decay,
-          func_simplex = func_simplex,
-          lambda = lambda,
-          lambda_focal_outcome = lambda_focal_outcome,
-          LD_free = LD_free,
-          dynamic_learning_rate = dynamic_learning_rate
-        )
+        cb_model <- colocboost_update(cb_model, cb_model_para, cb_data)
 
         # step 3: check stop for the updated ones
         # # - update cb_model and cb_model_parameter
@@ -208,12 +190,7 @@ colocboost_workhorse <- function(cb_data,
             if (!is.null(cb_model_para$true_stop)) {
               ####### ---------------------------------------------
               # calculate objective function of Y for the last iteration.
-              cb_model <- boost_obj_last(cb_data, cb_model, cb_model_para,
-                tau = tau,
-                func_simplex = func_simplex,
-                lambda = lambda,
-                lambda_focal_outcome = lambda_focal_outcome
-              )
+              cb_model <- boost_obj_last(cb_data, cb_model, cb_model_para)
               if (!is.null(focal_outcome_idx)) {
                 if (focal_outcome_idx %in% cb_model_para$true_stop) {
                   message(paste(
@@ -261,12 +238,7 @@ colocboost_workhorse <- function(cb_data,
       cb_model_para$true_stop <- which(cb_model_para$update_y == 1)
       ####### ---------------------------------------------
       # calculate objective function of Y for the last iteration.
-      cb_model <- boost_obj_last(cb_data, cb_model, cb_model_para,
-        tau = tau,
-        func_simplex = func_simplex,
-        lambda = lambda,
-        lambda_focal_outcome = lambda_focal_outcome
-      )
+      cb_model <- boost_obj_last(cb_data, cb_model, cb_model_para)
       warning(paste("COLOC-BOOST updates did not converge in", M, "iterations; checkpoint at last iteration"))
       cb_model_para$coveraged <- FALSE
     }

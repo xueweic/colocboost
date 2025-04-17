@@ -39,17 +39,20 @@ generate_test_model <- function(n = 100, p = 20, L = 2, seed = 42) {
       output_level = 3  # Include full model details
     )$diagnostic_details
   })
+  result$cb_model_para$update_y <- c(1:result$cb_model_para$L)
+  Y_list <- lapply(Y_list, as.matrix)
   result$cb_data <- colocboost_init_data(
-        X = X_list,
-        Y = Y_list,
-        dict_YX = NULL, 
-        Z = NULL,
-        LD = NULL,
-        N_sumstat = NULL,
-        dict_sumstatLD = NULL,
-        Var_y = NULL,
-        SeBhat = NULL
-      )
+    X = X_list,
+    Y = Y_list,
+    dict_YX = c(1,2), 
+    Z = NULL,
+    LD = NULL,
+    N_sumstat = NULL,
+    dict_sumstatLD = NULL,
+    Var_y = NULL,
+    SeBhat = NULL,
+    keep_variables = lapply(X_list, colnames)
+  )
   result
 }
 

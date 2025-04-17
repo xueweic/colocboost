@@ -5,40 +5,22 @@
 #'
 #' @return update_status and real_update_jk for each trait
 #' @noRd
-colocboost_check_update_jk <- function(cb_model, cb_model_para, cb_data,
-                                       prioritize_jkstar = TRUE,
-                                       jk_equiv_corr = 0.8, ##### more than 2 traits
-                                       jk_equiv_loglik = 1, ## more than 2 traits
-                                       func_compare = "min_max", ##### more than 3 traits
-                                       coloc_thresh = 0.1) {
+colocboost_check_update_jk <- function(cb_model, cb_model_para, cb_data) {
+  
   pos.update <- which(cb_model_para$update_y == 1)
   focal_outcome_idx <- cb_model_para$focal_outcome_idx
   if (is.null(focal_outcome_idx)) {
-    cb_model_para <- boost_check_update_jk_nofocal(cb_model, cb_model_para, cb_data,
-      prioritize_jkstar = prioritize_jkstar,
-      jk_equiv_corr = jk_equiv_corr,
-      jk_equiv_loglik = jk_equiv_loglik,
-      func_compare = func_compare,
-      coloc_thresh = coloc_thresh
-    )
+    cb_model_para <- boost_check_update_jk_nofocal(cb_model, cb_model_para, cb_data)
   } else {
     if (focal_outcome_idx %in% pos.update) {
-      cb_model_para <- boost_check_update_jk_focal(cb_model, cb_model_para, cb_data,
-        prioritize_jkstar = prioritize_jkstar,
-        jk_equiv_corr = jk_equiv_corr,
-        jk_equiv_loglik = jk_equiv_loglik,
-        func_compare = func_compare,
-        coloc_thresh = coloc_thresh,
+      cb_model_para <- boost_check_update_jk_focal(
+        cb_model, 
+        cb_model_para, 
+        cb_data,
         focal_outcome_idx = focal_outcome_idx
       )
     } else {
-      cb_model_para <- boost_check_update_jk_nofocal(cb_model, cb_model_para, cb_data,
-        prioritize_jkstar = prioritize_jkstar,
-        jk_equiv_corr = jk_equiv_corr,
-        jk_equiv_loglik = jk_equiv_loglik,
-        func_compare = func_compare,
-        coloc_thresh = coloc_thresh
-      )
+      cb_model_para <- boost_check_update_jk_nofocal(cb_model, cb_model_para, cb_data)
     }
   }
   return(cb_model_para)
@@ -47,12 +29,8 @@ colocboost_check_update_jk <- function(cb_model, cb_model_para, cb_data,
 
 
 #' @importFrom stats median
-boost_check_update_jk_nofocal <- function(cb_model, cb_model_para, cb_data,
-                                          prioritize_jkstar = TRUE,
-                                          jk_equiv_corr = 0.8, ##### more than 2 traits
-                                          jk_equiv_loglik = 1, ## more than 2 traits
-                                          func_compare = "min_max", ##### more than 3 traits
-                                          coloc_thresh = 0.1) {
+boost_check_update_jk_nofocal <- function(cb_model, cb_model_para, cb_data) {
+  
   ############# Output #################
   # we will obtain and update the cb_model_para$update_status and cb_model_para$real_update_jk
   ######################################
@@ -64,6 +42,12 @@ boost_check_update_jk_nofocal <- function(cb_model, cb_model_para, cb_data,
   if (is.null(cb_model_para$coloc_thresh)) {
     cb_model_para$coloc_thresh <- (1 - coloc_thresh) * max(sapply(1:length(cb_model), function(i) max(cb_model[[i]]$change_loglike)))
   }
+  # - initial parameter
+  prioritize_jkstar <- cb_model_para$prioritize_jkstar 
+  jk_equiv_corr <- cb_model_para$jk_equiv_corr 
+  jk_equiv_loglik <- cb_model_para$jk_equiv_loglik 
+  func_compare <- cb_model_para$func_compare 
+  coloc_thresh <- cb_model_para$coloc_thresh 
 
   # - update only Ys which is not stop
   pos.update <- which(cb_model_para$update_y == 1)
@@ -328,12 +312,8 @@ boost_check_update_jk_nofocal <- function(cb_model, cb_model_para, cb_data,
 
 
 boost_check_update_jk_focal <- function(cb_model, cb_model_para, cb_data,
-                                        prioritize_jkstar = TRUE,
-                                        jk_equiv_corr = 0.8, ##### more than 2 traits
-                                        jk_equiv_loglik = 1, ## more than 2 traits
-                                        func_compare = "min_max", ##### more than 3 traits
-                                        coloc_thresh = 0.1,
                                         focal_outcome_idx = 1) {
+  
   ############# Output #################
   # we will obtain and update the cb_model_para$update_status and cb_model_para$real_update_jk
   ######################################
@@ -345,6 +325,12 @@ boost_check_update_jk_focal <- function(cb_model, cb_model_para, cb_data,
   if (is.null(cb_model_para$coloc_thresh)) {
     cb_model_para$coloc_thresh <- (1 - coloc_thresh) * max(sapply(1:length(cb_model), function(i) max(cb_model[[i]]$change_loglike)))
   }
+  # - initial parameter
+  prioritize_jkstar <- cb_model_para$prioritize_jkstar 
+  jk_equiv_corr <- cb_model_para$jk_equiv_corr 
+  jk_equiv_loglik <- cb_model_para$jk_equiv_loglik 
+  func_compare <- cb_model_para$func_compare 
+  coloc_thresh <- cb_model_para$coloc_thresh 
 
   # - update only Ys which is not stop
   pos.update <- which(cb_model_para$update_y == 1)
