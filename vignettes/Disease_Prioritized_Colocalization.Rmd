@@ -78,6 +78,9 @@ res <- colocboost(X = X, Y = Y, sumstat = sumstat, LD = LD)
 
 # Identified CoS
 res$cos_details$cos$cos_index
+
+# Plotting the results
+colocboost_plot(res)
 ```
 
 ### Results Interpretation
@@ -89,10 +92,23 @@ For comprehensive tutorials on result interpretation and advanced visualization 
 # 3. Run ColocBoost (Disease Prioritized Colocalization)
 
 
+TO-DO-LIST
+
+
 ```{r disease-basic}
 # Run colocboost
 res <- colocboost(X = X, Y = Y, sumstat = sumstat, LD = LD, focal_outcome_idx = 5)
 
 # Identified CoS
 res$cos_details$cos$cos_index
+
+# Plotting results
+colocboost_plot(res)
+```
+
+
+
+```{r disease-basic-focal}
+# Plotting the focal only results
+colocboost_plot(res, plot_focal_only = TRUE)
 ```

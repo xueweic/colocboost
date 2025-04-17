@@ -88,6 +88,8 @@ The output from `get_strong_colocalization` is the same as output from `colocboo
 
 ## 3. Details of ColocBoost output
 
+TO-DO-LIST
+
 The entire colocalization output from `colocboost` is stored in the `colocboost` object, which contains several components:
 
 - `cos_summary`: A summary table for colocalization events.

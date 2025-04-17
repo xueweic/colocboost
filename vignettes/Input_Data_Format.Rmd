@@ -66,3 +66,13 @@ refer to [Summary Statistics Colocalization](https://statfungen.github.io/colocb
 - One LD matrix with a superset of variants in `sumstat` for all traits is allowed.
 - Multiple LD matrices, each corresponding to a different trait, are also allowed for the trait-specific LD structure.
 - Multiple LD matrices and unmatched `sumstat` data frames with a mapping dictionary are also allowed.  
+
+
+
+## 3. Dictionary format for mapping
+
+TO-DO-LIST
+
+## 4. Effect size and standard error of effect size matrices
+
+TO-DO-LIST

@@ -81,6 +81,9 @@ res <- colocboost(sumstat = Sumstat_5traits$sumstat, LD = LD)
 
 # Identified CoS
 res$cos_details$cos$cos_index
+
+# Plotting the results
+colocboost_plot(res)
 ```
 
 
