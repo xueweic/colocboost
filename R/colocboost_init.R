@@ -30,7 +30,7 @@ colocboost_inits <- function() {
 colocboost_init_data <- function(X, Y, dict_YX,
                                  Z, LD, N_sumstat, dict_sumstatLD,
                                  Var_y, SeBhat,
-                                 keep_variables = NULL,
+                                 keep_variables,
                                  focal_outcome_idx = NULL,
                                  focal_outcome_variables = TRUE,
                                  overlap_variables = FALSE,
@@ -213,12 +213,20 @@ colocboost_init_model <- function(cb_data,
 #' @importFrom utils tail
 colocboost_init_para <- function(cb_data, cb_model, tau = 0.01,
                                  func_simplex = "z2z",
-                                 lambda = 0.5, lambda_focal_outcome = 1,
+                                 lambda = 0.5, 
+                                 lambda_focal_outcome = 1,
+                                 learning_rate_decay = 1,
                                  multi_test_thresh = 1,
                                  func_multi_test = "lfdr",
                                  LD_free = FALSE,
                                  outcome_names = NULL,
-                                 focal_outcome_idx = NULL) {
+                                 focal_outcome_idx = NULL,
+                                 dynamic_learning_rate = TRUE,
+                                 prioritize_jkstar = TRUE,
+                                 jk_equiv_corr = 0.8,
+                                 jk_equiv_loglik = 1,
+                                 func_compare = "min_max",
+                                 coloc_thresh =  0.1) {
   #################  initialization #######################################
   # - sample size
   N <- sapply(cb_data$data, function(dt) dt$N)
@@ -251,7 +259,8 @@ colocboost_init_para <- function(cb_data, cb_model, tau = 0.01,
   } else {
     outcome_names <- paste0("Y", 1:L)
   }
-
+  # - initial coloc_thresh
+  coloc_thresh <- (1 - coloc_thresh) * max(sapply(1:length(cb_model), function(i) max(cb_model[[i]]$change_loglike)))
   cb_model_para <- list(
     "L" = L,
     "P" = P,
@@ -260,7 +269,14 @@ colocboost_init_para <- function(cb_data, cb_model, tau = 0.01,
     "func_simplex" = func_simplex,
     "lambda" = lambda,
     "lambda_focal_outcome" = lambda_focal_outcome,
+    "learning_rate_decay" = learning_rate_decay,
     "profile_loglike" = profile_loglike,
+    "dynamic_learning_rate" = dynamic_learning_rate,
+    "prioritize_jkstar" = prioritize_jkstar,
+    "jk_equiv_corr" = jk_equiv_corr,
+    "jk_equiv_loglik" = jk_equiv_loglik,
+    "func_compare" = func_compare,
+    "coloc_thresh" = coloc_thresh,
     "update_status" = c(),
     "jk" = c(),
     "update_y" = update_y,
