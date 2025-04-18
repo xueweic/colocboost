@@ -796,7 +796,7 @@ get_model_info <- function(cb_obj, outcome_names = NULL) {
   outcome_proximity_obj <- lapply(cb_obj$cb_model, function(cb) cb$obj_path)
   outcome_coupled_best_update_obj <- lapply(cb_obj$cb_model, function(cb) cb$obj_single)
   outcome_profile_loglik <- lapply(cb_obj$cb_model, function(cb) cb$profile_loglike_each)
-  names(outcome_proximity_obj) <- names(outcome_coupled_obj) <-
+  names(outcome_proximity_obj) <- names(outcome_coupled_best_update_obj) <-
     names(outcome_profile_loglik) <- outcome_names
   ll <- list(
     "model_coveraged" = model_coveraged,
