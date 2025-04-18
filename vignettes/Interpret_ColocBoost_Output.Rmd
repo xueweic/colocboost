@@ -213,6 +213,7 @@ res$model_info$jk_update[c(5:10,36:38), ]
 - **`outcome_profile_loglik`**: trait-specifc profile log-likelihood changes over boosting rounds.
 
 ```{r profile_loglik}
+# Plotting joint profile log-likelihood (blue) and trait-specific profile log-likelihood (red).
 par(mfrow=c(2,3),mar=c(4,4,2,1))
 plot(res$model_info$profile_loglik, type="p", col="#3366CC", lwd=2, xlab="", ylab="Joint Profile")
 for(i in 1:5){
@@ -225,6 +226,7 @@ plot(res$model_info$outcome_profile_loglik[[i]], type="p", col="#CC3333", lwd=2,
 
 
 ```{r objetive-proximity}
+# Plotting trait-specific proximity objective
 par(mfrow=c(2,3), mar=c(4,4,2,1))
 for(i in 1:5){
 plot(res$model_info$outcome_proximity_obj[[i]], type="p", col="#3366CC", lwd=2, xlab="", ylab="Trait-specific Objective", main = paste0("Trait ", i))
@@ -232,6 +234,7 @@ plot(res$model_info$outcome_proximity_obj[[i]], type="p", col="#3366CC", lwd=2, 
 ```
 
 ```{r objetive-best}
+# Plotting trait-specific objective at the best update variant
 par(mfrow=c(2,3), mar=c(4,4,2,1))
 for(i in 1:5){ 
   plot(res$model_info$outcome_coupled_best_update_obj[[i]], type="p", col="#CC3333", lwd=2, xlab="", ylab=paste0("Objetive at best update variant"), main = paste0("Trait ", i)) 

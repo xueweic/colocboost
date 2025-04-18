@@ -85,3 +85,21 @@ res$data_info$n_variables
 # Plotting the results
 colocboost_plot(res)
 ```
+
+
+In disease-prioritized colocalization analysis with a focal trait, `ColocBoost` recommends prioritizing variants in the focal trait as the default setting. 
+For the example above, if we consider trait 3 as the focal trait, only variants present in trait 3 will be included in the analysis. 
+This ensures that the analysis focuses on variants relevant to the focal trait while accounting for partial overlaps across other traits.
+If you want to include all variants across traits, you can set `focal_outcome_variables = FALSE` to disable this default behavior.
+
+```{r run-code-focal}
+# Run colocboost
+res <- colocboost(X = X, Y = Y, focal_outcome_idx = 3)
+
+# The number of variants in the analysis
+res$data_info$n_variables
+
+# Plotting the results
+colocboost_plot(res)
+```
+

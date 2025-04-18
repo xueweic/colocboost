@@ -496,12 +496,14 @@ get_multiple_testing_correction <- function(z, miss_idx = NULL, func_multi_test 
 #' @return List containing processed data with optimized LD submatrix storage
 #' @noRd
 process_sumstat <- function(Z, N, Var_y, SeBhat, ld_matrices, variant_lists, dict, target_variants) {
+  
+  
   # Step 1: Identify unique combinations of (variant list, LD matrix)
   unified_dict <- integer(length(variant_lists))
 
   # First item is always assigned its own position
   unified_dict[1] <- 1
-
+  
   # Process remaining items
   if (length(variant_lists) > 1) {
     for (i in 2:length(variant_lists)) {
@@ -641,15 +643,19 @@ process_individual_data <- function(X, Y, dict_YX, target_variants,
   }
   
   # Step 1: Update dictionary to handle duplicates samples
-  sample_lists <- lapply(Y, rownames)
-  new_dict <- 1:length(dict_YX)
-  # For each pair of Y indices
-  for (i in 1:(length(dict_YX)-1)) {
-    for (j in (i+1):length(dict_YX)) {
-      # Check if they map to the same X matrix AND have the same samples
-      if (dict_YX[i] == dict_YX[j] && identical(sample_lists[[i]], sample_lists[[j]])) {
-        # If same matrix and same samples, use the smaller index
-        new_dict[j] <- new_dict[i]
+  if (length(Y) == 1){
+    new_dict = 1
+  } else {
+    sample_lists <- lapply(Y, rownames)
+    new_dict <- 1:length(dict_YX)
+    # For each pair of Y indices
+    for (i in 1:(length(dict_YX)-1)) {
+      for (j in (i+1):length(dict_YX)) {
+        # Check if they map to the same X matrix AND have the same samples
+        if (dict_YX[i] == dict_YX[j] && identical(sample_lists[[i]], sample_lists[[j]])) {
+          # If same matrix and same samples, use the smaller index
+          new_dict[j] <- new_dict[i]
+        }
       }
     }
   }

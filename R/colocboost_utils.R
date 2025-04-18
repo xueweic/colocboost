@@ -42,7 +42,6 @@ merge_cos_ucos <- function(cb_obj, out_cos, out_ucos, coverage = 0.95,
         res <- get_between_purity(cset1, cset2,
           X = cb_obj$cb_data$data[[X_dict]]$X,
           Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
-          N = cb_obj$cb_data$data[[fine_outcome]]$N,
           miss_idx = cb_obj$cb_data$data[[fine_outcome]]$variable_miss,
           P = cb_obj$cb_model_para$P
         )
@@ -66,7 +65,6 @@ merge_cos_ucos <- function(cb_obj, out_cos, out_ucos, coverage = 0.95,
           res[[ii]] <- get_between_purity(cset1, cset2,
             X = cb_obj$cb_data$data[[X_dict]]$X,
             Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
-            N = cb_obj$cb_data$data[[ii]]$N,
             miss_idx = cb_obj$cb_data$data[[ii]]$variable_miss,
             P = cb_obj$cb_model_para$P
           )
@@ -152,7 +150,6 @@ merge_ucos <- function(cb_obj, past_out,
         res[[flag]] <- get_between_purity(cset1, cset2,
           X = cb_obj$cb_data$data[[X_dict]]$X,
           Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
-          N = cb_obj$cb_data$data[[ii]]$N,
           miss_idx = cb_obj$cb_data$data[[ii]]$variable_miss,
           P = cb_obj$cb_model_para$P
         )

@@ -182,3 +182,72 @@ test_that("get_merge_ordered_with_indices merges vectors", {
   result2 <- get_merge_ordered_with_indices(vector_list2)
   expect_equal(result2, c("a", "b", "c", "d", "e"))
 })
+
+# Test for get_cos_purity function
+test_that("get_cos_purity calculates correct purity statistics", {
+  # Set up test data
+  set.seed(123)
+  N <- 100
+  P <- 20
+  
+  # Generate X with correlation structure
+  sigma <- 0.8^abs(outer(1:P, 1:P, "-"))
+  X <- MASS::mvrnorm(N, rep(0, P), sigma)
+  colnames(X) <- paste0("SNP", 1:P)
+  
+  # Create test CoS lists
+  cos1 <- c(1, 2, 3)
+  cos2 <- c(10, 11, 12)
+  cos3 <- c(5, 6, 7, 8)
+  cos_list <- list(trait1 = cos1, trait2 = cos2, trait3 = cos3)
+  
+  # Calculate X correlation matrix for testing both methods
+  Xcorr <- cor(X)
+  
+  # Test with X matrix input
+  result_X <- get_cos_purity(cos_list, X = X)
+  
+  # Test with correlation matrix input
+  result_Xcorr <- get_cos_purity(cos_list, Xcorr = Xcorr)
+  
+  # Basic structure tests
+  expect_type(result_X, "list")
+  expect_equal(length(result_X), 3)
+  expect_named(result_X, c("min_abs_cor", "max_abs_cor", "median_abs_cor"))
+  
+  # Check dimensions
+  expect_equal(dim(result_X$min_abs_cor), c(3, 3))
+  expect_equal(rownames(result_X$min_abs_cor), c("trait1", "trait2", "trait3"))
+  
+  # Test symmetry of results
+  expect_equal(result_X$min_abs_cor[1, 2], result_X$min_abs_cor[2, 1])
+  expect_equal(result_X$max_abs_cor[1, 3], result_X$max_abs_cor[3, 1])
+  
+  # Test that X and Xcorr methods give same results (within numerical precision)
+  expect_equal(result_X$min_abs_cor, result_Xcorr$min_abs_cor, tolerance = 1e-10)
+  expect_equal(result_X$max_abs_cor, result_Xcorr$max_abs_cor, tolerance = 1e-10)
+  expect_equal(result_X$median_abs_cor, result_Xcorr$median_abs_cor, tolerance = 1e-10)
+  
+  # Test single CoS case
+  single_cos <- list(single = cos1)
+  result_single <- get_cos_purity(single_cos, X = X)
+  expect_equal(dim(result_single$min_abs_cor), c(1, 1))
+  expect_named(result_single, c("min_abs_cor", "max_abs_cor", "median_abs_cor"))
+  
+  # Test empty CoS case
+  expect_null(get_cos_purity(list(), X = X))
+  
+  # Test n_purity parameter
+  result_limited <- get_cos_purity(cos_list, X = X, n_purity = 2)
+  # The result still has the same structure
+  expect_type(result_limited, "list")
+  expect_equal(length(result_limited), 3)
+  
+  # Test error cases
+  expect_error(get_cos_purity(cos_list), "Either X or Xcorr must be provided")
+  
+  # Test converting numeric input to list
+  num_cos <- 1:5
+  result_num <- get_cos_purity(num_cos, X = X)
+  expect_equal(dim(result_num$min_abs_cor), c(1, 1))
+})
