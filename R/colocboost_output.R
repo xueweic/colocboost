@@ -249,10 +249,14 @@ get_robust_colocalization <- function(cb_output,
     cb_output$cos_details <- cos_details
     return(cb_output)
   }
+  get_npuc <- function(npc_outcome) {
+    max_idx <- which.max(npc_outcome)
+    npc_outcome[max_idx] * prod(1 - npc_outcome[-max_idx])
+  }
 
   cos_details <- cb_output$cos_details
   coloc_outcome_index <- coloc_outcome <- list()
-  colocset_names <- cos_min_npc_outcome <- c()
+  colocset_names <- cos_min_npc_outcome <- cos_npc <- c()
   for (i in 1:length(cos_details$cos$cos_index)) {
     cos_npc_config <- cos_details$cos_outcomes_npc[[i]]
     npc_outcome <- cos_npc_config$npc_outcome
@@ -277,9 +281,15 @@ get_robust_colocalization <- function(cb_output,
       coloc_outcome_index[[i]] <- 0
       coloc_outcome[[i]] <- 0
       cos_min_npc_outcome[i] <- 0
+      cos_npc[i] <- 0
       colocset_names[i] <- paste0("remove", i)
     } else {
       cos_min_npc_outcome[i] <- min(npc_outcome[pos_pass])
+      if (length(pos_pass) > 1){
+        cos_npc[i] <- 1 - get_npuc(npc_outcome[pos_pass])
+      } else {
+        cos_npc[i] <- 0 # since single-trait remain
+      }
       coloc_outcome_index[[i]] <- sort(cos_npc_config$outcomes_index[pos_pass])
       coloc_outcome[[i]] <- rownames(cos_npc_config)[pos_pass]
       colocset_names[i] <- paste0("cos", i, ":", paste0(paste0("y", coloc_outcome_index[[i]]), collapse = "_"))
@@ -288,9 +298,10 @@ get_robust_colocalization <- function(cb_output,
       }
     }
   }
-  names(coloc_outcome) <- names(coloc_outcome_index) <- names(cos_min_npc_outcome) <- colocset_names
+  names(coloc_outcome) <- names(coloc_outcome_index) <- names(cos_min_npc_outcome) <- names(cos_npc) <- colocset_names
   cos_details$cos_outcomes <- list("outcome_index" = coloc_outcome_index, "outcome_name" = coloc_outcome)
   cos_details$cos_min_npc_outcome <- cos_min_npc_outcome
+  cos_details$cos_npc <- cos_npc
 
   # - VCP
   cos_weights <- lapply(1:length(cos_details$cos_outcomes$outcome_index), function(idx) {

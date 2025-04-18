@@ -7,9 +7,10 @@
 #' @param cb_output Output object from `colocboost` analysis
 #' @param y Specifies the y-axis values, default is "log10p" for -log10 transformed marginal association p-values.
 #' @param grange Optional plotting range of x-axis to zoom in to a specific region.
-#' @param plot_focal_only Logical, if TRUE only plots colocalization with focal outcome, default is FALSE.
 #' @param plot_cos_idx Optional indices of CoS to plot
 #' @param outcome_idx Optional indices of outcomes to include in the plot. \code{outcome_idx=NULL} to plot only the outcomes having colocalization.
+#' @param plot_focal_only Logical, if TRUE only plots colocalization with focal outcome, default is FALSE.
+#' @param plot_focal_cos_outocme_only Logical, if TRUE only plots colocalization including at least on colocalized outcome with focal outcome, default is FALSE.
 #' @param points_color Background color for non-colocalized variables, default is "grey80".
 #' @param cos_color Optional custom colors for CoS.
 #' @param add_vertical Logical, if TRUE adds vertical lines at specified positions, default is FALSE
@@ -21,11 +22,13 @@
 #' @param show_cos_to_uncoloc Logical, if TRUE shows colocalization to uncolocalized outcomes to diagnose, default is FALSE
 #' @param show_cos_to_uncoloc_idx Optional indices for showing CoS to all uncolocalized outcomes
 #' @param show_cos_to_uncoloc_outcome Optional outcomes for showing CoS to uncolocalized outcomes
+#' @param plot_ucos Logical, if TRUE plots also trait-specific (uncolocalized) sets , default is FALSE
+#' @param plot_ucos_idx Optional indices of trait-specific (uncolocalized) sets to plot when included
 #' @param gene_name Optional gene name to display in plot title
 #' @param ylim_each Logical, if TRUE uses separate y-axis limits for each plot, default is TRUE
 #' @param outcome_legend_pos Position for outcome legend, default is "top"
 #' @param outcome_legend_size Size for outcome legend text, default is 1.2
-#' @param cos_legend_pos Position for colocalization set legend, default is "bottomleft"
+#' @param cos_legend_pos Proportion of the legend from (left edge, bottom edge), default as (0.05, 0.4) at the left - median position
 #' @param show_variable Logical, if TRUE displays variant IDs, default is FALSE
 #' @param lab_style Vector of two numbers for label style (size, boldness), default is c(2, 1)
 #' @param axis_style Vector of two numbers for axis style (size, boldness), default is c(2, 1)
@@ -65,9 +68,10 @@
 #' @export
 colocboost_plot <- function(cb_output, y = "log10p",
                             grange = NULL,
-                            plot_focal_only = FALSE,
                             plot_cos_idx = NULL,
                             outcome_idx = NULL,
+                            plot_focal_only = FALSE,
+                            plot_focal_cos_outocme_only = FALSE,
                             points_color = "grey80",
                             cos_color = NULL,
                             add_vertical = FALSE,
@@ -79,11 +83,13 @@ colocboost_plot <- function(cb_output, y = "log10p",
                             show_cos_to_uncoloc = FALSE,
                             show_cos_to_uncoloc_idx = NULL,
                             show_cos_to_uncoloc_outcome = NULL,
+                            plot_ucos = FALSE,
+                            plot_ucos_idx = NULL,
                             gene_name = NULL,
                             ylim_each = TRUE,
                             outcome_legend_pos = "top",
-                            outcome_legend_size = 1.2,
-                            cos_legend_pos = "bottomleft",
+                            outcome_legend_size = 1.8,
+                            cos_legend_pos = c(0.05, 0.4),
                             show_variable = FALSE,
                             lab_style = c(2, 1),
                             axis_style = c(2, 1),
@@ -96,12 +102,14 @@ colocboost_plot <- function(cb_output, y = "log10p",
   # get cb_plot_input data from colocboost results
   cb_plot_input <- get_input_plot(cb_output,
     plot_cos_idx = plot_cos_idx,
-    plot_focal_only = plot_focal_only,
     variant_coord = variant_coord,
     outcome_names = outcome_names,
+    plot_focal_only = plot_focal_only,
+    plot_focal_cos_outocme_only = plot_focal_cos_outocme_only,
     show_cos_to_uncoloc = show_cos_to_uncoloc,
     show_cos_to_uncoloc_idx = show_cos_to_uncoloc_idx,
-    show_cos_to_uncoloc_outcome = show_cos_to_uncoloc_outcome
+    show_cos_to_uncoloc_outcome = show_cos_to_uncoloc_outcome,
+    plot_ucos = plot_ucos, plot_ucos_idx = plot_ucos_idx
   )
   # get initial set up of plot
   cb_plot_init <- plot_initial(cb_plot_input,
@@ -244,7 +252,7 @@ colocboost_plot <- function(cb_output, y = "log10p",
         if (!is.null(uncoloc)) {
           p.uncoloc <- sapply(uncoloc$outcome_to_uncoloc, function(idx) sum(idx == iy) != 0)
           p.uncoloc <- which(p.uncoloc)
-          texts <- shape_col <- texts_col <- c()
+          shape_col <- texts_col <- c()
           for (i.uncoloc in p.uncoloc) {
             uncoloc_outcome <- uncoloc$outcome_to_uncoloc[[i.uncoloc]]
             if (iy %in% uncoloc_outcome) {
@@ -253,20 +261,32 @@ colocboost_plot <- function(cb_output, y = "log10p",
               x0 <- intersect(args$x, cs)
               y1 <- args$y[match(x0, args$x)]
               points(x0, y1,
-                pch = 4, col = adjustcolor(legend_text$col[uncoloc$cos_idx_to_uncoloc[i.uncoloc]], alpha.f = 0.3),
+                pch = 4, col = adjustcolor(legend_text$col[uncoloc$cos_idx_to_uncoloc[i.uncoloc]], alpha.f = 0.4),
                 cex = 1.5, lwd = 1.5
               )
-              texts <- c(texts, uncoloc$cos_uncoloc_texts[i.cs])
               shape_col <- c(shape_col, adjustcolor(legend_text$col[uncoloc$cos_idx_to_uncoloc[i.uncoloc]], alpha.f = 1))
               texts_col <- c(texts_col, adjustcolor(legend_text$col[uncoloc$cos_idx_to_uncoloc[i.uncoloc]], alpha.f = 0.8))
             }
           }
+          texts <- unlist(sapply(names(uncoloc$outcome_to_uncoloc), function(name) {
+            positions <- which(uncoloc$outcome_to_uncoloc[[name]] == iy)
+            if(length(positions) > 0) {
+              return(uncoloc$cos_uncoloc_texts[[name]][positions])
+            } else {
+              return(NULL)
+            }
+          }))
           if (length(texts) == 0) {
             next
           }
-          legend(cb_plot_init$cos_legend_pos, texts,
+
+          # Get current plot area coordinates
+          usr <- par("usr")
+          x_pos <- usr[1] + cb_plot_init$cos_legend_pos[1] * (usr[2] - usr[1])  # 5% from left edge
+          y_pos <- usr[3] + cb_plot_init$cos_legend_pos[2] * (usr[4] - usr[3])  # 50% from bottom edge
+          legend(x = x_pos, y = y_pos, texts,
             bty = "n", col = shape_col, text.col = texts_col,
-            cex = 1.5, pt.cex = 1.5, pch = 4, x.intersp = 0.1, y.intersp = 0.3
+            cex = 1.5, pt.cex = 1.5, pch = 4, x.intersp = 0.1, y.intersp = 0.5
           )
         }
       }
@@ -293,12 +313,25 @@ colocboost_plot <- function(cb_output, y = "log10p",
 
 # get input data for cb_plot
 get_input_plot <- function(cb_output, plot_cos_idx = NULL,
-                           plot_focal_only = FALSE,
                            variant_coord = FALSE,
                            outcome_names = NULL,
+                           plot_focal_only = FALSE,
+                           plot_focal_cos_outocme_only = FALSE,
                            show_cos_to_uncoloc = FALSE,
                            show_cos_to_uncoloc_idx = NULL,
-                           show_cos_to_uncoloc_outcome = NULL) {
+                           show_cos_to_uncoloc_outcome = NULL,
+                           plot_ucos = FALSE,
+                           plot_ucos_idx = NULL) {
+
+  # check ucos exists
+  if (plot_ucos && !"ucos_details" %in% names(cb_output)) {
+    warning(
+      "Since you want to plot trait-specific (uncolocalized) sets with plot_ucos = TRUE,",
+      " but there is no output of ucos from colocboost.\n",
+      " Please run colocboost model with output_level=2!",
+      " Only show colocalization results if exists."
+    )
+  }
   # redefined outcome names
   if (!is.null(outcome_names)) {
     cb_output$data_info$outcome_info$outcome_names <- outcome_names
@@ -330,6 +363,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
     cb_output$cos_details$cos_outcomes <- cb_output$ucos_details$ucos_outcomes
     if (!is.null(cb_output$cos_details$cos$cos_variables)) {
       cb_output$cos_details$cos_vcp <- cb_output$ucos_details$ucos_weight
+      vcp <- list(as.numeric(cb_output$vpa))
     }
     if_focal <- rep(TRUE, length(cb_output$cos_details$cos$cos_variables))
   }
@@ -357,18 +391,27 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
     ncos <- length(cb_output$cos_details$cos$cos_index)
 
     select_cs <- 1:ncos
-    if (plot_focal_only) {
-      if (sum(if_focal) == 0) {
-        message("No focal CoS, draw all CoS.")
-      } else {
-        select_cs <- which(if_focal)
+    if (!is.null(plot_cos_idx)) {
+      if (length(setdiff(plot_cos_idx, c(1:ncos))) != 0) {
+        stop("Please check plot_cos_idx!")
       }
+      select_cs <- plot_cos_idx
     } else {
-      if (!is.null(plot_cos_idx)) {
-        if (length(setdiff(plot_cos_idx, c(1:ncos))) != 0) {
-          stop("please check plot_cos_idx!")
+      if (plot_focal_only || plot_focal_cos_outocme_only) {
+        if (sum(if_focal) == 0) {
+          message("No focal CoS, draw all CoS.")
+        } else if (plot_focal_only) {
+          select_cs <- which(if_focal)
+        } else {  # plot_focal_cos_outocme_only is true here
+          # Get all outcomes colocalized with focal CoS
+          focal_outcomes <- unique(unlist(coloc_index[if_focal]))
+          # Find CoS that include at least one of these focal outcomes
+          cos_with_focal_outcomes <- sapply(coloc_index, function(cos_outcomes) {
+            length(intersect(cos_outcomes, focal_outcomes)) > 0
+          })
+          # Extract the indices of these CoS
+          select_cs <- which(cos_with_focal_outcomes)
         }
-        select_cs <- plot_cos_idx
       }
     }
     coloc_variables <- coloc_variables[select_cs]
@@ -381,6 +424,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
     } else {
       warnings("No colocalized effects in this region!")
     }
+    ncos <- 0
     coloc_index <- select_cs <- NULL
     vcp <- list(rep(0, cb_output$data_info$n_variables))
     cos_vcp <- lapply(1:length(analysis_outcome), function(iy) rep(0, cb_output$data_info$n_variables) )
@@ -416,7 +460,42 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
     "select_cos" = select_cs
   )
 
+  # check plot uncolocalizaed confidence sets from ucos_details
+  if (plot_ucos & cb_output$data_info$n_outcomes > 1){
+    ucos_details <- cb_output$ucos_details
+    if (!is.null(ucos_details)){
+      ucos <- ucos_details$ucos$ucos_index
+      ucos_outcome_index <- ucos_details$ucos_outcomes$outcome_index
+      ucos_hits <- lapply(ucos, function(x) x[[1]])
+      # check inclusion of other options
+      select_ucos <- 1:length(ucos)
+      if (!is.null(plot_ucos_idx)) {
+        if (length(setdiff(plot_cos_idx, select_ucos)) != 0) {
+          stop("Please check plot_ucos_idx!")
+        }
+        select_ucos <- plot_ucos_idx
+      } else if (plot_focal_cos_outocme_only && sum(if_focal) != 0) {
+        # Get all outcomes colocalized with focal CoS
+        focal_outcomes <- unique(unlist(plot_input$coloc_index))
+        # Find uCoS that include at least one of these focal outcomes
+        ucos_with_focal_outcomes <- sapply(ucos_outcome_index, function(ucos_outcomes) {
+          length(intersect(ucos_outcomes, focal_outcomes)) > 0
+        })
+        # Extract the indices of these uCoS
+        select_ucos <- which(ucos_with_focal_outcomes)
+      }
+      plot_input$cos <- c(plot_input$cos, ucos[select_ucos])
+      plot_input$cos_hits <- c(plot_input$cos_hits, ucos_hits[select_ucos])
+      plot_input$coloc_index <- c(plot_input$coloc_index, ucos_outcome_index[select_ucos])
+      plot_input$select_cos <- c(plot_input$select_cos, ncos + select_ucos)
+    }
+  }
+
   # check if plot cos to uncolocalized outcome
+  # use the updated coloc_cos and related components from plot_input if available
+  coloc_cos <- plot_input$cos
+  coloc_index <- plot_input$coloc_index
+  coloc_hits <- plot_input$cos_hits
   if (show_cos_to_uncoloc & !is.null(coloc_cos)) {
     if (is.null(show_cos_to_uncoloc_idx)) {
       cos_to_uncoloc <- coloc_cos
@@ -467,7 +546,16 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
       }
     }
     if (!is.null(outcome_to_uncoloc)) {
-      cos_uncoloc_texts <- rep("Uncolocalized effect", length(outcome_to_uncoloc))
+      cos_uncoloc_texts <- lapply(1:length(outcome_to_uncoloc), function(idx){
+        cname <- names(outcome_to_uncoloc)[idx]
+        if (grepl("^ucos", cname)){
+          texts_tmp <- "Uncolocalized effect (uCoS)"
+        } else {
+          texts_tmp <- "Uncolocalized effect (CoS)"
+        }
+        return(rep(texts_tmp, length(outcome_to_uncoloc[[idx]])))
+      })
+      names(cos_uncoloc_texts) <- names(outcome_to_uncoloc)
     } else {
       cos_uncoloc_texts <- NULL
     }
@@ -583,6 +671,13 @@ plot_initial <- function(cb_plot_input, y = "log10p",
   } else {
     ymax <- NULL
     ymin <- rep(0, length(args$y))
+    
+    # Check if ylim_each is FALSE but no ylim is provided
+    if (!ylim_each) {
+      warning("Since you want to plot with the same y-axis range (ylim_each=FALSE), but ylim was not provided, ", 
+              "still plotting with trait-specific y ranges (equivalent to ylim_each=TRUE).")
+      ylim_each <- TRUE
+    }
   }
   if (ylim_each & is.null(ymax)) {
     ymax <- sapply(plot_data, function(p) {
@@ -610,13 +705,6 @@ plot_initial <- function(cb_plot_input, y = "log10p",
     args$outcome_legend_angle <- 270
   } else {
     args$outcome_legend_angle <- 0
-  }
-
-  if (!(cos_legend_pos %in% c(
-    "bottomright", "bottom", "bottomleft", "left",
-    "topleft", "top", "topright", "right", "center"
-  ))) {
-    cos_legend_pos <- "bottomleft"
   }
   args$cos_legend_pos <- cos_legend_pos
 

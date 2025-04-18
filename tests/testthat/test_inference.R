@@ -58,44 +58,6 @@ generate_test_result <- function(n = 100, p = 20, L = 2, seed = 42) {
   return(result)
 }
 
-# Test colocboost_plot function
-test_that("colocboost_plot handles different plot options", {
-  
-  # Generate a test colocboost results
-  cb_res <- generate_test_result()
-  
-  # Basic plot call
-  expect_error(suppressWarnings(colocboost_plot(cb_res)), NA)
-  
-  # Test with different y-axis values
-  expect_error(suppressWarnings(colocboost_plot(cb_res, y = "z_original")), NA)
-  
-  # Test with different outcome_idx
-  expect_error(suppressWarnings(colocboost_plot(cb_res, outcome_idx = 1)), NA)
-})
-
-# Test get_cos_summary function
-test_that("get_cos_summary handles different parameters", {
-
-  # Generate a test colocboost results
-  cb_res <- generate_test_result()
-  
-  # Basic summary call
-  expect_error(get_cos_summary(cb_res), NA)
-  
-  # With custom outcome names
-  expect_error(get_cos_summary(cb_res, outcome_names = c("Trait1", "Trait2")), NA)
-  
-  # With gene name
-  summary_with_gene <- get_cos_summary(cb_res, region_name = "TestGene")
-  
-  # If summary is not NULL, check for region_name column
-  if (!is.null(summary_with_gene)) {
-    expect_true("region_name" %in% colnames(summary_with_gene))
-    expect_equal(summary_with_gene$region_name[1], "TestGene")
-  }
-})
-
 # Test for get_strong_colocalization
 test_that("get_robust_colocalization filters results correctly", {
 

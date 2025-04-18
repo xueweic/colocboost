@@ -35,3 +35,4 @@ Other colocboost_utilities:
 \code{\link{get_hierarchical_clusters}()}
 }
 \concept{colocboost_utilities}
+\keyword{cb_post_inference}

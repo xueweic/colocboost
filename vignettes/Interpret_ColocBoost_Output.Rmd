@@ -245,7 +245,11 @@ for(i in 1:5){
 
 ## 4. Trait-specific effects information (UCoS)
 
-TO-DO-LIST
+There is `ucos_details` in ColocBoost output when setting `output_level = 2`, including the trait-specific (uncolocalized) information from single-effect learner (SEL).
+
+- **`ucos`**: 
+- **`cb_model_para`**: 
+
 
 ```{r ucos-details}
 res <- colocboost(X = X, Y = Y, sumstat = sumstat, LD = LD, output_level = 2)
@@ -253,6 +257,9 @@ res <- colocboost(X = X, Y = Y, sumstat = sumstat, LD = LD, output_level = 2)
 
 ## 5. Diagnostic details
 
-TO-DO-LIST
+There is `diagnostic_details` in ColocBoost output when setting `output_level = 3`:
+
+- **`cb_model`**: trait-specific proximity gradient boosting model, including proximity weight at each iteration, residual after gradient boosting, et al.
+- **`cb_model_para`**: parameters used in fitting ColocBoost model.
 
 For more diagnosis of ColocBoost model fitting, please refer to our Tutorial (TO-DO-LIST).

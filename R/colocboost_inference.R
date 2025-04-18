@@ -44,6 +44,7 @@ colocboost_post_inference <- function() {
 #' X <- MASS::mvrnorm(N, rep(0, P), sigma)
 #' cormat <- get_cormat(X)
 #'
+#' @keywords cb_post_inference
 #' @family colocboost_utilities
 #' @export
 get_cormat <- function(X, intercepte = TRUE) {
@@ -85,6 +86,7 @@ get_cormat <- function(X, intercepte = TRUE) {
 #' clusters$cluster
 #' clusters$Q_modularity
 #'
+#' @keywords cb_post_inference
 #' @family colocboost_utilities
 #' @export
 get_hierarchical_clusters <- function(cormat, min_cluster_corr = 0.8) {
@@ -206,8 +208,6 @@ w_purity <- function(weights, X = NULL, Xcorr = NULL, N = NULL, n = 100, coverag
 }
 
 
-
-
 #' Function to remove the spurious signals
 #' @importFrom utils head tail
 #' @keywords cb_post_inference
@@ -295,7 +295,7 @@ check_null_post <- function(cb_obj,
       return(res.tmp)
     }
   }
-  # - add hoc
+  # - add hoc - for single-trait fine-mapping results
   cut <- if (length(cb_obj$cb_data) == 1) 0.2 else 1
 
   # ----- null filtering
@@ -323,7 +323,6 @@ check_null_post <- function(cb_obj,
         if (min(cb_obj$cb_model[[j]]$multi_correction_univariate[cs_variants]) >= cut) {
           change <- 0
         }
-        # ------
         # - check_null
         check_cs_change[i, j] <- change / diff(range(cb_obj$cb_model[[j]]$profile_loglike_each))
         cs_change[i, j] <- change # / diff(range(cb_obj$cb_model[[j]]$profile_loglike_each))

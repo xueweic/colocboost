@@ -42,3 +42,4 @@ Other colocboost_utilities:
 \code{\link{get_cos_purity}()}
 }
 \concept{colocboost_utilities}
+\keyword{cb_post_inference}
