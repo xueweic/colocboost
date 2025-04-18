@@ -104,5 +104,5 @@ For example, when anaylze L traits for the same P variants with the specified ef
 - `effect_n` (highly recommended) is either a scalar or a vector of sample sizes for estimating regression coefficients.
 - `LD` (optional) is LD matrix for the $P$ variants. If it is not provided, it will apply LD-free ColocBoost.
 
-See more details about data format to implement LD-free ColocBoost and LD-mistmatch diagnosis in FIXME.
+See more details about data format to implement LD-free ColocBoost and LD-mistmatch diagnosis in (LD mismatch diagnosis and LD-free analysis (avaiable soon)).
 

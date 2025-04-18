@@ -88,15 +88,67 @@ The output from `get_strong_colocalization` is the same as output from `colocboo
 
 ## 3. More details on ColocBoost output
 
-TO-DO-LIST
+The entire colocalization output from `colocboost` is stored in the `colocboost` object, which contains several components:
+
+- **`cos_summary`**: A summary table for colocalization events (see details in above Section 1).
+- **`vcp`**: The variable colocalized probability for each variable.
+- **`cos_details`**: A object with all information for colocalization results.
+- **`data_info`**: A object with detailed information from input data.
+- **`model_info`**: A object with detailed information for colocboost model.
+
+In this section, we will provide a brief overview of the components of interest for deepening into ColocBoost result.
+
+
+
+
+
+
+### 4. Entire colocboost output (for advanced users)
 
 The entire colocalization output from `colocboost` is stored in the `colocboost` object, which contains several components:
 
-- `cos_summary`: A summary table for colocalization events.
-- `vcp`: The variable colocalized probability for each variable.
-- `cos_details`: A object with all information for colocalization results.
-- `data_info`: A object with detailed information from input data.
-- `model_info`: A object with detailed information for colocboost model.
+- **`cos_summary`**: A summary table for colocalization events (see details in above Section 1).
+- **`vcp`**: The variable colocalized probability for each variable.
+- **`cos_details`**: A object with all information for colocalization results.
+- **`data_info`**: A object with detailed information from input data.
+- **`model_info`**: A object with detailed information for colocboost model.
+
+In this section, we will provide a brief overview of each component and its contents.
+
+#### 4.1. Variant colocalization probability (VCP)
+
+- **`vcp`**: The variable colocalized probability for each variable.
+
+#### 4.2. Colocalization details
+
+- **`cos_details`**: A object with all information for colocalization results.
+  - `cos`: A data frame with detailed information for each colocalization event.
+    - `cos_index`: Indices of colocalized variables.
+    - `cos_variables`: Names of colocalized variables.
+  - `cos_outcomes`: 
+    - `outcome_index`: 
+    - `outcome_variable`: 
+  - `cos_vcp`:
+  - `cos_outcomes_npc`: 
+  - `cos_npc`:
+  - `cos_min_npc_outcome`: 
+  - `cos_purity`: 
+  - `cos_top_variables`: 
+  - `cos_weights`
+
+
+#### 4.3. Data information
+
+- **`data_info`**: A object with detailed information from input data.
+
+
+
+#### 4.4. Model information
+- **`model_info`**: A object with detailed information for colocboost model.
+
+
+
+
 
 
 
