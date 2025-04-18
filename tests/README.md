@@ -28,6 +28,7 @@ This repository contains a comprehensive testing framework for the [colocboost](
 - `testthat/`: Directory containing test files
   - `test_package.R`: Tests for basic package functionality
   - `test_colocboost.R`: Tests for the main colocalization functions
+  - `test_inference.R`: Tests for the post inference functions
   - `test_utils.R`: Tests for utility functions
   - `test_model.R`: Tests for model fitting and prediction functions
 - `.github/workflows/`: GitHub Actions workflow configurations

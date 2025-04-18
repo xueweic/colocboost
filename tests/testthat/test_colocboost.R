@@ -43,7 +43,6 @@ test_data <- generate_test_data()
 
 # Basic test for colocboost functionality with individual data
 test_that("colocboost runs with individual data", {
-  skip_on_cran()
   
   # Convert Y to list
   Y_list <- list(test_data$Y[,1], test_data$Y[,2])
@@ -71,7 +70,6 @@ test_that("colocboost runs with individual data", {
 
 # Test with summary statistics
 test_that("colocboost runs with summary statistics", {
-  skip_on_cran()
   
   # Generate summary statistics from the individual data
   X <- test_data$X
@@ -120,7 +118,6 @@ test_that("colocboost runs with summary statistics", {
 
 # Test focal outcome functionality
 test_that("colocboost handles focal outcome correctly", {
-  skip_on_cran()
   
   # Convert Y to list
   Y_list <- list(test_data$Y[,1], test_data$Y[,2])
@@ -145,7 +142,6 @@ test_that("colocboost handles focal outcome correctly", {
 
 # Test get_cos_summary functionality
 test_that("get_cos_summary returns expected structure", {
-  skip_on_cran()
   
   # Convert Y to list
   Y_list <- list(test_data$Y[,1], test_data$Y[,2])
@@ -180,7 +176,6 @@ test_that("get_cos_summary returns expected structure", {
 
 # Test colocboost_plot functionality (basic call should not error)
 test_that("colocboost_plot runs without error", {
-  skip_on_cran()
   
   # Convert Y to list
   Y_list <- list(test_data$Y[,1], test_data$Y[,2])
@@ -199,9 +194,8 @@ test_that("colocboost_plot runs without error", {
   expect_error(suppressWarnings(colocboost_plot(result)), NA)
 })
 
-# Test get_strong_colocalization functionality
-test_that("get_strong_colocalization maintains colocboost structure", {
-  skip_on_cran()
+# Test get_robust_colocalization functionality
+test_that("get_robust_colocalization maintains colocboost structure", {
   
   # Convert Y to list
   Y_list <- list(test_data$Y[,1], test_data$Y[,2])
@@ -216,7 +210,7 @@ test_that("get_strong_colocalization maintains colocboost structure", {
   )
   
   # Run get_strong_colocalization
-  strong_result <- get_strong_colocalization(
+  strong_result <- get_robust_colocalization(
     result, 
     cos_npc_cutoff = 0.2,  # Lower threshold for testing
     npc_outcome_cutoff = 0.1  # Lower threshold for testing
@@ -231,8 +225,7 @@ test_that("get_strong_colocalization maintains colocboost structure", {
 
 # Test error handling with malformed input
 test_that("colocboost handles missing/invalid inputs appropriately", {
-  skip_on_cran()
-  
+
   # Test missing both individual data and summary stats
   expect_warning(colocboost(), "Error: No individual data")
   

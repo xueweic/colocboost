@@ -82,17 +82,17 @@ test_that("get_cos_summary handles different parameters", {
 })
 
 # Test for get_strong_colocalization
-test_that("get_strong_colocalization filters results correctly", {
+test_that("get_robust_colocalization filters results correctly", {
 
   # Generate a test colocboost results
   cb_res <- generate_test_result()
   
   # Basic call
-  expect_error(get_strong_colocalization(cb_res), NA)
+  expect_error(get_robust_colocalization(cb_res), NA)
   
   # With stricter thresholds
-  expect_error(get_strong_colocalization(cb_res, cos_npc_cutoff = 0.8), NA)
+  expect_error(get_robust_colocalization(cb_res, cos_npc_cutoff = 0.8), NA)
   
   # With p-value threshold
-  expect_error(get_strong_colocalization(cb_res, pvalue_cutoff = 0.05), NA)
+  expect_error(get_robust_colocalization(cb_res, pvalue_cutoff = 0.05), NA)
 })
