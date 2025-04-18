@@ -3,26 +3,28 @@
 \docType{data}
 \name{Non_Causal_Strongest_Marginal}
 \alias{Non_Causal_Strongest_Marginal}
-\title{Summary level data for 5 traits}
+\title{Individual level data for 2 traits and 2 causal variants, but the strongest margianl association is not causal}
 \format{
 \subsection{\code{Non_Causal_Strongest_Marginal}}{
 
 A list with 3 elements
 \describe{
 \item{X}{List of genotype matrices}
-\item{Y}{List of outcomes}
-\item{TrueCausalVariants}{List of causal variants}
+\item{Y}{List of traits}
+\item{variant}{Incides of two causal variants}
 }
 }
 }
 \source{
-See Cao et. al. 2025 for details. TO-DO-LIST
+The Non_Causal_Strongest_Marginal dataset contains 2 simulated phenotypes alongside corresponding genotype matrices.
+There are two causal variants, but the strongest marginal association is not a causal variant.
+See Figure 2b in Cao et. al. 2025 for details.
 }
 \usage{
 Non_Causal_Strongest_Marginal
 }
 \description{
-An example dataset with simulated statistics and LD for 5 traits
+An example dataset with simulated genotypes and traits for 2 traits and 2 common causal variants, but the strongest marginal association is not causal variant.
 }
 \seealso{
 Other colocboost_data: 

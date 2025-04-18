@@ -3,26 +3,28 @@
 \docType{data}
 \name{Weaker_GWAS_Effect}
 \alias{Weaker_GWAS_Effect}
-\title{Summary level data for 5 traits}
+\title{Individual level data for 2 traits and 2 causal variants with weaker effects for focal trait}
 \format{
 \subsection{\code{Weaker_GWAS_Effect}}{
 
 A list with 3 elements
 \describe{
 \item{X}{List of genotype matrices}
-\item{Y}{List of outcomes}
-\item{TrueCausalVariants}{List of causal variants}
+\item{Y}{List of traits}
+\item{variant}{Incides of two causal variants}
 }
 }
 }
 \source{
-See Cao et. al. 2025 for details. TO-DO-LIST
+The Weaker_GWAS_Effect dataset contains 2 simulated phenotypes alongside corresponding genotype matrices.
+There are two causal variants, one of which has a weaker effect on the focal trait compared to the other trait.
+See Figure 2b in Cao et. al. 2025 for details.
 }
 \usage{
 Weaker_GWAS_Effect
 }
 \description{
-An example dataset with simulated statistics and LD for 5 traits
+An example dataset with simulated genotypes and traits for 2 traits and 2 common causal variants with heterogeneous effects
 }
 \seealso{
 Other colocboost_data: 

@@ -10,7 +10,7 @@ vignette: >
 
 ## ColocBoost on the media
 
-- *April 17, 2025*: Manuscript describing ColocBoost methods with applications is posted on [biorxiv]().
+- *April 17, 2025*: Manuscript describing ColocBoost methods with applications is posted on [medRxiv]().
 
 ## Software updates
 

@@ -144,13 +144,18 @@ colocboost_plot <- function(cb_output, y = "log10p",
     # - begin plotting
     coloc_cos <- cb_plot_input$cos
     outcomes <- cb_plot_input$outcomes
+    if (length(y)==1) outcome_idx <- 1
     if (is.null(outcome_idx)) {
       if (is.null(coloc_cos)) {
         # - no colocalized effects, draw all outcomes in this region
         if (length(cb_plot_input$outcomes) == 1) {
           message("There is no fine-mapped causal effect in this region!. Showing margianl for this outcome!")
         } else {
-          message("There is no colocalization in this region!. Showing margianl for all outcomes!")
+          if (length(y) == 1){
+            message("There is no colocalization in this region!. Showing VCP = 0!")
+          } else {
+            message("There is no colocalization in this region!. Showing margianl for all outcomes!")
+          }
         }
         outcome_idx <- 1:length(y)
       } else {
@@ -195,10 +200,12 @@ colocboost_plot <- function(cb_output, y = "log10p",
       } else {
         do.call(plot, args)
       }
-      mtext(outcomes[iy],
-        side = cb_plot_init$outcome_legend_pos, line = 0.2, adj = 0.5,
-        cex = cb_plot_init$outcome_legend_size, font = 1
-      )
+      if (length(y)!=1){
+        mtext(outcomes[iy],
+              side = cb_plot_init$outcome_legend_pos, line = 0.2, adj = 0.5,
+              cex = cb_plot_init$outcome_legend_size, font = 1
+        )
+      }
       if (add_vertical) {
         for (iii in 1:length(add_vertical_idx)) {
           abline(v = add_vertical_idx[iii], col = "#E31A1C", lwd = 1.5, lty = "dashed")
@@ -209,6 +216,7 @@ colocboost_plot <- function(cb_output, y = "log10p",
       if (!is.null(coloc_cos)) {
         n.coloc <- length(coloc_cos)
         coloc_index <- cb_plot_input$coloc_index
+        if (length(y)==1){coloc_index = lapply(coloc_index, function(i) 1 )}
         legend_text <- list(col = vector())
         legend_text$col <- head(cb_plot_init$col, n.coloc)
 
@@ -312,6 +320,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
   variables <- cb_output$data_info$variables
   Z <- cb_output$data_info$z
   coef <- cb_output$data_info$coef
+  vcp <- list(as.numeric(cb_output$vcp))
 
   # if finemapping
   if (cb_output$data_info$n_outcomes == 1) {
@@ -336,7 +345,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
   names(coloc_hits) <- names(coloc_cos)
   if (!is.null(coloc_cos)) {
     # extract vcp each outcome
-    vcp <- lapply(1:length(analysis_outcome), function(iy) {
+    cos_vcp <- lapply(1:length(analysis_outcome), function(iy) {
       pos <- which(sapply(coloc_index, function(idx) iy %in% idx))
       if (length(pos) != 0) {
         w <- do.call(cbind, cb_output$cos_details$cos_vcp[pos])
@@ -372,8 +381,9 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
     } else {
       warnings("No colocalized effects in this region!")
     }
-    coloc_index <- NULL
-    vcp <- rep(0, cb_output$data_info$n_variables)
+    coloc_index <- select_cs <- NULL
+    vcp <- list(rep(0, cb_output$data_info$n_variables))
+    cos_vcp <- lapply(1:length(analysis_outcome), function(iy) rep(0, cb_output$data_info$n_variables) )
   }
   # extract x axis
   if (variant_coord) {
@@ -398,6 +408,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
     "x" = x,
     "Zscores" = Z,
     "vcp" = vcp,
+    "cos_vcp" = cos_vcp,
     "coef" = coef,
     "cos" = coloc_cos,
     "cos_hits" = coloc_hits,
@@ -528,18 +539,22 @@ plot_initial <- function(cb_plot_input, y = "log10p",
   } else if (y == "z_original") {
     plot_data <- cb_plot_input$Zscores
     ylab <- "Z score"
+  } else if (y == "cos_vcp") {
+    plot_data <- cb_plot_input$cos_vcp
+    ylab <- "CoS-specific VCP"
+    args$ylim <- c(0, 1)
   } else if (y == "vcp") {
     plot_data <- cb_plot_input$vcp
-    ylab <- "VCP"
     if (length(cb_plot_input$outcomes) == 1) {
       ylab <- "VPA"
     }
+    ylab <- "VCP"
     args$ylim <- c(0, 1)
-  } else if (y == "coef") {
+  }else if (y == "coef") {
     plot_data <- cb_plot_input$coef
     ylab <- "Coefficients"
   } else {
-    stop("Invalid y value! Choose from 'z' or 'z_original'")
+    stop("Invalid y value! Choose from 'log10p', 'z_original', 'vcp', 'coef', or 'cos_vcp'!")
   }
   if (!exists("xlab", args)) args$xlab <- "variables"
   if (!exists("ylab", args)) args$ylab <- ylab
@@ -607,3 +622,4 @@ plot_initial <- function(cb_plot_input, y = "log10p",
 
   return(args)
 }
+

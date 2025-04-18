@@ -10,18 +10,21 @@
 A list with 2 elements
 \describe{
 \item{sumstat}{Summary statistics for 5 traits}
-\item{TrueCausalVariants}{List of causal variants}
+\item{true_effect_variants}{List of causal variants}
 }
 }
 }
 \source{
-See Cao et. al. 2025 for details. TO-DO-LIST
+The Sumstat_5traits dataset contains 5 simulated summary statistics,
+where it is directly derived from the Ind_5traits dataset using marginal association.
+The dataset is specifically designed for evaluating and demonstrating the capabilities of ColocBoost
+in multi-trait colocalization analysis with summary association data. See Cao et. al. 2025 for details.
 }
 \usage{
 Sumstat_5traits
 }
 \description{
-An example dataset with simulated statistics and LD for 5 traits
+An example dataset with simulated statistics for 5 traits
 }
 \seealso{
 Other colocboost_data: 

@@ -63,7 +63,7 @@ head(Sumstat_5traits$sumstat[[1]])
 
 
 The preferred format for colocalization analysis in ColocBoost using summary statistics data is where one LD matrix is provided for all traits, 
-and the summary statistics are organized in a list. The **Basic format** us 
+and the summary statistics are organized in a list. The **Basic format** is 
 
 - `sumstat` is organized as a list of data.frames for all traits
 - `LD` is a matrix of linkage disequilibrium (LD) information for all variants across all traits.

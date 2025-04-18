@@ -80,7 +80,7 @@ colocboost_workhorse <- function(cb_data,
       # - if all outcomes do not have signals, STOP
       message(paste0(
         "Using multiple testing correction method: ", func_multi_test,
-        ". Stop ColocBoost since no outcomes ", focal_outcome_idx, " have association signals."
+        ". Stop ColocBoost since no outcomes ", focal_outcome_idx, "have association signals."
       ))
     } else {
       message(paste0(
