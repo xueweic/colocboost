@@ -206,7 +206,7 @@ res$cos_details$cos_top_variables
 
 ```{r jk_update}
 # Pick arbitrary SEC updates, see entire update in advance
-res$model_info$jk_update[c(5:10,36:38), ]
+res$model_info$jk_star[c(5:10,36:38), ]
 ```
 
 - **`profile_loglik`**: joint profile log-likelihood changes over boosting rounds.

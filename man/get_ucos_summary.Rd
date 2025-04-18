@@ -44,7 +44,7 @@ colnames(X) <- paste0("SNP", 1:P)
 L <- 1  # Only one trait for single-trait analysis
 true_beta <- matrix(0, P, L)
 true_beta[10, 1] <- 0.5 # SNP10 affects the trait
-true_beta[50, 1] <- 0.2 # SNP11 also affects the trait but with lower effect
+true_beta[80, 1] <- 0.2 # SNP11 also affects the trait but with lower effect
 Y <- X \%*\% true_beta + rnorm(N, 0, 1)
 res <- colocboost(X = X, Y = Y, output_level = 2)
 # Get the trait-specifc effect summary

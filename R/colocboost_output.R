@@ -434,7 +434,7 @@ get_robust_colocalization <- function(cb_output,
 #' L <- 1  # Only one trait for single-trait analysis
 #' true_beta <- matrix(0, P, L)
 #' true_beta[10, 1] <- 0.5 # SNP10 affects the trait
-#' true_beta[50, 1] <- 0.2 # SNP11 also affects the trait but with lower effect
+#' true_beta[80, 1] <- 0.2 # SNP11 also affects the trait but with lower effect
 #' Y <- X %*% true_beta + rnorm(N, 0, 1)
 #' res <- colocboost(X = X, Y = Y, output_level = 2)
 #' # Get the trait-specifc effect summary
@@ -552,7 +552,7 @@ get_cos <- function(cb_output, coverage = 0.95, X = NULL, Xcorr = NULL, n_purity
     if (is.null(median_abs_corr)) {
       is_pure <- which(within_purity[, 1] >= min_abs_corr)
     } else {
-      is_pure <- which(within_purity[, 1] >= min_abs_corr | purity[, 3] >= median_abs_corr)
+      is_pure <- which(within_purity[, 1] >= min_abs_corr | within_purity[, 3] >= median_abs_corr)
     }
     # Filter impured CoS
     if (length(is_pure) == 0) {
