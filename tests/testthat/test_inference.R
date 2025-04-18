@@ -45,7 +45,6 @@ generate_test_result <- function(n = 100, p = 20, L = 2, seed = 42) {
 
 # Test colocboost_plot function
 test_that("colocboost_plot handles different plot options", {
-  skip_on_cran()
   
   # Generate a test colocboost results
   cb_res <- generate_test_result()
@@ -62,8 +61,7 @@ test_that("colocboost_plot handles different plot options", {
 
 # Test get_cos_summary function
 test_that("get_cos_summary handles different parameters", {
-  skip_on_cran()
-  
+
   # Generate a test colocboost results
   cb_res <- generate_test_result()
   
@@ -85,8 +83,7 @@ test_that("get_cos_summary handles different parameters", {
 
 # Test for get_strong_colocalization
 test_that("get_strong_colocalization filters results correctly", {
-  skip_on_cran()
-  
+
   # Generate a test colocboost results
   cb_res <- generate_test_result()
   

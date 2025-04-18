@@ -80,7 +80,7 @@ colocboost_workhorse <- function(cb_data,
       # - if all outcomes do not have signals, STOP
       message(paste0(
         "Using multiple testing correction method: ", func_multi_test,
-        ". Stop ColocBoost since no outcomes ", focal_outcome_idx, "have association signals."
+        ". Stop ColocBoost since no outcomes have association signals."
       ))
     } else {
       message(paste0(
@@ -92,7 +92,7 @@ colocboost_workhorse <- function(cb_data,
     }
     if (!is.null(focal_outcome_idx) & (M != 1)) {
       if (sum(cb_model_para$true_stop == focal_outcome_idx) != 0) {
-        message(paste("Stop ColocBoost since the focal outcome", focal_outcome_idx, "do not have association signals."))
+        warning(paste("Stop ColocBoost since the focal outcome", focal_outcome_idx, "do not have association signals."))
         cb_model_para$update_y <- 0
       }
     }
@@ -106,7 +106,7 @@ colocboost_workhorse <- function(cb_data,
   }
   if (M == 1) {
     # single effect with or without LD matrix
-    message("Running colocboost with assumption of one causal per outcome!")
+    message("Running ColocBoost with assumption of one causal per outcome per region!")
     cb_obj <- colocboost_one_causal(cb_model, cb_model_para, cb_data)
     cb_obj$cb_model_para$coveraged <- "one_causal"
   } else {
@@ -133,10 +133,10 @@ colocboost_workhorse <- function(cb_data,
         if (length(pos_rtr_stop) != 0) {
           cb_model_para$update_y[pos.update[pos_rtr_stop]] <- 0
           message(paste(
-            "Boosting iterations for outcome", paste(pos.update[pos_rtr_stop], collapse = ", "),
+            "Gradient boosting for outcome", paste(pos.update[pos_rtr_stop], collapse = ", "),
             "stop since rtr < 0 or max(correlation) > 1 after", m, "iterations!",
             "Results for this locus are not stable, please check if mismatch between sumstat and LD!",
-            "See details in website."
+            "See details in tutorial website."
           ))
         }
 
@@ -166,14 +166,11 @@ colocboost_workhorse <- function(cb_data,
             }
           }
         }
-        # if (!is.null(focal_outcome_idx)){
-        #     if (!is.na(stop[focal_outcome_idx]) & stop[focal_outcome_idx]){ stop = TRUE }
-        # }
 
         if (all(length(stop) == 1 & stop)) {
           cb_model_para$update_y <- 0
           if (cb_model_para$L == 1) {
-            message(paste("Boosting iterations for outcome 1 converge after", m, "iterations!"))
+            message(paste("Gradient boosting for outcome 1 converge after", m, "iterations!"))
           }
         } else {
           if (all(!stop[pos.update])) {
@@ -194,25 +191,25 @@ colocboost_workhorse <- function(cb_data,
               if (!is.null(focal_outcome_idx)) {
                 if (focal_outcome_idx %in% cb_model_para$true_stop) {
                   message(paste(
-                    "Boosting iterations for focal outcome", focal_outcome_idx,
-                    "converge after", m, "iterations!"
+                    "Gradient boosting for focal outcome", focal_outcome_idx,
+                    "converged after", m, "iterations!"
                   ))
                   if (length(setdiff(cb_model_para$true_stop, focal_outcome_idx)) != 0) {
                     message(paste(
-                      "Boosting iterations for outcome", paste(setdiff(cb_model_para$true_stop, focal_outcome_idx), collapse = ", "),
-                      "converge after", m, "iterations!"
+                      "Gradient boosting for outcome", paste(setdiff(cb_model_para$true_stop, focal_outcome_idx), collapse = ", "),
+                      "converged after", m, "iterations!"
                     ))
                   }
                 } else {
                   message(paste(
-                    "Boosting iterations for outcome", paste(cb_model_para$true_stop, collapse = ", "),
-                    "converge after", m, "iterations!"
+                    "Gradient boosting for outcome", paste(cb_model_para$true_stop, collapse = ", "),
+                    "converged after", m, "iterations!"
                   ))
                 }
               } else {
                 message(paste(
-                  "Boosting iterations for outcome", paste(cb_model_para$true_stop, collapse = ", "),
-                  "converge after", m, "iterations!"
+                  "Gradient boosting for outcome", paste(cb_model_para$true_stop, collapse = ", "),
+                  "converged after", m, "iterations!"
                 ))
               }
             }
@@ -220,7 +217,7 @@ colocboost_workhorse <- function(cb_data,
         }
       }
       if (m %% 1000 == 0) {
-        message(paste("Boosting at", m, "iterations, still updating."))
+        message(paste("Gradient boosting at", m, "iterations, still updating."))
       }
     }
 
@@ -239,7 +236,7 @@ colocboost_workhorse <- function(cb_data,
       ####### ---------------------------------------------
       # calculate objective function of Y for the last iteration.
       cb_model <- boost_obj_last(cb_data, cb_model, cb_model_para)
-      warning(paste("COLOC-BOOST updates did not converge in", M, "iterations; checkpoint at last iteration"))
+      warning(paste("ColocBoost updates did not converge in", M, "iterations; checkpoint at last iteration"))
       cb_model_para$coveraged <- FALSE
     }
 

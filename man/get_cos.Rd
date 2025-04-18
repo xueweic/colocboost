@@ -2,7 +2,7 @@
 % Please edit documentation in R/colocboost_output.R
 \name{get_cos}
 \alias{get_cos}
-\title{Extract CoS simply change the coverage without checking purity}
+\title{Extract CoS at different coverages, without filtering by purity}
 \usage{
 get_cos(cb_output, coverage = 0.95)
 }

@@ -129,11 +129,11 @@ get_cos_summary <- function(cb_output,
 }
 
 
-#' @rdname get_strong_colocalization
+#' @rdname get_robust_colocalization
 #'
-#' @title Get colocalization summary table from a ColocBoost output.
+#' @title Recalibrate and summarize robust colocalization events.
 #'
-#' @description `get_strong_colocalization` get the colocalization by discarding the weaker colocalization events or colocalized outcomes
+#' @description `get_robust_colocalization` get the colocalization by discarding the weaker colocalization events or colocalized outcomes
 #'
 #' @param cb_output Output object from `colocboost` analysis
 #' @param cos_npc_cutoff Minimum threshold of normalized probability of colocalization (NPC) for CoS.
@@ -171,12 +171,12 @@ get_cos_summary <- function(cb_output,
 #' }
 #' res <- colocboost(X = X, Y = Y)
 #' res$cos_details$cos$cos_index
-#' filter_res <- get_strong_colocalization(res, cos_npc_cutoff = 0.5, npc_outcome_cutoff = 0.2)
+#' filter_res <- get_robust_colocalization(res, cos_npc_cutoff = 0.5, npc_outcome_cutoff = 0.2)
 #' filter_res$cos_details$cos$cos_index
 #'
 #' @family colocboost_inference
 #' @export
-get_strong_colocalization <- function(cb_output,
+get_robust_colocalization <- function(cb_output,
                                       cos_npc_cutoff = 0.5,
                                       npc_outcome_cutoff = 0.2,
                                       pvalue_cutoff = NULL,
@@ -458,7 +458,7 @@ get_ucos_summary <- function(cb_output, outcome_names = NULL, region_name = NULL
   return(summary_table)
 }
 
-#' Extract CoS simply change the coverage without checking purity
+#' Extract CoS at different coverages, without filtering by purity
 #'
 #' @description `get_cos` get the colocalization confidence sets (CoS) with different coverage.
 #'
@@ -793,6 +793,10 @@ get_model_info <- function(cb_obj, outcome_names = NULL) {
   n_updates <- cb_obj$cb_model_para$num_updates
   model_coveraged <- cb_obj$cb_model_para$coveraged
   jk_update <- cb_obj$cb_model_para$real_update_jk
+  if (!is.null(jk_update)){
+    rownames(jk_update) <- paste0("jk_star_", 1:nrow(jk_update))
+    colnames(jk_update) <- outcome_names
+  }
   outcome_proximity_obj <- lapply(cb_obj$cb_model, function(cb) cb$obj_path)
   outcome_coupled_best_update_obj <- lapply(cb_obj$cb_model, function(cb) cb$obj_single)
   outcome_profile_loglik <- lapply(cb_obj$cb_model, function(cb) cb$profile_loglike_each)
@@ -805,7 +809,7 @@ get_model_info <- function(cb_obj, outcome_names = NULL) {
     "outcome_profile_loglik" = outcome_profile_loglik,
     "outcome_proximity_obj" = outcome_proximity_obj,
     "outcome_coupled_best_update_obj" = outcome_coupled_best_update_obj,
-    "jk_update" = jk_update
+    "jk_star" = jk_update
   )
   return(ll)
 }

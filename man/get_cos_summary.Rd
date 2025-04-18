@@ -63,6 +63,6 @@ get_cos_summary(res)
 }
 \seealso{
 Other colocboost_inference: 
-\code{\link{get_strong_colocalization}()}
+\code{\link{get_robust_colocalization}()}
 }
 \concept{colocboost_inference}

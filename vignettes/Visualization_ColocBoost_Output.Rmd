@@ -83,6 +83,7 @@ colocboost_plot(res, show_top_variables = TRUE)
 ### 2.3. Plot CoS variants to uncolocalized traits to diagnostic the colocalization.
 
 There are three options available for plotting the CoS variants to uncolocalized traits:
+
 - `show_cos_to_uncoloc = FALSE` (default), if `TRUE` will plot all CoS variants to all uncolocalized traits.
 - `show_cos_to_uncoloc_idx = NULL` (default), if specified, will plot the specified CoS variants to all uncolocalized traits.
 - `show_cos_to_uncoloc_outcome = NULL` (default), if specified, will plot the all CoS variants to the specified uncolocalized traits.
