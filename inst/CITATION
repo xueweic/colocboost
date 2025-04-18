@@ -1,0 +1,27 @@
+citHeader("To cite colocboost in publications use:")
+
+citEntry(
+  entry    = "Article",
+  title    = "Integrative multi-omics QTL colocalization maps regulatory architecture in aging human brain",
+  author   = c(person("Xuewei", "Cao"),
+               person("Haochen", "Sun"),
+               person("Ru", "Feng"),
+               person("Rajib", "Mazumder"),
+               person("Cristian F. B.", "Najar"),
+               person("Yang I.", "Li"),
+               person("Philip L.", "de Jager"),
+               person("David", "Bennett"),
+               person("The Alzheimer's Disease Functional Genomics Consortium"),
+               person("Kushal K.", "Dey"),
+               person("Guanghao", "Wang")),
+  journal  = "medRxiv",
+  year     = "2025",
+  note     = "Preprint",
+  url      = "https://doi.org/",
+  textVersion = paste(
+    "Cao X, Sun H, Feng R, Mazumder R, Najar CFB, Li YI, de Jager PL, Bennett D, The Alzheimer's Disease Functional Genomics Consortium, Dey KK, Wang G. (2025).",
+    "Integrative multi-omics QTL colocalization maps regulatory architecture in aging human brain.",
+    "medRxiv.",
+    "https://doi.org/[YOUR_DOI_HERE]"
+  )
+)
