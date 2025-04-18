@@ -45,6 +45,9 @@
 #' res <- colocboost(X = X, Y = Y)
 #' get_cos_summary(res)
 #'
+#' @source See detailed instructions in our tutorial portal:
+#'  \url{https://statfungen.github.io/colocboost/articles/Interpret_ColocBoost_Output.html}
+#' 
 #' @family colocboost_inference
 #' @export
 get_cos_summary <- function(cb_output,
@@ -173,6 +176,9 @@ get_cos_summary <- function(cb_output,
 #' res$cos_details$cos$cos_index
 #' filter_res <- get_robust_colocalization(res, cos_npc_cutoff = 0.5, npc_outcome_cutoff = 0.2)
 #' filter_res$cos_details$cos$cos_index
+#' 
+#' @source See detailed instructions in our tutorial portal: 
+#' \url{https://statfungen.github.io/colocboost/articles/Interpret_ColocBoost_Output.html}
 #'
 #' @family colocboost_inference
 #' @export
@@ -198,7 +204,7 @@ get_robust_colocalization <- function(cb_output,
     if (is.null(pvalue_cutoff)) {
       message(paste0(
         "Extracting colocalization results with cos_npc_cutoff = ", cos_npc_cutoff, " and npc_outcome_cutoff = ", npc_outcome_cutoff, ".\n",
-        "For each CoS, keep the outcomes configurations that the npc_outcome > ", npc_outcome_cutoff, "."
+        "For each CoS, keep the outcomes configurations that the npc_outcome >= ", npc_outcome_cutoff, "."
       ))
     } else {
       if (pvalue_cutoff > 1 | pvalue_cutoff < 0) {
@@ -450,6 +456,9 @@ get_robust_colocalization <- function(cb_output,
 #' res <- colocboost(X = X, Y = Y, output_level = 2)
 #' # Get the trait-specifc effect summary
 #' get_ucos_summary(res)
+#' 
+#' @source See detailed instructions in our tutorial portal: 
+#' \url{https://statfungen.github.io/colocboost/articles/Interpret_ColocBoost_Output.html}
 #'
 #' @family colocboost_inference
 #' @export

@@ -117,6 +117,8 @@
 #' }
 #' res <- colocboost(X = X, Y = Y)
 #' res$cos_details$cos$cos_index
+#' 
+#' @source See detailed instructions in our tutorial portal: \url{https://statfungen.github.io/colocboost/index.html}
 #'
 #' @family colocboost
 #' @importFrom stats na.omit

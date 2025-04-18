@@ -63,6 +63,8 @@
 #' @importFrom utils head tail
 #' @importFrom graphics abline axis legend mtext par points text
 #' @importFrom grDevices adjustcolor
+#' 
+#' @source See detailed instructions in our tutorial portal: \url{https://statfungen.github.io/colocboost/articles/Visualization_ColocBoost_Output.html}
 #'
 #' @family colocboost_plot
 #' @export

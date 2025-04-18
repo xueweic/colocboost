@@ -241,21 +241,67 @@ for(i in 1:5){
 }
 ```
 
+### 3.5. Trait-specific effects information (**`ucos_details`**)
 
-
-## 4. Trait-specific effects information (UCoS)
-
-There is `ucos_details` in ColocBoost output when setting `output_level = 2`, including the trait-specific (uncolocalized) information from single-effect learner (SEL).
-
-- **`ucos`**: 
-- **`cb_model_para`**: 
-
+There is `ucos_details` in ColocBoost output when setting `output_level = 2`, including the trait-specific (uncolocalized) information from the single-effect learner (SEL).
 
 ```{r ucos-details}
-res <- colocboost(X = X, Y = Y, sumstat = sumstat, LD = LD, output_level = 2)
+# Create a mixed dataset
+data(Ind_5traits)
+data(Heterogeneous_Effect)
+X <- Ind_5traits$X[1:3]
+Y <- Ind_5traits$Y[1:3]
+X1 <- Heterogeneous_Effect$X[,1:3000]
+Y1 <- Heterogeneous_Effect$Y[,1,drop=F]
+res <- colocboost(X = c(X, list(X1)), Y = c(Y, list(Y1)), output_level = 2)
 ```
 
-## 5. Diagnostic details
+#### 3.5.1. Trait-specific (uncolocalized) traits (**`ucos`**)
+
+- **`ucos`**: A list containing detailed information about trait-specific (uncolocalized) traits for each uCoS.
+  - **`ucos_index`**: Indices of trait-specific (uncolocalized) variables.
+  - **`ucos_variables`**: Names of trait-specific (uncolocalized) variables.
+
+```{r ucos}
+res$ucos_details$ucos
+```
+
+#### 3.5.2. Trait-specific (uncolocalized) outcomes (**`ucos_outcomes`**)
+
+- **`ucos_outcomes`**: A list with detailed information about trait-specific (uncolocalized) outcomes for each uCoS.
+  - **`outcome_index`**: Indices of trait-specific (uncolocalized) outcomes.
+  - **`outcome_name`**: Names of trait-specific (uncolocalized) outcomes.
+
+```{r ucos-outcomes}
+res$ucos_details$ucos_outcomes
+```
+
+#### 3.5.3. Purity across CoS and uCoS (**`cos_ucos_purity`**)
+
+- **`cos_ucos_purity`**: Includes three lists, each containing an $S \times uS$ matrix, where $S$ is the number of CoS and $uS$ is the number of uCoS:
+  - `min_abs_cor`: Minimum absolute correlation of variables across each pair of CoS and uCoS.
+  - `median_abs_cor`: Median absolute correlation of variables across each pair of CoS and uCoS.
+  - `max_abs_cor`: Maximum absolute correlation of variables across each pair of CoS and uCoS.
+
+```{r cos-ucos-purity}
+res$ucos_details$cos_ucos_purity
+```
+
+
+#### 3.5.4. Other components
+
+- **`ucos_weight`**: Integrative weights for each trait-specific (uncolocalized) trait, used to recalibrate UCoS when traits are filtered out.
+- **`ucos_top_variables`**: Indices and names of the top variable for each UCoS, which is the variable with the highest VCP.
+- **`ucos_purity`**: Includes three lists, each containing an $uS \times uS$ matrix, where $uS$ is the number of uCoS:
+  - `min_abs_cor`: Minimum absolute correlation of variables within (diagonal) UCoS or between (off-diagonal) different uCoS.
+  - `median_abs_cor`: Median absolute correlation of variables within or between UCoS.
+  - `max_abs_cor`: Maximum absolute correlation of variables within or between UCoS.
+
+By analyzing these components, you can gain a deeper understanding of trait-specific (uncolocalized) effects that are not colocalized, 
+providing additional insights into the dataset.
+
+
+### 3.6. Diagnostic details (**`diagnostic_details`**)
 
 There is `diagnostic_details` in ColocBoost output when setting `output_level = 3`:
 

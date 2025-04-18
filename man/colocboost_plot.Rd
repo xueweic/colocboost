@@ -3,6 +3,9 @@
 \name{colocboost_plot}
 \alias{colocboost_plot}
 \title{Plot visualization plot from a ColocBoost output.}
+\source{
+See detailed instructions in our tutorial portal: \url{https://statfungen.github.io/colocboost/articles/Visualization_ColocBoost_Output.html}
+}
 \usage{
 colocboost_plot(
   cb_output,

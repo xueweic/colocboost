@@ -3,6 +3,10 @@
 \name{get_ucos_summary}
 \alias{get_ucos_summary}
 \title{Get trait-specific summary table from a ColocBoost output.}
+\source{
+See detailed instructions in our tutorial portal:
+\url{https://statfungen.github.io/colocboost/articles/Interpret_ColocBoost_Output.html}
+}
 \usage{
 get_ucos_summary(cb_output, outcome_names = NULL, region_name = NULL)
 }

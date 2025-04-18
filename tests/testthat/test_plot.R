@@ -322,3 +322,51 @@ test_that("colocboost_plot handles focal outcome in complex cases", {
                                                plot_focal_cos_outocme_only = TRUE,
                                                outcome_idx = 1:3)), NA)
 })
+
+# Test colocboost_plot with varying cutoff settings from get_robust_colocalization
+test_that("colocboost_plot handles varying cutoff settings", {
+  
+  # Generate a test colocboost result
+  cb_res <- generate_test_result(output_level = 3)
+  
+  # Test with different cutoff settings
+  cutoff_settings <- list(
+    list(cos_npc_cutoff = 0.5, npc_outcome_cutoff = 0.2),
+    list(cos_npc_cutoff = 0.7, npc_outcome_cutoff = 0.3),
+    list(cos_npc_cutoff = 0.9, npc_outcome_cutoff = 0.5),
+    list(cos_npc_cutoff = 1.0, npc_outcome_cutoff = 0.5),  # Corner case: cos_npc_cutoff = 1
+    list(cos_npc_cutoff = 0.5, npc_outcome_cutoff = 1.0),  # Corner case: npc_outcome_cutoff = 1
+    list(cos_npc_cutoff = 1.0, npc_outcome_cutoff = 1.0)   # Corner case: both cutoffs = 1
+  )
+  
+  for (cutoff in cutoff_settings) {
+    # Apply robust colocalization filtering
+    filter_res <- get_robust_colocalization(
+      cb_res, 
+      cos_npc_cutoff = cutoff$cos_npc_cutoff, 
+      npc_outcome_cutoff = cutoff$npc_outcome_cutoff
+    )
+    
+    # Test basic plot call with filtered results
+    expect_error(suppressWarnings(colocboost_plot(filter_res)), NA)
+    
+    # Test y-axis options with filtered results
+    expect_error(suppressWarnings(colocboost_plot(filter_res, y = "log10p")), NA)
+    expect_error(suppressWarnings(colocboost_plot(filter_res, y = "cos_vcp")), NA)
+    
+    # Test plot_focal_only option
+    expect_error(suppressWarnings(colocboost_plot(filter_res, plot_focal_only = TRUE)), NA)
+    
+    # Test plot_ucos option
+    expect_error(suppressWarnings(colocboost_plot(filter_res, plot_ucos = TRUE)), NA)
+    
+    # Test show_cos_to_uncoloc option
+    expect_error(suppressWarnings(colocboost_plot(filter_res, show_cos_to_uncoloc = TRUE)), NA)
+    
+    # Test combined options
+    expect_error(suppressWarnings(colocboost_plot(filter_res, 
+                                                  plot_focal_only = TRUE, 
+                                                  plot_ucos = TRUE, 
+                                                  y = "cos_vcp")), NA)
+  }
+})

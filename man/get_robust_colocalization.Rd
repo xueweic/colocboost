@@ -3,6 +3,10 @@
 \name{get_robust_colocalization}
 \alias{get_robust_colocalization}
 \title{Recalibrate and summarize robust colocalization events.}
+\source{
+See detailed instructions in our tutorial portal:
+\url{https://statfungen.github.io/colocboost/articles/Interpret_ColocBoost_Output.html}
+}
 \usage{
 get_robust_colocalization(
   cb_output,
