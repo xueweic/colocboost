@@ -45,6 +45,9 @@
 #' res <- colocboost(X = X, Y = Y)
 #' get_cos_summary(res)
 #'
+#' @source See detailed instructions in our tutorial portal:
+#'  \url{https://statfungen.github.io/colocboost/articles/Interpret_ColocBoost_Output.html}
+#' 
 #' @family colocboost_inference
 #' @export
 get_cos_summary <- function(cb_output,
@@ -102,7 +105,7 @@ get_cos_summary <- function(cb_output,
       summary_table$focal_outcome <- ifelse(if.focal, focal_outcome, FALSE)
       summary_table <- summary_table[order(summary_table$focal_outcome == "FALSE"), ]
       if (sum(if.focal) == 0) {
-        warnings("No colocalization with focal outcomes.")
+        warning("No colocalization with focal outcomes.")
       }
     }
     # - if extract only interest outcome colocalization
@@ -116,10 +119,10 @@ get_cos_summary <- function(cb_output,
         summary_table$interest_outcome <- interest_outcome
         summary_table <- summary_table[-which(if.interest == "FALSE"), ]
         if (sum(if.interest) == 0) {
-          warnings("No colocalization with interest outcomes.")
+          warning("No colocalization with interest outcomes.")
         }
       } else {
-        warnings("Interest outcome is not in the analysis outcomes, please check.")
+        warning("Interest outcome is not in the analysis outcomes, please check.")
       }
     }
   } else {
@@ -173,6 +176,9 @@ get_cos_summary <- function(cb_output,
 #' res$cos_details$cos$cos_index
 #' filter_res <- get_robust_colocalization(res, cos_npc_cutoff = 0.5, npc_outcome_cutoff = 0.2)
 #' filter_res$cos_details$cos$cos_index
+#' 
+#' @source See detailed instructions in our tutorial portal: 
+#' \url{https://statfungen.github.io/colocboost/articles/Interpret_ColocBoost_Output.html}
 #'
 #' @family colocboost_inference
 #' @export
@@ -187,7 +193,7 @@ get_robust_colocalization <- function(cb_output,
   }
 
   if (is.null(cb_output$cos_details)) {
-    warnings("No colocalization results in this region!")
+    warning("No colocalization results in this region!")
     return(cb_output)
   }
 
@@ -198,11 +204,11 @@ get_robust_colocalization <- function(cb_output,
     if (is.null(pvalue_cutoff)) {
       message(paste0(
         "Extracting colocalization results with cos_npc_cutoff = ", cos_npc_cutoff, " and npc_outcome_cutoff = ", npc_outcome_cutoff, ".\n",
-        "For each CoS, keep the outcomes configurations that the npc_outcome > ", npc_outcome_cutoff, "."
+        "For each CoS, keep the outcomes configurations that the npc_outcome >= ", npc_outcome_cutoff, "."
       ))
     } else {
       if (pvalue_cutoff > 1 | pvalue_cutoff < 0) {
-        warnings("Please check the pvalue cutoff in [0,1].")
+        warning("Please check the pvalue cutoff in [0,1].")
         return(cb_output)
       }
       if (npc_outcome_cutoff == 0 && cos_npc_cutoff == 0) {
@@ -249,10 +255,14 @@ get_robust_colocalization <- function(cb_output,
     cb_output$cos_details <- cos_details
     return(cb_output)
   }
+  get_npuc <- function(npc_outcome) {
+    max_idx <- which.max(npc_outcome)
+    npc_outcome[max_idx] * prod(1 - npc_outcome[-max_idx])
+  }
 
   cos_details <- cb_output$cos_details
   coloc_outcome_index <- coloc_outcome <- list()
-  colocset_names <- cos_min_npc_outcome <- c()
+  colocset_names <- cos_min_npc_outcome <- cos_npc <- c()
   for (i in 1:length(cos_details$cos$cos_index)) {
     cos_npc_config <- cos_details$cos_outcomes_npc[[i]]
     npc_outcome <- cos_npc_config$npc_outcome
@@ -277,9 +287,15 @@ get_robust_colocalization <- function(cb_output,
       coloc_outcome_index[[i]] <- 0
       coloc_outcome[[i]] <- 0
       cos_min_npc_outcome[i] <- 0
+      cos_npc[i] <- 0
       colocset_names[i] <- paste0("remove", i)
     } else {
       cos_min_npc_outcome[i] <- min(npc_outcome[pos_pass])
+      if (length(pos_pass) > 1){
+        cos_npc[i] <- 1 - get_npuc(npc_outcome[pos_pass])
+      } else {
+        cos_npc[i] <- 0 # since single-trait remain
+      }
       coloc_outcome_index[[i]] <- sort(cos_npc_config$outcomes_index[pos_pass])
       coloc_outcome[[i]] <- rownames(cos_npc_config)[pos_pass]
       colocset_names[i] <- paste0("cos", i, ":", paste0(paste0("y", coloc_outcome_index[[i]]), collapse = "_"))
@@ -288,9 +304,10 @@ get_robust_colocalization <- function(cb_output,
       }
     }
   }
-  names(coloc_outcome) <- names(coloc_outcome_index) <- names(cos_min_npc_outcome) <- colocset_names
+  names(coloc_outcome) <- names(coloc_outcome_index) <- names(cos_min_npc_outcome) <- names(cos_npc) <- colocset_names
   cos_details$cos_outcomes <- list("outcome_index" = coloc_outcome_index, "outcome_name" = coloc_outcome)
   cos_details$cos_min_npc_outcome <- cos_min_npc_outcome
+  cos_details$cos_npc <- cos_npc
 
   # - VCP
   cos_weights <- lapply(1:length(cos_details$cos_outcomes$outcome_index), function(idx) {
@@ -399,27 +416,52 @@ get_robust_colocalization <- function(cb_output,
 
 #' @rdname get_ucos_summary
 #'
-#' @title Get fine-mapping summary table from a ColocBoost output with only one single trait fine-mapping analysis.
+#' @title Get trait-specific summary table from a ColocBoost output.
 #'
-#' @description `get_ucos_summary` get the fine-mapping summary table
+#' @description `get_ucos_summary` produces a trait-specific summary table for uncolocalized (single-trait) 
+#' associations from ColocBoost results. This is particularly useful for examining trait-specific signals 
+#' or for summarizing results from single-trait FineBoost analyses.
 #'
 #' @param cb_output Output object from `colocboost` analysis
 #' @param outcome_names Optional vector of names of outcomes, which has the same order as Y in the original analysis.
 #' @param region_name Optional character string. When provided, adds a column with this gene name to the output table for easier filtering in downstream analyses.
 #'
-#' @return A summary table for fine-mapped events with the following columns:
-#' \item{outcomes}{Outcomes analyzed }
-#' \item{ucos_id}{Unique identifier for fine-mapped confidence sets }
-#' \item{purity}{Minimum absolute correlation of variables with in fine-mapped confidence sets }
-#' \item{top_variable}{The variable with highest variant-level probability of association (VPA) }
+#' @return A summary table for trait-specific, uncolocalized associations with the following columns:
+#' \item{outcomes}{Outcome being analyzed}
+#' \item{ucos_id}{Unique identifier for trait-specific confidence sets}
+#' \item{purity}{Minimum absolute correlation of variables within trait-specific confidence sets}
+#' \item{top_variable}{The variable with highest variant-level probability of association (VPA)}
 #' \item{top_variable_vpa}{Variant-level probability of association (VPA) for the top variable}
-#' \item{n_variables}{Number of variables in colocalization confidence set (CoS)}
-#' \item{ucos_index}{Indices of fine-mapped variables}
-#' \item{ucos_variables}{List of fine-mapped variables}
-#' \item{ucos_variables_vpa}{Variant-level probability of association (VPA) for all fine-mapped variables}
+#' \item{ucos_npc}{Normalized probability of causal association for the trait-specific confidence set}
+#' \item{n_variables}{Number of variables in trait-specific confidence set}
+#' \item{ucos_index}{Indices of variables in the trait-specific confidence set}
+#' \item{ucos_variables}{List of variables in the trait-specific confidence set}
+#' \item{ucos_variables_vpa}{Variant-level probability of association (VPA) for all variables in the confidence set}
+#' \item{region_name}{Region name if provided through the region_name parameter}
+#'
+#' @examples
+#' # colocboost example with single trait analysis
+#' set.seed(1)
+#' N <- 1000
+#' P <- 100
+#' # Generate X with LD structure
+#' sigma <- 0.9^abs(outer(1:P, 1:P, "-"))
+#' X <- MASS::mvrnorm(N, rep(0, P), sigma)
+#' colnames(X) <- paste0("SNP", 1:P)
+#' L <- 1  # Only one trait for single-trait analysis
+#' true_beta <- matrix(0, P, L)
+#' true_beta[10, 1] <- 0.5 # SNP10 affects the trait
+#' true_beta[80, 1] <- 0.2 # SNP11 also affects the trait but with lower effect
+#' Y <- X %*% true_beta + rnorm(N, 0, 1)
+#' res <- colocboost(X = X, Y = Y, output_level = 2)
+#' # Get the trait-specifc effect summary
+#' get_ucos_summary(res)
+#' 
+#' @source See detailed instructions in our tutorial portal: 
+#' \url{https://statfungen.github.io/colocboost/articles/Interpret_ColocBoost_Output.html}
 #'
 #' @family colocboost_inference
-#' @noRd
+#' @export
 get_ucos_summary <- function(cb_output, outcome_names = NULL, region_name = NULL) {
   if (!inherits(cb_output, "colocboost")) {
     stop("Input must from colocboost object!")
@@ -432,6 +474,10 @@ get_ucos_summary <- function(cb_output, outcome_names = NULL, region_name = NULL
       cs_outcome <- outcome_names
     }
     vpa <- as.numeric(cb_output$vpa)
+    if (length(vpa) == 0){
+      w <- do.call(cbind, specific_cs$ucos_weight)
+      vpa <- as.vector(1 - apply(1 - w, 1, prod))
+    }
 
     summary_table <- matrix(NA, nrow = length(specific_cs$ucos$ucos_index), ncol = 9)
     colnames(summary_table) <- c(
@@ -458,12 +504,16 @@ get_ucos_summary <- function(cb_output, outcome_names = NULL, region_name = NULL
   return(summary_table)
 }
 
-#' Extract CoS at different coverages, without filtering by purity
+#' Extract CoS at different coverages
 #'
-#' @description `get_cos` get the colocalization confidence sets (CoS) with different coverage.
+#' @description `get_cos` get the colocalization confidence sets (CoS) with different coverage. If Genotype...provided...check purity
 #'
 #' @param cb_output Output object from `colocboost` analysis
 #' @param coverage A number between 0 and 1 specifying the \dQuote{coverage} of the estimated colocalization confidence sets (CoS) (default is 0.95).
+#' @param X Genotype matrix of values of the p variables. Used to compute correlations if Xcorr is not provided.
+#' @param Xcorr Correlation matrix of correlations between variables. Alternative to X.
+#' @param n_purity The maximum number of CoS variables used in calculating the correlation (\dQuote{purity}) statistics. 
+#' When the number of variables included in the CoS is greater than this number, the CoS variables are randomly subsampled.
 #'
 #' @return A list of indices of variables in each CoS.
 #'
@@ -487,16 +537,54 @@ get_ucos_summary <- function(cb_output, outcome_names = NULL, region_name = NULL
 #'   Y[, l] <- X %*% true_beta[, l] + rnorm(N, 0, 1)
 #' }
 #' res <- colocboost(X = X, Y = Y)
-#' get_cos(res, coverage = 0.75)
+#' get_cos(res, coverage = 0.99, X = X)
+#' get_cos(res, coverage = 0.99, X = X, min_abs_corr = 0.95)
 #'
 #' @family colocboost_utilities
 #' @export
-get_cos <- function(cb_output, coverage = 0.95) {
+get_cos <- function(cb_output, coverage = 0.95, X = NULL, Xcorr = NULL, n_purity = 100, min_abs_corr = 0.5, median_abs_corr = NULL) {
+
+  if (is.null(cb_output$cos_details$cos)){
+    warning("No colocalization results in this region!")
+    return(list("cos" = NULL, "cos_purity" = NULL))
+  }
+
+  # Refine CoS based on different coverage
   cos_vcp <- cb_output$cos_details$cos_vcp
   cos_diff_coverage <- lapply(cos_vcp, function(w) {
     unlist(get_in_cos(w, coverage = coverage))
   })
-  return(cos_diff_coverage)
+  names(cos_diff_coverage) <- paste0(names(cos_diff_coverage), "_coverage_", coverage)
+
+  # Check purity if X or Xcorr exist
+  cos_purity <- NULL
+  if (!is.null(X) || !is.null(Xcorr)){
+    cos_purity <- get_cos_purity(cos_diff_coverage, X = X, Xcorr = Xcorr, n_purity = n_purity)
+    # Extract within-CoS purity
+    ncos <- nrow(cos_purity[[1]])
+    within_purity <- matrix(NA, nrow = ncos, ncol = 3)
+    colnames(within_purity) <- c("min_abs_cor", "max_abs_cor", "median_abs_cor")
+    rownames(within_purity) <- names(cos_diff_coverage)
+    within_purity[, 1] <- diag(cos_purity$min_abs_cor)
+    within_purity[, 2] <- diag(cos_purity$max_abs_cor)
+    within_purity[, 3] <- diag(cos_purity$median_abs_cor)
+    # Check purity
+    if (is.null(median_abs_corr)) {
+      is_pure <- which(within_purity[, 1] >= min_abs_corr)
+    } else {
+      is_pure <- which(within_purity[, 1] >= min_abs_corr | within_purity[, 3] >= median_abs_corr)
+    }
+    # Filter impured CoS
+    if (length(is_pure) == 0) {
+      cos_diff_coverage <- NULL
+      cos_purity <- NULL
+    } else if (length(is_pure) < ncos){
+      cos_diff_coverage <- cos_diff_coverage[is_pure]
+      cos_purity <- lapply(cos_purity, function(tmp) tmp[is_pure, is_pure, drop = FALSE] )
+    }
+  }
+  cos_refined <- list("cos" = cos_diff_coverage, "cos_purity" = cos_purity)
+  return(cos_refined)
 }
 
 #' Get integrated weight from different outcomes
@@ -523,6 +611,97 @@ get_in_cos <- function(weights, coverage = 0.95) {
   # Order these indices by their weights in decreasing order
   csets <- indices[order(weights[indices], decreasing = TRUE)]
   return(list(csets))
+}
+
+
+#' Calculate purity within and in-between CoS 
+#'
+#' @description Calculate purity statistics between all pairs of colocalization confidence sets (CoS)
+#'
+#' @param cos List of variables in CoS
+#' @param X Genotype matrix of values of the p variables. Used to compute correlations if Xcorr is not provided.
+#' @param Xcorr Correlation matrix of correlations between variables. Alternative to X.
+#' @param n_purity The maximum number of CoS variables used in calculating the correlation (\dQuote{purity}) statistics. 
+#' When the number of variables included in the CoS is greater than this number, the CoS variables are randomly subsampled.
+#' 
+#' @return A list containing three matrices (min_abs_cor, max_abs_cor, median_abs_cor) with
+#'   purity statistics for all pairs of CoS. Diagonal elements represent within-CoS purity.
+#'
+#' @examples
+#' # colocboost example
+#' set.seed(1)
+#' N <- 1000
+#' P <- 100
+#' # Generate X with LD structure
+#' sigma <- 0.9^abs(outer(1:P, 1:P, "-"))
+#' X <- MASS::mvrnorm(N, rep(0, P), sigma)
+#' colnames(X) <- paste0("SNP", 1:P)
+#' L <- 3
+#' true_beta <- matrix(0, P, L)
+#' true_beta[10, 1] <- 0.5 
+#' true_beta[10, 2] <- 0.4 
+#' true_beta[50, 2] <- 0.3 
+#' true_beta[80, 3] <- 0.6 
+#' Y <- matrix(0, N, L)
+#' for (l in 1:L) {
+#'   Y[, l] <- X %*% true_beta[, l] + rnorm(N, 0, 1)
+#' }
+#' res <- colocboost(X = X, Y = Y)
+#' cos_res <- get_cos(res, coverage = 0.8)
+#' get_cos_purity(cos_res$cos, X = X)
+#'
+#' @family colocboost_utilities
+#' @export
+get_cos_purity <- function(cos, X = NULL, Xcorr = NULL, n_purity = 100) {
+  # Check inputs
+  if (is.null(cos) || length(cos) == 0) return(NULL)
+  if (is.null(X) && is.null(Xcorr)) stop("Either X or Xcorr must be provided")
+  if (is.numeric(cos)) cos <- list(cos)
+
+  # Get CoS names
+  cos_names <- names(cos)
+  ncos <- length(cos)
+  if (is.null(cos_names)) cos_names <- paste0("cos_", 1:ncos)
+  
+  # If only one CoS, just return the purity as a matrix
+  if (ncos == 1) {
+    purity_stats <- get_purity(cos[[1]], X = X, Xcorr = Xcorr, n = n_purity)
+    cos_purity <- lapply(1:3, function(ii) {
+      mat <- matrix(purity_stats[ii], 1, 1)
+      rownames(mat) <- colnames(mat) <- cos_names
+      return(mat)
+    })
+    names(cos_purity) <- c("min_abs_cor", "max_abs_cor", "median_abs_cor")
+    return(cos_purity)
+  }
+  
+  # Initialize empty matrices for purity values
+  empty_matrix <- matrix(NA, ncos, ncos)
+  colnames(empty_matrix) <- rownames(empty_matrix) <- cos_names
+  # Initialize purity matrices with diagonal values (within-CoS purity)
+  cos_purity <- lapply(1:3, function(ii) empty_matrix )
+  # Compute within-CoS purity
+  for (i in 1:ncos){
+    purity_stats <- get_purity(cos[[i]], X = X, Xcorr = Xcorr, n = n_purity)
+    for (ii in 1:3) {
+        cos_purity[[ii]][i, i] <- purity_stats[ii]
+      }
+  }
+  # Compute between-CoS purity for every pair
+  for (i in 1:(ncos - 1)) {
+    for (j in (i + 1):ncos) {
+      cos1 <- cos[[i]]
+      cos2 <- cos[[j]]
+      purity_stats <- get_between_purity(cos1, cos2, X = X, Xcorr = Xcorr)
+      # Update all three purity matrices
+      for (ii in 1:3) {
+        cos_purity[[ii]][i, j] <- cos_purity[[ii]][j, i] <- purity_stats[ii]
+      }
+    }
+  }
+  names(cos_purity) <- c("min_abs_cor", "max_abs_cor", "median_abs_cor")
+  
+  return(cos_purity)
 }
 
 
@@ -695,7 +874,6 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL) {
             res[[flag]] <- get_between_purity(cset1, cset2,
               X = cb_obj$cb_data$data[[X_dict]]$X,
               Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
-              N = cb_obj$cb_data$data[[ii]]$N,
               miss_idx = cb_obj$cb_data$data[[ii]]$variable_miss,
               P = cb_obj$cb_model_para$P
             )
@@ -945,7 +1123,6 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
                 res[[flag]] <- get_between_purity(cset1, cset2,
                   X = cb_obj$cb_data$data[[X_dict]]$X,
                   Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
-                  N = cb_obj$cb_data$data[[ii]]$N,
                   miss_idx = cb_obj$cb_data$data[[ii]]$variable_miss,
                   P = cb_obj$cb_model_para$P
                 )
@@ -986,7 +1163,6 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
                 res[[flag]] <- get_between_purity(cset1, cset2,
                   X = cb_obj$cb_data$data[[X_dict]]$X,
                   Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
-                  N = cb_obj$cb_data$data[[ii]]$N,
                   miss_idx = cb_obj$cb_data$data[[ii]]$variable_miss,
                   P = cb_obj$cb_model_para$P
                 )

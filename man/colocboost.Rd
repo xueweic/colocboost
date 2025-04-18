@@ -3,6 +3,9 @@
 \name{colocboost}
 \alias{colocboost}
 \title{ColocBoost: A gradient boosting informed multi-omics xQTL colocalization method}
+\source{
+See detailed instructions in our tutorial portal: \url{https://statfungen.github.io/colocboost/index.html}
+}
 \usage{
 colocboost(
   X = NULL,

@@ -206,13 +206,14 @@ res$cos_details$cos_top_variables
 
 ```{r jk_update}
 # Pick arbitrary SEC updates, see entire update in advance
-res$model_info$jk_update[c(5:10,36:38), ]
+res$model_info$jk_star[c(5:10,36:38), ]
 ```
 
 - **`profile_loglik`**: joint profile log-likelihood changes over boosting rounds.
 - **`outcome_profile_loglik`**: trait-specifc profile log-likelihood changes over boosting rounds.
 
 ```{r profile_loglik}
+# Plotting joint profile log-likelihood (blue) and trait-specific profile log-likelihood (red).
 par(mfrow=c(2,3),mar=c(4,4,2,1))
 plot(res$model_info$profile_loglik, type="p", col="#3366CC", lwd=2, xlab="", ylab="Joint Profile")
 for(i in 1:5){
@@ -225,6 +226,7 @@ plot(res$model_info$outcome_profile_loglik[[i]], type="p", col="#CC3333", lwd=2,
 
 
 ```{r objetive-proximity}
+# Plotting trait-specific proximity objective
 par(mfrow=c(2,3), mar=c(4,4,2,1))
 for(i in 1:5){
 plot(res$model_info$outcome_proximity_obj[[i]], type="p", col="#3366CC", lwd=2, xlab="", ylab="Trait-specific Objective", main = paste0("Trait ", i))
@@ -232,24 +234,78 @@ plot(res$model_info$outcome_proximity_obj[[i]], type="p", col="#3366CC", lwd=2, 
 ```
 
 ```{r objetive-best}
+# Plotting trait-specific objective at the best update variant
 par(mfrow=c(2,3), mar=c(4,4,2,1))
 for(i in 1:5){ 
   plot(res$model_info$outcome_coupled_best_update_obj[[i]], type="p", col="#CC3333", lwd=2, xlab="", ylab=paste0("Objetive at best update variant"), main = paste0("Trait ", i)) 
 }
 ```
 
+### 3.5. Trait-specific effects information (**`ucos_details`**)
 
-
-## 4. Trait-specific effects information (UCoS)
-
-TO-DO-LIST
+There is `ucos_details` in ColocBoost output when setting `output_level = 2`, including the trait-specific (uncolocalized) information from the single-effect learner (SEL).
 
 ```{r ucos-details}
-res <- colocboost(X = X, Y = Y, sumstat = sumstat, LD = LD, output_level = 2)
+# Create a mixed dataset
+data(Ind_5traits)
+data(Heterogeneous_Effect)
+X <- Ind_5traits$X[1:3]
+Y <- Ind_5traits$Y[1:3]
+X1 <- Heterogeneous_Effect$X[,1:3000]
+Y1 <- Heterogeneous_Effect$Y[,1,drop=F]
+res <- colocboost(X = c(X, list(X1)), Y = c(Y, list(Y1)), output_level = 2)
 ```
 
-## 5. Diagnostic details
+#### 3.5.1. Trait-specific (uncolocalized) traits (**`ucos`**)
 
-TO-DO-LIST
+- **`ucos`**: A list containing detailed information about trait-specific (uncolocalized) traits for each uCoS.
+  - **`ucos_index`**: Indices of trait-specific (uncolocalized) variables.
+  - **`ucos_variables`**: Names of trait-specific (uncolocalized) variables.
+
+```{r ucos}
+res$ucos_details$ucos
+```
+
+#### 3.5.2. Trait-specific (uncolocalized) outcomes (**`ucos_outcomes`**)
+
+- **`ucos_outcomes`**: A list with detailed information about trait-specific (uncolocalized) outcomes for each uCoS.
+  - **`outcome_index`**: Indices of trait-specific (uncolocalized) outcomes.
+  - **`outcome_name`**: Names of trait-specific (uncolocalized) outcomes.
+
+```{r ucos-outcomes}
+res$ucos_details$ucos_outcomes
+```
+
+#### 3.5.3. Purity across CoS and uCoS (**`cos_ucos_purity`**)
+
+- **`cos_ucos_purity`**: Includes three lists, each containing an $S \times uS$ matrix, where $S$ is the number of CoS and $uS$ is the number of uCoS:
+  - `min_abs_cor`: Minimum absolute correlation of variables across each pair of CoS and uCoS.
+  - `median_abs_cor`: Median absolute correlation of variables across each pair of CoS and uCoS.
+  - `max_abs_cor`: Maximum absolute correlation of variables across each pair of CoS and uCoS.
+
+```{r cos-ucos-purity}
+res$ucos_details$cos_ucos_purity
+```
+
+
+#### 3.5.4. Other components
+
+- **`ucos_weight`**: Integrative weights for each trait-specific (uncolocalized) trait, used to recalibrate UCoS when traits are filtered out.
+- **`ucos_top_variables`**: Indices and names of the top variable for each UCoS, which is the variable with the highest VCP.
+- **`ucos_purity`**: Includes three lists, each containing an $uS \times uS$ matrix, where $uS$ is the number of uCoS:
+  - `min_abs_cor`: Minimum absolute correlation of variables within (diagonal) UCoS or between (off-diagonal) different uCoS.
+  - `median_abs_cor`: Median absolute correlation of variables within or between UCoS.
+  - `max_abs_cor`: Maximum absolute correlation of variables within or between UCoS.
+
+By analyzing these components, you can gain a deeper understanding of trait-specific (uncolocalized) effects that are not colocalized, 
+providing additional insights into the dataset.
+
+
+### 3.6. Diagnostic details (**`diagnostic_details`**)
+
+There is `diagnostic_details` in ColocBoost output when setting `output_level = 3`:
+
+- **`cb_model`**: trait-specific proximity gradient boosting model, including proximity weight at each iteration, residual after gradient boosting, et al.
+- **`cb_model_para`**: parameters used in fitting ColocBoost model.
 
 For more diagnosis of ColocBoost model fitting, please refer to our Tutorial (TO-DO-LIST).

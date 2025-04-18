@@ -350,7 +350,6 @@ colocboost_assemble_cos <- function(cb_obj,
               res[[i]] <- get_between_purity(cset1, cset2,
                 X = cb_data$data[[X_dict]]$X,
                 Xcorr = cb_data$data[[X_dict]]$XtX,
-                N = cb_data$data[[i]]$N,
                 miss_idx = cb_data$data[[i]]$variable_miss,
                 P = cb_model_para$P
               )

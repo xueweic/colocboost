@@ -20,9 +20,16 @@ generate_edge_case_data <- function(case = "missing_values",
   
   # Generate true effects with shared causal variant
   true_beta <- matrix(0, p, L)
-  true_beta[5, 1] <- 0.5  # SNP5 affects trait 1
-  true_beta[5, 2] <- 0.4  # SNP5 also affects trait 2 (colocalized)
-  true_beta[10, 2] <- 0.3 # SNP10 only affects trait 2
+  if (L == 1) {
+    # Single trait case
+    true_beta[5, 1] <- 0.5  # SNP5 affects the trait
+  } else {
+    # Multi-trait case
+    true_beta[5, 1] <- 0.5  # SNP5 affects trait 1
+    true_beta[5, 2] <- 0.4  # SNP5 also affects trait 2 (colocalized)
+    true_beta[10, 2] <- 0.3 # SNP10 only affects trait 2
+  }
+  
   
   # Generate Y with some noise
   Y <- matrix(0, n, L)
@@ -64,7 +71,7 @@ generate_edge_case_data <- function(case = "missing_values",
   } else if (case == "high_correlation") {
     # Create highly correlated outcomes
     Y[, 2] <- 0.9 * Y[, 1] + rnorm(n, 0, 0.3)
-  }
+  } 
   
   # Return test objects
   list(
@@ -77,7 +84,6 @@ generate_edge_case_data <- function(case = "missing_values",
 
 # Test colocboost handling of missing values
 test_that("colocboost handles missing values in Y", {
-  skip_on_cran()
   
   # Generate data with missing values
   test_data <- generate_edge_case_data("missing_values")
@@ -102,7 +108,6 @@ test_that("colocboost handles missing values in Y", {
 
 # Test colocboost with different sample sizes
 test_that("colocboost handles different sample sizes", {
-  skip_on_cran()
   
   # Generate data with different sample sizes
   test_data <- generate_edge_case_data("different_samples")
@@ -134,7 +139,6 @@ test_that("colocboost handles different sample sizes", {
 
 # Test colocboost with different variant sets
 test_that("colocboost handles different variant sets", {
-  skip_on_cran()
   
   # Generate data with different variant sets
   test_data <- generate_edge_case_data("different_variants")
@@ -155,8 +159,7 @@ test_that("colocboost handles different variant sets", {
 
 # Test colocboost with no true colocalization
 test_that("colocboost correctly identifies absence of colocalization", {
-  skip_on_cran()
-  
+
   # Generate data with no colocalization
   test_data <- generate_edge_case_data("no_colocalization")
   
@@ -185,9 +188,9 @@ test_that("colocboost correctly identifies absence of colocalization", {
   ))
 })
 
+
 # Test colocboost with highly correlated traits
 test_that("colocboost handles highly correlated traits", {
-  skip_on_cran()
   
   # Generate data with correlated traits
   test_data <- generate_edge_case_data("high_correlation")
@@ -215,7 +218,6 @@ test_that("colocboost handles highly correlated traits", {
 
 # Test with very small dataset
 test_that("colocboost handles very small datasets", {
-  skip_on_cran()
   
   # Create tiny dataset
   set.seed(123)
@@ -240,7 +242,6 @@ test_that("colocboost handles very small datasets", {
 
 # Test with custom parameter settings
 test_that("colocboost works with custom parameters", {
-  skip_on_cran()
   
   # Create simple dataset
   set.seed(123)
@@ -271,7 +272,6 @@ test_that("colocboost works with custom parameters", {
 
 # Test focal outcome functionality
 test_that("colocboost prioritizes focal outcome correctly", {
-  skip_on_cran()
   
   # Generate test data
   set.seed(123)

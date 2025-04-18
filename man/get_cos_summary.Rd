@@ -3,6 +3,10 @@
 \name{get_cos_summary}
 \alias{get_cos_summary}
 \title{Get colocalization summary table from a ColocBoost output.}
+\source{
+See detailed instructions in our tutorial portal:
+\url{https://statfungen.github.io/colocboost/articles/Interpret_ColocBoost_Output.html}
+}
 \usage{
 get_cos_summary(
   cb_output,
@@ -63,6 +67,7 @@ get_cos_summary(res)
 }
 \seealso{
 Other colocboost_inference: 
-\code{\link{get_robust_colocalization}()}
+\code{\link{get_robust_colocalization}()},
+\code{\link{get_ucos_summary}()}
 }
 \concept{colocboost_inference}

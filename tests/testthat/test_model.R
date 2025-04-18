@@ -59,7 +59,6 @@ generate_test_model <- function(n = 100, p = 20, L = 2, seed = 42) {
 
 # Test for colocboost_init_data
 test_that("colocboost_init_data correctly initializes data", {
-  skip_on_cran()
   
   # Generate test data
   set.seed(42)
@@ -92,7 +91,6 @@ test_that("colocboost_init_data correctly initializes data", {
 
 # Test colocboost_assemble function
 test_that("colocboost_assemble processes model results", {
-  skip_on_cran()
   
   # Generate a test model
   cb_obj <- generate_test_model()
@@ -112,7 +110,6 @@ test_that("colocboost_assemble processes model results", {
 
 # Test for colocboost_workhorse
 test_that("colocboost_workhorse performs boosting iterations", {
-  skip_on_cran()
   
   # Generate a test model
   cb_obj <- generate_test_model()

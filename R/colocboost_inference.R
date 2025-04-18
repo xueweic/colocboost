@@ -44,12 +44,13 @@ colocboost_post_inference <- function() {
 #' X <- MASS::mvrnorm(N, rep(0, P), sigma)
 #' cormat <- get_cormat(X)
 #'
+#' @keywords cb_post_inference
 #' @family colocboost_utilities
 #' @export
-get_cormat <- function(X, intercepte = FALSE) {
+get_cormat <- function(X, intercepte = TRUE) {
   X <- t(X)
   # Center each variable
-  if (!intercepte) {
+  if (intercepte) {
     X <- X - rowMeans(X)
   }
   # Standardize each variable
@@ -57,6 +58,153 @@ get_cormat <- function(X, intercepte = FALSE) {
   # Calculate correlations
   cr <- tcrossprod(X)
   return(cr)
+}
+
+#' @title Perform modularity-based hierarchical clustering
+#' @description
+#' This function performs a modularity-based hierarchical clustering approach to identify clusters from a correlation matrix (LD matrix).
+#'
+#' @param cormat A correlation matrix.
+#' @param min_cluster_corr The small correlation for the weights distributions across different iterations to be decided having only one cluster. Default is 0.8.
+#'
+#' @return A list containing:
+#' \item{cluster}{A binary matrix indicating the cluster membership of each variable.}
+#' \item{Q_modularity}{The modularity values for the identified clusters.}
+#'
+#' @examples
+#' # Example usage
+#' set.seed(1)
+#' N <- 100
+#' P <- 4
+#' sigma <- matrix(0.2, nrow = P, ncol = P)
+#' diag(sigma) <- 1
+#' sigma[1:2, 1:2] <- 0.9
+#' sigma[3:4, 3:4] <- 0.9
+#' X <- MASS::mvrnorm(N, rep(0, P), sigma)
+#' cormat <- get_cormat(X)
+#' clusters <- get_hierarchical_clusters(cormat)
+#' clusters$cluster
+#' clusters$Q_modularity
+#'
+#' @keywords cb_post_inference
+#' @family colocboost_utilities
+#' @export
+get_hierarchical_clusters <- function(cormat, min_cluster_corr = 0.8) {
+  # Handle edge case: single element matrix
+  if (nrow(cormat) == 1 || ncol(cormat) == 1) {
+    # Return a single cluster with one element and zero modularity
+    return(list(
+      "cluster" = matrix(1, nrow = nrow(cormat), ncol = 1),
+      "Q_modularity" = 0
+    ))
+  }
+  
+  # Perform hierarchical clustering approach
+  hc <- hclust(as.dist(1 - cormat))
+  # Get the optimal number of clusters
+  opt_cluster <- get_n_cluster(hc, cormat, min_cluster_corr = min_cluster_corr)
+  n_cluster <- opt_cluster$n_cluster
+  Q_modularity <- opt_cluster$Qmodularity
+  # Obtain the final clusters
+  index <- cutree(hc, n_cluster)
+  B <- sapply(1:n_cluster, function(t) as.numeric(index == t))
+  B <- as.matrix(B)
+  return(list("cluster" = B, "Q_modularity" = Q_modularity))
+}
+
+#' Function to calculate modularity for a given number of clusters
+#' @param Weight A matrix of weights
+#' @param B A matrix of binary values indicating the clusters
+#' @return The modularity value
+#' @keywords cb_post_inference
+#' @noRd
+get_modularity <- function(Weight, B) {
+  if (dim(Weight)[1] == 1) return(0)
+  
+  W_pos <- Weight * (Weight > 0)
+  W_neg <- Weight * (Weight < 0)
+  N <- dim(Weight)[1]
+  K_pos <- colSums(W_pos)
+  K_neg <- colSums(W_neg)
+  m_pos <- sum(K_pos)
+  m_neg <- sum(K_neg)
+  m <- m_pos + m_neg
+  
+  if (m == 0) return(0)
+  
+  cate <- B %*% t(B)
+  
+  if (m_pos == 0 & m_neg == 0) return(0)
+  
+  if (m_pos == 0) {
+    Q_positive <- 0
+    Q_negative <- sum((W_neg - K_neg %*% t(K_neg) / m_neg) * cate) / m_neg
+  } else if (m_neg == 0) {
+    Q_positive <- sum((W_pos - K_pos %*% t(K_pos) / m_pos) * cate) / m_pos
+    Q_negative <- 0
+  } else {
+    Q_positive <- sum((W_pos - K_pos %*% t(K_pos) / m_pos) * cate) / m_pos
+    Q_negative <- sum((W_neg - K_neg %*% t(K_neg) / m_neg) * cate) / m_neg
+  }
+  Q <- m_pos / m * Q_positive - m_neg / m * Q_negative
+  return(Q)
+}
+
+#' Function to get the number of clusters based on modularity-based hierarchical clustering method
+#' @param hc A hierarchical clustering object
+#' @param Sigma A matrix of weights
+#' @param m The number of clusters
+#' @param min_cluster_corr The minimum correlation threshold for clustering within the same cluster
+#' @return A list containing the number of clusters and modularity values
+#' @keywords cb_post_inference
+#' @noRd
+#' @importFrom stats cutree
+get_n_cluster <- function(hc, Sigma, m = ncol(Sigma), min_cluster_corr = 0.8) {
+  if (min(Sigma) > min_cluster_corr) {
+    IND <- 1
+    Q <- 1
+  } else {
+    Q <- c()
+    if (ncol(Sigma) < 10) {
+      m <- ncol(Sigma)
+    }
+    for (i in 1:m)
+    {
+      index <- cutree(hc, i)
+      B <- sapply(1:i, function(t) as.numeric(index == t))
+      Q[i] <- get_modularity(Sigma, B)
+    }
+
+    IND <- which(Q == max(Q))
+    L <- length(IND)
+    if (L > 1) IND <- IND[1]
+  }
+  return(list(
+    "n_cluster" = IND,
+    "Qmodularity" = Q
+  ))
+}
+
+#' Function to calculate within-CoS purity for each single weight from one SEC
+#' @keywords cb_post_inference
+#' @noRd
+w_purity <- function(weights, X = NULL, Xcorr = NULL, N = NULL, n = 100, coverage = 0.95,
+                     min_abs_corr = 0.5, median_abs_corr = NULL, miss_idx = NULL) {
+  tmp <- apply(weights, 2, w_cs, coverage = coverage)
+  tmp_purity <- apply(tmp, 2, function(tt) {
+    pos <- which(tt == 1)
+    # deal with missing snp here
+    if (!is.null(Xcorr)) {
+      pos <- match(pos, setdiff(1:length(tmp), miss_idx))
+    }
+    get_purity(pos, X = X, Xcorr = Xcorr, N = N, n = n)
+  })
+  if (is.null(median_abs_corr)) {
+    is_pure <- which(tmp_purity[1, ] >= min_abs_corr)
+  } else {
+    is_pure <- which(tmp_purity[1, ] >= min_abs_corr | tmp_purity[3, ] >= median_abs_corr)
+  }
+  return(is_pure)
 }
 
 
@@ -147,7 +295,7 @@ check_null_post <- function(cb_obj,
       return(res.tmp)
     }
   }
-  # - add hoc
+  # - add hoc - for single-trait fine-mapping results
   cut <- if (length(cb_obj$cb_data) == 1) 0.2 else 1
 
   # ----- null filtering
@@ -175,7 +323,6 @@ check_null_post <- function(cb_obj,
         if (min(cb_obj$cb_model[[j]]$multi_correction_univariate[cs_variants]) >= cut) {
           change <- 0
         }
-        # ------
         # - check_null
         check_cs_change[i, j] <- change / diff(range(cb_obj$cb_model[[j]]$profile_loglike_each))
         cs_change[i, j] <- change # / diff(range(cb_obj$cb_model[[j]]$profile_loglike_each))
@@ -270,106 +417,11 @@ get_purity <- function(pos, X = NULL, Xcorr = NULL, N = NULL, n = 100) {
   }
 }
 
-# ------ Calculate modularity ----------
-#' Function to calculate modularity for a given number of clusters
-#' @param Weight A matrix of weights
-#' @param B A matrix of binary values indicating the clusters
-#' @return The modularity value
-#' @keywords cb_post_inference
-#' @noRd
-get_modularity <- function(Weight, B) {
-  if (dim(Weight)[1] == 1) {
-    Q <- 0
-  } else {
-    W_pos <- Weight * (Weight > 0)
-    W_neg <- Weight * (Weight < 0)
-    N <- dim(Weight)[1]
-    K_pos <- colSums(W_pos)
-    K_neg <- colSums(W_neg)
-    m_pos <- sum(K_pos)
-    m_neg <- sum(K_neg)
-    m <- m_pos + m_neg
-    cate <- B %*% t(B)
-    if (m_pos == 0 & m_neg == 0) {
-      Q <- 0
-    } else {
-      if (m_pos == 0) {
-        Q_positive <- 0
-        Q_negative <- sum((W_neg - K_neg %*% t(K_neg) / m_neg) * cate) / m_neg
-      } else if (m_neg == 0) {
-        Q_positive <- sum((W_pos - K_pos %*% t(K_pos) / m_pos) * cate) / m_pos
-        Q_negative <- 0
-      } else {
-        Q_positive <- sum((W_pos - K_pos %*% t(K_pos) / m_pos) * cate) / m_pos
-        Q_negative <- sum((W_neg - K_neg %*% t(K_neg) / m_neg) * cate) / m_neg
-      }
-    }
-    Q <- m_pos / m * Q_positive - m_neg / m * Q_negative
-  }
-}
-
-#' Function to get the number of clusters based on modularity-based hierarchical clustering method
-#' @param hc A hierarchical clustering object
-#' @param Sigma A matrix of weights
-#' @param m The number of clusters
-#' @param min_cluster_corr The minimum correlation threshold for clustering within the same cluster
-#' @return A list containing the number of clusters and modularity values
-#' @keywords cb_post_inference
-#' @noRd
-#' @importFrom stats cutree
-get_n_cluster <- function(hc, Sigma, m = ncol(Sigma), min_cluster_corr = 0.8) {
-  if (min(Sigma) > min_cluster_corr) {
-    IND <- 1
-    Q <- 1
-  } else {
-    Q <- c()
-    if (ncol(Sigma) < 10) {
-      m <- ncol(Sigma)
-    }
-    for (i in 1:m)
-    {
-      index <- cutree(hc, i)
-      B <- sapply(1:i, function(t) as.numeric(index == t))
-      Q[i] <- get_modularity(Sigma, B)
-    }
-
-    IND <- which(Q == max(Q))
-    L <- length(IND)
-    if (L > 1) IND <- IND[1]
-  }
-  return(list(
-    "n_cluster" = IND,
-    "Qmodularity" = Q
-  ))
-}
-
-#' Function to calculate within-CoS purity for each single weight from one SEC
-#' @keywords cb_post_inference
-#' @noRd
-w_purity <- function(weights, X = NULL, Xcorr = NULL, N = NULL, n = 100, coverage = 0.95,
-                     min_abs_corr = 0.5, median_abs_corr = NULL, miss_idx = NULL) {
-  tmp <- apply(weights, 2, w_cs, coverage = coverage)
-  tmp_purity <- apply(tmp, 2, function(tt) {
-    pos <- which(tt == 1)
-    # deal with missing snp here
-    if (!is.null(Xcorr)) {
-      pos <- match(pos, setdiff(1:length(tmp), miss_idx))
-    }
-    get_purity(pos, X = X, Xcorr = Xcorr, N = N, n = n)
-  })
-  if (is.null(median_abs_corr)) {
-    is_pure <- which(tmp_purity[1, ] >= min_abs_corr)
-  } else {
-    is_pure <- which(tmp_purity[1, ] >= min_abs_corr | tmp_purity[3, ] >= median_abs_corr)
-  }
-  return(is_pure)
-}
-
 #' Calculate purity between two CoS
 #' @keywords cb_post_inference
 #' @noRd
 #' @importFrom stats na.omit
-get_between_purity <- function(pos1, pos2, X = NULL, Xcorr = NULL, N = NULL, miss_idx = NULL, P = NULL) {
+get_between_purity <- function(pos1, pos2, X = NULL, Xcorr = NULL, miss_idx = NULL, P = NULL) {
   get_matrix_mult <- function(X_sub1, X_sub2) {
     X_sub1 <- t(X_sub1)
     X_sub2 <- t(X_sub2)
@@ -385,15 +437,16 @@ get_between_purity <- function(pos1, pos2, X = NULL, Xcorr = NULL, N = NULL, mis
   get_median <- Rfast::med
 
   if (is.null(Xcorr)) {
-    X_sub1 <- X[, pos1, drop = FALSE]
-    X_sub2 <- X[, pos2, drop = FALSE]
+    X_sub1 <- scale(X[, pos1, drop = FALSE], center = T, scale = F)
+    X_sub2 <- scale(X[, pos2, drop = FALSE], center = T, scale = F)
     value <- abs(get_matrix_mult(X_sub1, X_sub2))
   } else {
-    pos1 <- na.omit(match(pos1, setdiff(1:P, miss_idx)))
-    pos2 <- na.omit(match(pos2, setdiff(1:P, miss_idx)))
-    # scaling_factor <- if (!is.null(N)) N-1 else 1
+    if (length(miss_idx)!=0){
+      pos1 <- na.omit(match(pos1, setdiff(1:P, miss_idx)))
+      pos2 <- na.omit(match(pos2, setdiff(1:P, miss_idx)))
+    }
     if (length(pos1) != 0 & length(pos2) != 0) {
-      value <- abs(Xcorr[pos1, pos2]) # / scaling_factor
+      value <- abs(Xcorr[pos1, pos2])
     } else {
       value <- 0
     }

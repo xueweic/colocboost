@@ -4,7 +4,7 @@
 \alias{get_cormat}
 \title{A fast function to calculate correlation matrix (LD matrix) from individual level data}
 \usage{
-get_cormat(X, intercepte = FALSE)
+get_cormat(X, intercepte = TRUE)
 }
 \arguments{
 \item{X}{A matrix of individual level data.}
@@ -30,6 +30,9 @@ cormat <- get_cormat(X)
 }
 \seealso{
 Other colocboost_utilities: 
-\code{\link{get_cos}()}
+\code{\link{get_cos}()},
+\code{\link{get_cos_purity}()},
+\code{\link{get_hierarchical_clusters}()}
 }
 \concept{colocboost_utilities}
+\keyword{cb_post_inference}

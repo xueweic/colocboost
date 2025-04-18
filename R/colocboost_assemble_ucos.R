@@ -236,7 +236,6 @@ colocboost_assemble_ucos <- function(cb_obj_single,
             res <- get_between_purity(cset1, cset2,
               X = cb_data$data[[1]]$X,
               Xcorr = cb_data$data[[1]]$XtX,
-              N = cb_data$data[[1]]$N,
               miss_idx = cb_data$data[[1]]$variable_miss,
               P = cb_model_para$P
             )

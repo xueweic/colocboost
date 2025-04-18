@@ -51,7 +51,7 @@ LD <- get_cormat(Ind_5traits$X[[1]])
 ```
 
 For analyze the specific one type of data, you can refer to the following 
-tutorals [Individual Level Data Colocalization](https://statfungen.github.io/colocboost/articles/Individual_Level_Colocalization.html) and 
+tutorials [Individual Level Data Colocalization](https://statfungen.github.io/colocboost/articles/Individual_Level_Colocalization.html) and 
 [Summary Level Data Colocalization](https://statfungen.github.io/colocboost/articles/Summary_Level_Colocalization.html).
 
 
@@ -116,6 +116,7 @@ res <- colocboost(X = X, Y = Y,
 colocboost_plot(res, plot_focal_only = TRUE)
 ```
 
+
 Unlike the other existing methods, the disease-prioritized mode of ColocBoost only used a soft prioritization strategy.
 Therefore, it does not only identify the colocalization of the focal trait,  but also the colocalization across the other traits without the focal trait. 
 To extract all CoS and visualization of all colocalization results, you can use the following code:
@@ -128,8 +129,11 @@ res$cos_details$cos$cos_index
 colocboost_plot(res)
 ```
 
+
 ### Results Interpretation
 
 For comprehensive tutorials on result interpretation and advanced visualization techniques, please visit our documentation portal 
 at [Visualization of ColocBoost Results](https://statfungen.github.io/colocboost/articles/Visualization_ColocBoost_Output.html) and
 [Interpret ColocBoost Output](https://statfungen.github.io/colocboost/articles/Interpret_ColocBoost_Output.html).
+
+

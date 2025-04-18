@@ -3,14 +3,18 @@
 \name{colocboost_plot}
 \alias{colocboost_plot}
 \title{Plot visualization plot from a ColocBoost output.}
+\source{
+See detailed instructions in our tutorial portal: \url{https://statfungen.github.io/colocboost/articles/Visualization_ColocBoost_Output.html}
+}
 \usage{
 colocboost_plot(
   cb_output,
   y = "log10p",
   grange = NULL,
-  plot_focal_only = FALSE,
   plot_cos_idx = NULL,
   outcome_idx = NULL,
+  plot_focal_only = FALSE,
+  plot_focal_cos_outocme_only = FALSE,
   points_color = "grey80",
   cos_color = NULL,
   add_vertical = FALSE,
@@ -22,11 +26,13 @@ colocboost_plot(
   show_cos_to_uncoloc = FALSE,
   show_cos_to_uncoloc_idx = NULL,
   show_cos_to_uncoloc_outcome = NULL,
+  plot_ucos = FALSE,
+  plot_ucos_idx = NULL,
   gene_name = NULL,
   ylim_each = TRUE,
   outcome_legend_pos = "top",
-  outcome_legend_size = 1.2,
-  cos_legend_pos = "bottomleft",
+  outcome_legend_size = 1.8,
+  cos_legend_pos = c(0.05, 0.4),
   show_variable = FALSE,
   lab_style = c(2, 1),
   axis_style = c(2, 1),
@@ -41,11 +47,13 @@ colocboost_plot(
 
 \item{grange}{Optional plotting range of x-axis to zoom in to a specific region.}
 
-\item{plot_focal_only}{Logical, if TRUE only plots colocalization with focal outcome, default is FALSE.}
-
 \item{plot_cos_idx}{Optional indices of CoS to plot}
 
 \item{outcome_idx}{Optional indices of outcomes to include in the plot. \code{outcome_idx=NULL} to plot only the outcomes having colocalization.}
+
+\item{plot_focal_only}{Logical, if TRUE only plots colocalization with focal outcome, default is FALSE.}
+
+\item{plot_focal_cos_outocme_only}{Logical, if TRUE only plots colocalization including at least on colocalized outcome with focal outcome, default is FALSE.}
 
 \item{points_color}{Background color for non-colocalized variables, default is "grey80".}
 
@@ -69,6 +77,10 @@ colocboost_plot(
 
 \item{show_cos_to_uncoloc_outcome}{Optional outcomes for showing CoS to uncolocalized outcomes}
 
+\item{plot_ucos}{Logical, if TRUE plots also trait-specific (uncolocalized) sets , default is FALSE}
+
+\item{plot_ucos_idx}{Optional indices of trait-specific (uncolocalized) sets to plot when included}
+
 \item{gene_name}{Optional gene name to display in plot title}
 
 \item{ylim_each}{Logical, if TRUE uses separate y-axis limits for each plot, default is TRUE}
@@ -77,7 +89,7 @@ colocboost_plot(
 
 \item{outcome_legend_size}{Size for outcome legend text, default is 1.2}
 
-\item{cos_legend_pos}{Position for colocalization set legend, default is "bottomleft"}
+\item{cos_legend_pos}{Proportion of the legend from (left edge, bottom edge), default as (0.05, 0.4) at the left - median position}
 
 \item{show_variable}{Logical, if TRUE displays variant IDs, default is FALSE}
 
