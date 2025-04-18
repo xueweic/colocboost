@@ -96,30 +96,48 @@ The entire colocalization output from `colocboost` is stored in the `colocboost`
 - **`data_info`**: A object with detailed information from input data.
 - **`model_info`**: A object with detailed information for colocboost model.
 
-In this section, we will provide a brief overview of the components of interest for deepening into ColocBoost result.
+In this section, we will provide a detailed explanation of the interest components for deepening into ColocBoost result using a mixed dataset.
+
+```{r load-mixed-data}
+# Load example data
+data(Ind_5traits)
+data(Sumstat_5traits) 
+# Create a mixed dataset
+X <- Ind_5traits$X[1:4]
+Y <- Ind_5traits$Y[1:4]
+sumstat <- Sumstat_5traits$sumstat[5]
+LD <- get_cormat(Ind_5traits$X[[1]])
+# Run colocboost
+res <- colocboost(X = X, Y = Y, sumstat = sumstat, LD = LD)
+```
+
+### 3.1. Variant colocalization probability (**`vcp`**)
+
+- **`vcp`** is the probability of a variant being colocalized with at least one traits, serving as analogs of posterior inclusion probabilities (PIPs) in single-trait fine-mapping.
+To plot the VCP for the variants with in at least one CoS, you can use the `colocboost_plot` function with the `y` argument set to `"vcp"`. (please visit our documentation portal 
+at [Visualization of ColocBoost Results](https://statfungen.github.io/colocboost/articles/Visualization_ColocBoost_Output.html) for more details on the `colocboost_plot` function).
+
+```{r vcp-plot}
+colocboost_plot(res, y = "vcp")
+```
 
 
+### 3.2. Analyzed data information (**`data_info`**)
+
+- **`n_variables`** is the regression coefficients estimated from the colocboost model for each trait.
+- **`variables`** is vector of variable names across all traits being included in the colocalization analysis.
+- **`coef`** is the regression coefficients estimated from the colocboost model for each trait.
+- **`z`** is the z-scores from marginal associations for each trait.
+- **`n_outcomes`** is the regression coefficients estimated from the colocboost model for each trait.
+- **`outcome_info`** contains the information of analyzed data, including sample size and data type.
+
+```{r analyzed-data-info}
+res$data_info$outcome_info
+```
 
 
+### 3.3. Colocalization details (**`cos_details`**)
 
-
-### 4. Entire colocboost output (for advanced users)
-
-The entire colocalization output from `colocboost` is stored in the `colocboost` object, which contains several components:
-
-- **`cos_summary`**: A summary table for colocalization events (see details in above Section 1).
-- **`vcp`**: The variable colocalized probability for each variable.
-- **`cos_details`**: A object with all information for colocalization results.
-- **`data_info`**: A object with detailed information from input data.
-- **`model_info`**: A object with detailed information for colocboost model.
-
-In this section, we will provide a brief overview of each component and its contents.
-
-#### 4.1. Variant colocalization probability (VCP)
-
-- **`vcp`**: The variable colocalized probability for each variable.
-
-#### 4.2. Colocalization details
 
 - **`cos_details`**: A object with all information for colocalization results.
   - `cos`: A data frame with detailed information for each colocalization event.
@@ -137,13 +155,10 @@ In this section, we will provide a brief overview of each component and its cont
   - `cos_weights`
 
 
-#### 4.3. Data information
 
-- **`data_info`**: A object with detailed information from input data.
-
+### 4.4. Model information (**`model_info`**)
 
 
-#### 4.4. Model information
 - **`model_info`**: A object with detailed information for colocboost model.
 
 

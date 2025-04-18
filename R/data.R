@@ -1,76 +1,92 @@
 #' Individual level data for 5 traits
 #'
-#' An example dataset with simulated genotypes and outcomes for 5 traits
+#' An example dataset with simulated genotypes and traits for 5 traits
 #'
 #' @format ## `Ind_5traits`
 #' A list with 3 elements
 #' \describe{
 #'   \item{X}{List of genotype matrices}
-#'   \item{Y}{List of outcomes}
-#'   \item{TrueCausalVariants}{List of causal variants}
+#'   \item{Y}{List of traits}
+#'   \item{true_effect_variants}{List of causal variants}
 #' }
-#' @source See Cao et. al. 2025 for details. TO-DO-LIST
+#' @source The Ind_5traits dataset contains 5 simulated phenotypes alongside corresponding genotype matrices.
+#' The dataset is specifically designed for evaluating and demonstrating the capabilities of ColocBoost in multi-trait colocalization analysis 
+#' with individual-level data. See Cao et. al. 2025 for details.
+#' 
 #' @family colocboost_data
 "Ind_5traits"
 
 #' Summary level data for 5 traits
 #'
-#' An example dataset with simulated statistics and LD for 5 traits
+#' An example dataset with simulated statistics for 5 traits
 #'
 #' @format ## `Sumstat_5traits`
 #' A list with 2 elements
 #' \describe{
 #'   \item{sumstat}{Summary statistics for 5 traits}
-#'   \item{TrueCausalVariants}{List of causal variants}
+#'   \item{true_effect_variants}{List of causal variants}
 #' }
-#' @source See Cao et. al. 2025 for details. TO-DO-LIST
+#' @source The Sumstat_5traits dataset contains 5 simulated summary statistics, 
+#' where it is directly derived from the Ind_5traits dataset using marginal association. 
+#' The dataset is specifically designed for evaluating and demonstrating the capabilities of ColocBoost 
+#' in multi-trait colocalization analysis with summary association data. See Cao et. al. 2025 for details. 
+#' 
 #' @family colocboost_data
 "Sumstat_5traits"
 
 
-#' Summary level data for 5 traits
+#' Individual level data for 2 traits and 2 causal variants with heterogeneous effects
 #'
-#' An example dataset with simulated statistics and LD for 5 traits
+#' An example dataset with simulated genotypes and traits for 2 traits and 2 common causal variants with heterogeneous effects
 #'
 #' @format ## `Heterogeneous_Effect`
 #' A list with 3 elements
 #' \describe{
 #'   \item{X}{List of genotype matrices}
-#'   \item{Y}{List of outcomes}
-#'   \item{TrueCausalVariants}{List of causal variants}
+#'   \item{Y}{List of traits}
+#'   \item{variant}{Incides of two causal variants}
 #' }
-#' @source See Cao et. al. 2025 for details. TO-DO-LIST
+#' @source The Heterogeneous_Effect dataset contains 2 simulated phenotypes alongside corresponding genotype matrices.
+#' There are two causal variants, both of which have heterogeneous effects on two traits.
+#' See Figure 2b in Cao et. al. 2025 for details. 
+#' 
 #' @family colocboost_data
 "Heterogeneous_Effect"
 
 
-#' Summary level data for 5 traits
+#' Individual level data for 2 traits and 2 causal variants with weaker effects for focal trait
 #'
-#' An example dataset with simulated statistics and LD for 5 traits
+#' An example dataset with simulated genotypes and traits for 2 traits and 2 common causal variants with heterogeneous effects
 #'
 #' @format ## `Weaker_GWAS_Effect`
 #' A list with 3 elements
 #' \describe{
 #'   \item{X}{List of genotype matrices}
-#'   \item{Y}{List of outcomes}
-#'   \item{TrueCausalVariants}{List of causal variants}
+#'   \item{Y}{List of traits}
+#'   \item{variant}{Incides of two causal variants}
 #' }
-#' @source See Cao et. al. 2025 for details. TO-DO-LIST
+#' @source The Weaker_GWAS_Effect dataset contains 2 simulated phenotypes alongside corresponding genotype matrices.
+#' There are two causal variants, one of which has a weaker effect on the focal trait compared to the other trait.
+#' See Figure 2b in Cao et. al. 2025 for details. 
+#' 
 #' @family colocboost_data
 "Weaker_GWAS_Effect"
 
 
-#' Summary level data for 5 traits
+#' Individual level data for 2 traits and 2 causal variants, but the strongest margianl association is not causal
 #'
-#' An example dataset with simulated statistics and LD for 5 traits
+#' An example dataset with simulated genotypes and traits for 2 traits and 2 common causal variants, but the strongest marginal association is not causal variant.
 #'
 #' @format ## `Non_Causal_Strongest_Marginal`
 #' A list with 3 elements
 #' \describe{
 #'   \item{X}{List of genotype matrices}
-#'   \item{Y}{List of outcomes}
-#'   \item{TrueCausalVariants}{List of causal variants}
+#'   \item{Y}{List of traits}
+#'   \item{variant}{Incides of two causal variants}
 #' }
-#' @source See Cao et. al. 2025 for details. TO-DO-LIST
+#' @source The Non_Causal_Strongest_Marginal dataset contains 2 simulated phenotypes alongside corresponding genotype matrices.
+#' There are two causal variants, but the strongest marginal association is not a causal variant.
+#' See Figure 2b in Cao et. al. 2025 for details. 
+#' 
 #' @family colocboost_data
 "Non_Causal_Strongest_Marginal"

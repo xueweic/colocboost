@@ -144,7 +144,7 @@ colocboost_plot <- function(cb_output, y = "log10p",
     # - begin plotting
     coloc_cos <- cb_plot_input$cos
     outcomes <- cb_plot_input$outcomes
-    outcome_idx <- ifelse(length(y)==1, 1, outcome_idx)
+    if (length(y)==1) outcome_idx <- 1
     if (is.null(outcome_idx)) {
       if (is.null(coloc_cos)) {
         # - no colocalized effects, draw all outcomes in this region

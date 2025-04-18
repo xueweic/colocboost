@@ -10,19 +10,21 @@
 A list with 3 elements
 \describe{
 \item{X}{List of genotype matrices}
-\item{Y}{List of outcomes}
-\item{TrueCausalVariants}{List of causal variants}
+\item{Y}{List of traits}
+\item{true_effect_variants}{List of causal variants}
 }
 }
 }
 \source{
-See Cao et. al. 2025 for details. TO-DO-LIST
+The Ind_5traits dataset contains 5 simulated phenotypes alongside corresponding genotype matrices.
+The dataset is specifically designed for evaluating and demonstrating the capabilities of ColocBoost in multi-trait colocalization analysis
+with individual-level data. See Cao et. al. 2025 for details.
 }
 \usage{
 Ind_5traits
 }
 \description{
-An example dataset with simulated genotypes and outcomes for 5 traits
+An example dataset with simulated genotypes and traits for 5 traits
 }
 \seealso{
 Other colocboost_data: 

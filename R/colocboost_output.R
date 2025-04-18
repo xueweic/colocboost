@@ -794,7 +794,7 @@ get_model_info <- function(cb_obj, outcome_names = NULL) {
   model_coveraged <- cb_obj$cb_model_para$coveraged
   jk_update <- cb_obj$cb_model_para$real_update_jk
   outcome_proximity_obj <- lapply(cb_obj$cb_model, function(cb) cb$obj_path)
-  outcome_coupled_obj <- lapply(cb_obj$cb_model, function(cb) cb$obj_single)
+  outcome_coupled_best_update_obj <- lapply(cb_obj$cb_model, function(cb) cb$obj_single)
   outcome_profile_loglik <- lapply(cb_obj$cb_model, function(cb) cb$profile_loglike_each)
   names(outcome_proximity_obj) <- names(outcome_coupled_obj) <-
     names(outcome_profile_loglik) <- outcome_names
@@ -804,7 +804,7 @@ get_model_info <- function(cb_obj, outcome_names = NULL) {
     "profile_loglik" = profile_loglik,
     "outcome_profile_loglik" = outcome_profile_loglik,
     "outcome_proximity_obj" = outcome_proximity_obj,
-    "outcome_coupled_obj" = outcome_coupled_obj,
+    "outcome_coupled_best_update_obj" = outcome_coupled_best_update_obj,
     "jk_update" = jk_update
   )
   return(ll)
