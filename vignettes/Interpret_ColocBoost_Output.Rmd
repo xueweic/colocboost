@@ -100,6 +100,7 @@ In this section, we will provide a detailed explanation of the components for de
 
 ```{r load-mixed-data}
 # Load example data
+# Load example data
 data(Ind_5traits)
 data(Sumstat_5traits) 
 # Create a mixed dataset
@@ -203,7 +204,8 @@ res$cos_details$cos_top_variables
 - **`jk_update`**: indices of the variants being updated in the model at each boosting round. 
 
 ```{r jk_update}
-res$model_info$jk_update[ seq(1,20, 3), ]
+# Pick arbitrary SEC updates, see entire update in advance
+res$model_info$jk_update[c(5:10,36:38), ]
 ```
 
 - **`profile_loglik`**: joint profile log-likelihood changes over boosting rounds.
