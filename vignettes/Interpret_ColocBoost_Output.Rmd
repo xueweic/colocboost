@@ -100,7 +100,6 @@ In this section, we will provide a detailed explanation of the components for de
 
 ```{r load-mixed-data}
 # Load example data
-# Load example data
 data(Ind_5traits)
 data(Sumstat_5traits) 
 # Create a mixed dataset
@@ -222,13 +221,33 @@ plot(res$model_info$outcome_profile_loglik[[i]], type="p", col="#CC3333", lwd=2,
 - **`outcome_proximity_obj`**: trait-specific proximity smoothed objective for each trait.
 - **`outcome_coupled_best_update_obj`**: objective at the (coupled) best update variant for each outcome.
 
-```{r objetive}
-par(mfrow=c(2,5), mar=c(4,4,2,1))
-plot(res$model_info$outcome_proximity_obj[[1]], type="p", col="#3366CC", lwd=2, xlab="", ylab="Trait-specific Objective", main = paste0("Trait ", 1))
-for(i in 2:5){
-plot(res$model_info$outcome_proximity_obj[[i]], type="p", col="#3366CC", lwd=2, xlab="", ylab="", main = paste0("Trait ", i))
+
+```{r objetive-proximity}
+par(mfrow=c(2,3), mar=c(4,4,2,1))
+for(i in 1:5){
+plot(res$model_info$outcome_proximity_obj[[i]], type="p", col="#3366CC", lwd=2, xlab="", ylab="Trait-specific Objective", main = paste0("Trait ", i))
 }
-plot(res$model_info$outcome_coupled_best_update_obj[[1]], type="p", col="#CC3333", lwd=2, xlab="", ylab=paste0("Objetive at best update variant"))
-for(i in 2:5){ plot(res$model_info$outcome_coupled_best_update_obj[[i]], type="p", col="#CC3333", lwd=2, xlab="", ylab="") }
 ```
 
+```{r objetive-best}
+par(mfrow=c(2,3), mar=c(4,4,2,1))
+for(i in 1:5){ 
+  plot(res$model_info$outcome_coupled_best_update_obj[[i]], type="p", col="#CC3333", lwd=2, xlab="", ylab=paste0("Objetive at best update variant"), main = paste0("Trait ", i)) 
+}
+```
+
+
+
+## 4. Trait-specific effects information (UCoS)
+
+TO-DO-LIST
+
+```{r ucos-details}
+res <- colocboost(X = X, Y = Y, sumstat = sumstat, LD = LD, output_level = 2)
+```
+
+## 5. Diagnostic details
+
+TO-DO-LIST
+
+For more diagnosis of ColocBoost model fitting, please refer to our Tutorial (TO-DO-LIST).
