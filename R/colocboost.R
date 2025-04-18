@@ -179,7 +179,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                        LD_free = FALSE,
                        output_level = 1) {
   ###################### ---- one module for data object
-  message("Starting checking the input data.")
+  message("Validating input data.")
   # - check if all missing
   check_individual <- (is.null(X) & is.null(Y))
   check_sumstat <- (is.null(sumstat) & (is.null(effect_est) & is.null(effect_se)))
@@ -604,7 +604,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
   )
 
   # --- post-processing of the colocboost updates
-  message("Starting assemble analyses and results summary.")
+  message("Performing inference on colocalization events.")
   cb_output <- colocboost_assemble(cb_obj,
     coverage = coverage,
     weight_fudge_factor = weight_fudge_factor,

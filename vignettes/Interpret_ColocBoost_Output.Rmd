@@ -76,14 +76,16 @@ In `cos_summary`, for each 95% CoS, the `cos_npc` column provides a normalized p
 `min_npc_outcome` column provides the minimum normalized probability among colocalized traits.
 Those two metrices are measured as an empirical evidence of colocalization both in CoS-level and in trait-level.
 To obtain the best minimal colocalization configuration can be defined by using both `cos_npc` and `npc_outcome`
-See detailed usage of this function in [link](https://statfungen.github.io/colocboost/reference/get_strong_colocalization.html).
+See detailed usage of this function in [link](https://statfungen.github.io/colocboost/reference/get_robust_colocalization.html).
 
 
 ```{r run-strong-colocalization}
-filter_res <- get_strong_colocalization(res, cos_npc_cutoff = 0.5, npc_outcome_cutoff = 0.2)
+filter_res <- get_robust_colocalization(res, cos_npc_cutoff = 0.5, npc_outcome_cutoff = 0.2)
 ```
 
-The output from `get_strong_colocalization` is the same as output from `colocboost`, which can be directly used in any post inference and visualization.
+- The output from `get_robust_colocalization` is the same as output from `colocboost`, which can be directly used in any post inference and visualization.
+- `npc=0.5` or `npc_outcome = 0.2` maintains robust colocalization signals for cases when many traits are evaluated. 
+Higher thresholds can be specified if users only want to focus on strong colocalization events.
 
 
 ## 3. More details on ColocBoost output
