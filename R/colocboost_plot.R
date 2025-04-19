@@ -159,6 +159,10 @@ colocboost_plot <- function(cb_output, y = "log10p",
     if (length(y)==1) outcome_idx <- 1
     if (plot_all_outcome){
       outcome_idx <- 1:length(y)
+      if (!is.null(cb_plot_input$focal_outcome)) {
+        p_focal <- grep(cb_plot_input$focal_outcome, outcomes)
+        outcome_idx <- c(p_focal, setdiff(outcome_idx, p_focal))
+      }
     } else {
       if (is.null(outcome_idx)) {
         if (is.null(coloc_cos)) {
