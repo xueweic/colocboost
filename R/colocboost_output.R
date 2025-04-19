@@ -117,7 +117,7 @@ get_cos_summary <- function(cb_output,
           all(sapply(tt, length) != 0)
         })
         summary_table$interest_outcome <- interest_outcome
-        summary_table <- summary_table[-which(if.interest == "FALSE"), ]
+        summary_table <- summary_table[which(if.interest), ]
         if (sum(if.interest) == 0) {
           warning("No colocalization with interest outcomes.")
         }
