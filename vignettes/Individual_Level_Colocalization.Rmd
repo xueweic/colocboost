@@ -57,7 +57,7 @@ Ind_5traits$true_effect_variants
 # 2. Matched individual level inputs $X$ and $Y$
 
 
-The preferred format for colocalization analysis in ColocBoost using individual level data is where genotype (X) and phenotype (Y) data are properly matched.
+The preferred format for colocalization analysis in ColocBoost using individual level data is where genotype ($X$) and phenotype ($Y$) data are properly matched.
 
 - **Basic format**: `X` and `Y` are organized as lists, matched by trait index,
     - `(X[1], Y[1])` contains individuals for trait 1,

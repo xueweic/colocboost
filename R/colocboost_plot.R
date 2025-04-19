@@ -635,10 +635,10 @@ plot_initial <- function(cb_plot_input, y = "log10p",
     args$ylim <- c(0, 1)
   } else if (y == "vcp") {
     plot_data <- cb_plot_input$vcp
+    ylab <- "VCP"
     if (length(cb_plot_input$outcomes) == 1) {
       ylab <- "VPA"
     }
-    ylab <- "VCP"
     args$ylim <- c(0, 1)
   }else if (y == "coef") {
     plot_data <- cb_plot_input$coef

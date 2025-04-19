@@ -100,9 +100,11 @@ Following plot also shows the top variants.
 
 
 ```{r vertical-plot}
-colocboost_plot(res, show_top_variables = TRUE, 
-                add_vertical = TRUE, 
-                add_vertical_idx = unique(unlist(Ind_5traits$true_effect_variants)))
+colocboost_plot(
+  res, show_top_variables = TRUE, 
+  add_vertical = TRUE, 
+  add_vertical_idx = unique(unlist(Ind_5traits$true_effect_variants))
+)
 ```
 
 
@@ -141,7 +143,7 @@ at [Interpret ColocBoost Output](https://statfungen.github.io/colocboost/article
 There are three options avaiable for plotting the results from disease prioritized colocalization, considering a focal trait:
 
 - `plot_focal_only = FALSE` (default), if `TRUE` will only plot CoS with focal trait and ignoring other CoS.
-- `plot_focal_cos_outocme_only = FALSE` (default) and recommend for visulization for disease prioritized colocalization.
+- `plot_focal_cos_outocme_only = FALSE` (default) and **recommend** for visulization for disease prioritized colocalization.
 If `TRUE` will plot all CoS colocalized with at least on traits within CoS of focal traits.
 
 ```{r focal-colocalization}
