@@ -9,6 +9,7 @@
 #' @param grange Optional plotting range of x-axis to zoom in to a specific region.
 #' @param plot_cos_idx Optional indices of CoS to plot
 #' @param outcome_idx Optional indices of outcomes to include in the plot. \code{outcome_idx=NULL} to plot only the outcomes having colocalization.
+#' @param plot_all_outcome Optional to plot all outcome in the same figure.
 #' @param plot_focal_only Logical, if TRUE only plots colocalization with focal outcome, default is FALSE.
 #' @param plot_focal_cos_outocme_only Logical, if TRUE only plots colocalization including at least on colocalized outcome with focal outcome, default is FALSE.
 #' @param points_color Background color for non-colocalized variables, default is "grey80".
@@ -72,6 +73,7 @@ colocboost_plot <- function(cb_output, y = "log10p",
                             grange = NULL,
                             plot_cos_idx = NULL,
                             outcome_idx = NULL,
+                            plot_all_outcome = FALSE,
                             plot_focal_only = FALSE,
                             plot_focal_cos_outocme_only = FALSE,
                             points_color = "grey80",
@@ -124,8 +126,8 @@ colocboost_plot <- function(cb_output, y = "log10p",
   )
 
   colocboost_plot_basic <- function(cb_plot_input, cb_plot_init,
-                                    outcome_idx = NULL, grange = NULL,
-                                    plot_cols = 2,
+                                    outcome_idx = NULL, plot_all_outcome = FALSE,
+                                    grange = NULL, plot_cols = 2,
                                     add_vertical = FALSE, add_vertical_idx = NULL,
                                     show_top_variables = TRUE,
                                     ...) {
@@ -155,33 +157,37 @@ colocboost_plot <- function(cb_output, y = "log10p",
     coloc_cos <- cb_plot_input$cos
     outcomes <- cb_plot_input$outcomes
     if (length(y)==1) outcome_idx <- 1
-    if (is.null(outcome_idx)) {
-      if (is.null(coloc_cos)) {
-        # - no colocalized effects, draw all outcomes in this region
-        if (length(cb_plot_input$outcomes) == 1) {
-          message("There is no fine-mapped causal effect in this region!. Showing margianl for this outcome!")
-        } else {
-          if (length(y) == 1){
-            message("There is no colocalization in this region!. Showing VCP = 0!")
+    if (plot_all_outcome){
+      outcome_idx <- 1:length(y)
+    } else {
+      if (is.null(outcome_idx)) {
+        if (is.null(coloc_cos)) {
+          # - no colocalized effects, draw all outcomes in this region
+          if (length(cb_plot_input$outcomes) == 1) {
+            message("There is no fine-mapped causal effect in this region!. Showing margianl for this outcome!")
           } else {
-            message("There is no colocalization in this region!. Showing margianl for all outcomes!")
+            if (length(y) == 1){
+              message("There is no colocalization in this region!. Showing VCP = 0!")
+            } else {
+              message("There is no colocalization in this region!. Showing margianl for all outcomes!")
+            }
           }
+          outcome_idx <- 1:length(y)
+        } else {
+          n.coloc <- length(coloc_cos)
+          coloc_index <- cb_plot_input$coloc_index
+          outcome_idx <- Reduce(union, coloc_index)
         }
-        outcome_idx <- 1:length(y)
-      } else {
-        n.coloc <- length(coloc_cos)
-        coloc_index <- cb_plot_input$coloc_index
-        outcome_idx <- Reduce(union, coloc_index)
-      }
-      if (!is.null(cb_plot_input$focal_outcome)) {
-        p_focal <- grep(cb_plot_input$focal_outcome, outcomes)
-        include_focal <- sapply(cb_plot_input$coloc_index, function(ci) {
-          p_focal %in% ci
-        })
-        if (any(include_focal)) {
-          coloc_index <- cb_plot_input$coloc_index[order(include_focal == "FALSE")]
-          coloc_index <- Reduce(union, coloc_index)
-          outcome_idx <- c(p_focal, setdiff(coloc_index, p_focal))
+        if (!is.null(cb_plot_input$focal_outcome)) {
+          p_focal <- grep(cb_plot_input$focal_outcome, outcomes)
+          include_focal <- sapply(cb_plot_input$coloc_index, function(ci) {
+            p_focal %in% ci
+          })
+          if (any(include_focal)) {
+            coloc_index <- cb_plot_input$coloc_index[order(include_focal == "FALSE")]
+            coloc_index <- Reduce(union, coloc_index)
+            outcome_idx <- c(p_focal, setdiff(coloc_index, p_focal))
+          }
         }
       }
     }
@@ -304,7 +310,9 @@ colocboost_plot <- function(cb_output, y = "log10p",
 
   colocboost_plot_basic(cb_plot_input, cb_plot_init,
     grange = grange,
-    outcome_idx = outcome_idx, plot_cols = plot_cols,
+    outcome_idx = outcome_idx, 
+    plot_all_outcome = plot_all_outcome,
+    plot_cols = plot_cols,
     add_vertical = add_vertical, add_vertical_idx = add_vertical_idx,
     show_top_variables = show_top_variables,
     ...
