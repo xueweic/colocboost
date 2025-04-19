@@ -13,6 +13,7 @@ colocboost_plot(
   grange = NULL,
   plot_cos_idx = NULL,
   outcome_idx = NULL,
+  plot_all_outcome = FALSE,
   plot_focal_only = FALSE,
   plot_focal_cos_outocme_only = FALSE,
   points_color = "grey80",
@@ -50,6 +51,8 @@ colocboost_plot(
 \item{plot_cos_idx}{Optional indices of CoS to plot}
 
 \item{outcome_idx}{Optional indices of outcomes to include in the plot. \code{outcome_idx=NULL} to plot only the outcomes having colocalization.}
+
+\item{plot_all_outcome}{Optional to plot all outcome in the same figure.}
 
 \item{plot_focal_only}{Logical, if TRUE only plots colocalization with focal outcome, default is FALSE.}
 

@@ -53,6 +53,7 @@ X[[2]][1:2, 1:10]
 X[[3]][1:2, 1:10]
 ```
 
+## 1. Run ColocBoost with partial overlapping variants
 
 To run ColocBoost to the different genotypes with different causal variants, the variant names should be provided as the column names of the `X` matrices.
 Otherwise, the `colocboost` function will not be able to identify the variants correctly from different genotype matrices,
@@ -69,6 +70,7 @@ res$data_info$n_variables
 colocboost_plot(res)
 ```
 
+## 2. Limitations of using only overlapping variables
 
 If we perform colocalization analysis using only overlapping variables, we may fail to detect any colocalization events. 
 This is because the causal variants, which are only partially overlapping across traits, are excluded during the preprocessing step. 
@@ -86,6 +88,8 @@ res$data_info$n_variables
 colocboost_plot(res)
 ```
 
+
+## 3. Disease-prioritized colocalization analysis with variables in the focal trait
 
 In disease-prioritized colocalization analysis with a focal trait, `ColocBoost` recommends prioritizing variants in the focal trait as the default setting. 
 For the example above, if we consider trait 3 as the focal trait, only variants present in trait 3 will be included in the analysis. 

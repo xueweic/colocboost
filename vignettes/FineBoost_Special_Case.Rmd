@@ -1,0 +1,60 @@
+---
+title: "Single-trait Fine-mapping with FineBoost"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Single-trait Fine-mapping with FineBoost}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+This vignette demonstrates how to perform single-trait fine-mapping analysis using FineBoost, a specialized single-trait version of ColocBoost,
+from both individual-level data and summary statistics. Specifically focusing on the 2nd trait with 2 causal variants (644 and 2289) from 
+`Ind_5traits` and `Sumstat_5traits` dataset included in the package.
+
+
+```{r setup}
+library(colocboost)
+```
+
+
+# 1. Fine-mapping with individual-level data
+
+
+```{r load-example-indiviudal}
+# Load example data
+data(Ind_5traits)
+X <- Ind_5traits$X[[2]]
+Y <- Ind_5traits$Y[[2]]
+
+res <- colocboost(X = X, Y = Y)
+colocboost_plot(res)
+```
+
+
+# 2. Fine-mapping with summary statistics
+
+```{r load-example-sumstat}
+# Load example data
+data(Sumstat_5traits) 
+sumstat <- Sumstat_5traits$sumstat[[2]]
+LD <- get_cormat(Ind_5traits$X[[2]])
+
+res <- colocboost(sumstat = sumstat, LD = LD)
+colocboost_plot(res)
+```
+
+# 3. LD-free fine-mapping with one causal variant assumption
+
+```{r ld-free}
+# Load example data
+res <- colocboost(sumstat = sumstat)
+colocboost_plot(res)
+```
