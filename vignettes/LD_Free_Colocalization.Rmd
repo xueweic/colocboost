@@ -26,9 +26,9 @@ library(colocboost)
 
 # 1. LD mismatch diagnosis
 
-The `colocboost` assumes the LD matrix accurately estimate the correlations among variants from the original GWAS genotype data.
-Typically, the LD matrix comes from some public databased of genotypes in suitable reference population. 
-The inaccurate LD matrix may lead to unreliable colocalization results, especially, if the LD matrix is much different from the one estimated from original genotype data.
+The `colocboost` assumes that the LD matrix accurately estimates the correlations among variants from the original GWAS genotype data.
+Typically, the LD matrix comes from some public databases of genotypes in a suitable reference population. 
+An inaccurate LD matrix may lead to unreliable colocalization results, especially if the LD matrix is significantly different from the one estimated from the original genotype data.
 
 
 ### Why LD Mismatch Matters
@@ -39,7 +39,7 @@ An inaccurate LD matrix can cause inconsistencies between the summary statistics
 - Potentially misleading colocalization results.
 
 
-ColocBoost provides the diagnostic warnings for assessing consistency of the summary statistics with the reference LD matrix.
+ColocBoost provides diagnostic warnings for assessing the consistency of the summary statistics with the reference LD matrix.
 
 - Estimated residual variance of the model is negative or greater than phenotypic variance (`rtr < 0` or `rtr > var_y`; 
 see details in Supplementary Note S3.5.2). 
@@ -48,7 +48,7 @@ see details in Supplementary Note S3.5.2).
 
 ### Example of including LD mismatch
 
-In this example, we create a simulated dataset with LD mismatch by changing the sign of Z-scores for 1% variants of each trait.
+In this example, we create a simulated dataset with LD mismatch by changing the sign of Z-scores for 1% of variants for each trait.
 
 ```{r LD-mismatch}
 # Create a simulated dataset with LD mismatch
@@ -56,12 +56,12 @@ data("Sumstat_5traits")
 data("Ind_5traits")
 LD <- get_cormat(Ind_5traits$X[[1]])
 
-# Change sign of Z-score for 1% variants of each trait by including mismatched with LD
+# Change sign of Z-score for 1% of variants for each trait by including mismatched LD
 set.seed(1)
 miss_prop <- 0.01 
 sumstat <- lapply(Sumstat_5traits$sumstat, function(ss){
   p <- nrow(ss)
-  pos_miss <- sample(1:p, ceiling(miss_prop*p))
+  pos_miss <- sample(1:p, ceiling(miss_prop * p))
   ss$z[pos_miss] <- -ss$z[pos_miss]
   return(ss)
 })
@@ -78,21 +78,21 @@ However, the results may be less reliable due to the mismatch, and the computati
 res <- colocboost(sumstat = sumstat, LD = LD)
 ```
 
-The warnings serve as a diagnostic tool to alert users about potential inconsistencies in the input data.
+These warnings serve as diagnostic tools to alert users about potential inconsistencies in the input data.
 
 
 # 2. LD-free and LD-mismatch colocalization analysis
 
 When there is substantial discordance between the LD matrix and summary statistics, 
 the reliability of colocalization analysis may be compromised. 
-Such discordance can arise when the LD matrix and summary statistics are derived from different populations, 
+Such discordance can arise when the LD matrix and summary statistics are derived from different populations 
 or when the LD matrix is estimated from a smaller or less representative reference sample. 
 This can lead to unexpected results, such as biased causal variant identification or reduced accuracy in the analysis.
 
 To address these challenges, ColocBoost provides two alternative approaches for colocalization analysis
-with one causal per trait per region assumption:
+with the assumption of one causal variant per trait per region:
 
-- **One iteration approach** (recommended): performing only 1 iteration of gradient boosting with LD matrix ensures that
+- **One iteration approach** (recommended): performing only 1 iteration of gradient boosting with the LD matrix ensures that:
   - The LD matrix is only used to check the equivalence among trait-specific best update variants.
   - The accuracy of the results is improved compared to completely ignoring the LD matrix.
 
@@ -100,11 +100,11 @@ This method is particularly useful when the LD matrix is mismatched but still pr
 
 ```{r LD-mismatch-one-iter}
 # Perform only 1 iteration of gradient boosting with LD matrix
-res_mismatch <- colocboost(sumstat = sumstat, LD = LD, M=1)
+res_mismatch <- colocboost(sumstat = sumstat, LD = LD, M = 1)
 ```
 
 
-- **LD-free**: when the mismatch between the LD matrix and summary statistics is too large to be useful, 
+- **LD-free**: when the mismatch between the LD matrix and summary statistics is too large to be useful 
 or when LD information is completely unavailable, ColocBoost provides an LD-free approach.
 
 ```{r LD-free}
