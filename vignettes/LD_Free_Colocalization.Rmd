@@ -40,6 +40,7 @@ data("Ind_5traits")
 LD <- get_cormat(Ind_5traits$X[[1]])
 
 # Change sign of Z-score for 1% variants of each trait by including mismatched with LD
+set.seed(1)
 miss_prop <- 0.01 
 sumstat <- lapply(Sumstat_5traits$sumstat, function(ss){
   p <- nrow(ss)
