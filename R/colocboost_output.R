@@ -204,6 +204,7 @@ get_robust_colocalization <- function(cb_output,
     if (is.null(pvalue_cutoff)) {
       message(paste0(
         "Extracting colocalization results with cos_npc_cutoff = ", cos_npc_cutoff, " and npc_outcome_cutoff = ", npc_outcome_cutoff, ".\n",
+        "Keep only CoS with cos_npc >= ", cos_npc_cutoff, ". ",
         "For each CoS, keep the outcomes configurations that the npc_outcome >= ", npc_outcome_cutoff, "."
       ))
     } else {
@@ -219,6 +220,7 @@ get_robust_colocalization <- function(cb_output,
       } else {
         message(paste0(
           "Extracting colocalization results with pvalue_cutoff = ", pvalue_cutoff, ", cos_npc_cutoff = ", cos_npc_cutoff, ", and npc_outcome_cutoff = ", npc_outcome_cutoff, ".\n",
+          "Keep only CoS with cos_npc >= ", cos_npc_cutoff, ". ",
           "For each CoS, keep the outcomes configurations that pvalue of variants for the outcome < ", pvalue_cutoff, " and npc_outcome >", npc_outcome_cutoff, "."
         ))
       }
