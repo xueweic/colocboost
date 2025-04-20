@@ -116,7 +116,7 @@ get_cos_summary <- function(cb_output,
           tt <- sapply(interest_outcome, function(tmp) grep(paste0(tmp, "\\b"), cp))
           all(sapply(tt, length) != 0)
         })
-        summary_table$interest_outcome <- interest_outcome
+        summary_table$interest_outcome <- paste0(interest_outcome, collapse = "; ")
         summary_table <- summary_table[which(if.interest), ]
         if (sum(if.interest) == 0) {
           warning("No colocalization with interest outcomes.")
@@ -204,6 +204,7 @@ get_robust_colocalization <- function(cb_output,
     if (is.null(pvalue_cutoff)) {
       message(paste0(
         "Extracting colocalization results with cos_npc_cutoff = ", cos_npc_cutoff, " and npc_outcome_cutoff = ", npc_outcome_cutoff, ".\n",
+        "Keep only CoS with cos_npc >= ", cos_npc_cutoff, ". ",
         "For each CoS, keep the outcomes configurations that the npc_outcome >= ", npc_outcome_cutoff, "."
       ))
     } else {
@@ -219,6 +220,7 @@ get_robust_colocalization <- function(cb_output,
       } else {
         message(paste0(
           "Extracting colocalization results with pvalue_cutoff = ", pvalue_cutoff, ", cos_npc_cutoff = ", cos_npc_cutoff, ", and npc_outcome_cutoff = ", npc_outcome_cutoff, ".\n",
+          "Keep only CoS with cos_npc >= ", cos_npc_cutoff, ". ",
           "For each CoS, keep the outcomes configurations that pvalue of variants for the outcome < ", pvalue_cutoff, " and npc_outcome >", npc_outcome_cutoff, "."
         ))
       }
