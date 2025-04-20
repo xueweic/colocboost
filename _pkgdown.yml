@@ -18,18 +18,26 @@ navbar:
       href: https://github.com/StatFunGen/colocboost
 
 articles:
-  - title: Vignettes
+  - title: Performing Colocalization using ColocBoost
+    desc: "Tutorials on how to perform multi-trait colocalization analysis using ColocBoost with flexible input data formats."
     contents:
     - Input_Data_Format
     - Individual_Level_Colocalization
     - Summary_Statistics_Colocalization
     - Disease_Prioritized_Colocalization
+
+  - title: Interpretation and Visualization
+    desc: "Tutorials on how to interpret and visualize the output from ColocBoost."
+    contents:
     - Interpret_ColocBoost_Output
     - Visualization_ColocBoost_Output
+
+  - title: Advanced Topics
+    desc: "Advanced topics and special cases in colocalization and fine-mapping analysis."
+    contents:
     - Partial_Overlap_Variants
     - ColocBoost_Wrapper_Pipeline
     - LD_Free_Colocalization
-    - ColocBoost_Diagnostics
     - FineBoost_Special_Case
 
   - title: internal
@@ -37,25 +45,26 @@ articles:
     - announcements
     - installation
     - Pairwise_Colocalization
+    - ColocBoost_Diagnostics
 
 reference:
   - title: "Example Data"
-    desc: "Example datasets for demonstration and testing"
+    desc: "Example datasets for demonstration and testing."
     contents:
     - has_concept("colocboost_data")
 
   - title: "Model fitting"
-    desc: "Functions for fitting colocalization models"
+    desc: "Main interface function for fitting multi-trait colocalization model."
     contents:
     - has_concept("colocboost")
 
   - title: "Inference and summary"
-    desc: "Functions for inference and summary from fitted models"
+    desc: "Functions for inference and summary from fitted model."
     contents:
     - has_concept("colocboost_inference")
 
   - title: "Visualization"
-    desc: "Functions for visualizing ColocBoost results"
+    desc: "Functions for visualizing ColocBoost result."
     contents:
     - has_concept("colocboost_plot")
 

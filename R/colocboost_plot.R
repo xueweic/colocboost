@@ -25,7 +25,7 @@
 #' @param show_cos_to_uncoloc_outcome Optional outcomes for showing CoS to uncolocalized outcomes
 #' @param plot_ucos Logical, if TRUE plots also trait-specific (uncolocalized) sets , default is FALSE
 #' @param plot_ucos_idx Optional indices of trait-specific (uncolocalized) sets to plot when included
-#' @param gene_name Optional gene name to display in plot title
+#' @param title_specific Optional specific title to display in plot title
 #' @param ylim_each Logical, if TRUE uses separate y-axis limits for each plot, default is TRUE
 #' @param outcome_legend_pos Position for outcome legend, default is "top"
 #' @param outcome_legend_size Size for outcome legend text, default is 1.2
@@ -89,7 +89,7 @@ colocboost_plot <- function(cb_output, y = "log10p",
                             show_cos_to_uncoloc_outcome = NULL,
                             plot_ucos = FALSE,
                             plot_ucos_idx = NULL,
-                            gene_name = NULL,
+                            title_specific = NULL,
                             ylim_each = TRUE,
                             outcome_legend_pos = "top",
                             outcome_legend_size = 1.8,
@@ -118,7 +118,7 @@ colocboost_plot <- function(cb_output, y = "log10p",
   # get initial set up of plot
   cb_plot_init <- plot_initial(cb_plot_input,
     y = y, points_color = points_color, cos_color = cos_color,
-    ylim_each = ylim_each, gene_name = gene_name,
+    ylim_each = ylim_each, title_specific = title_specific,
     outcome_legend_pos = outcome_legend_pos, outcome_legend_size = outcome_legend_size,
     cos_legend_pos = cos_legend_pos,
     show_variable = show_variable, lab_style = lab_style, axis_style = axis_style,
@@ -597,7 +597,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
 #' @importFrom stats pnorm
 plot_initial <- function(cb_plot_input, y = "log10p",
                          points_color = "grey80", cos_color = NULL,
-                         ylim_each = TRUE, gene_name = NULL,
+                         ylim_each = TRUE, title_specific = NULL,
                          outcome_legend_size = 1.5,
                          outcome_legend_pos = "right",
                          cos_legend_pos = "bottomleft",
@@ -664,7 +664,7 @@ plot_initial <- function(cb_plot_input, y = "log10p",
   args$lab_face <- lab_style[2]
 
   # - set title format
-  args$title <- gene_name
+  args$title <- title_specific
   args$title_size <- as.numeric(title_style[1])
   args$title_face <- title_style[2]
 

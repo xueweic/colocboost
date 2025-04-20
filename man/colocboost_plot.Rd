@@ -29,7 +29,7 @@ colocboost_plot(
   show_cos_to_uncoloc_outcome = NULL,
   plot_ucos = FALSE,
   plot_ucos_idx = NULL,
-  gene_name = NULL,
+  title_name = NULL,
   ylim_each = TRUE,
   outcome_legend_pos = "top",
   outcome_legend_size = 1.8,
@@ -84,7 +84,7 @@ colocboost_plot(
 
 \item{plot_ucos_idx}{Optional indices of trait-specific (uncolocalized) sets to plot when included}
 
-\item{gene_name}{Optional gene name to display in plot title}
+\item{title_name}{Optional title name to display in plot title}
 
 \item{ylim_each}{Logical, if TRUE uses separate y-axis limits for each plot, default is TRUE}
 

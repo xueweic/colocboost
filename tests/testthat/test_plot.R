@@ -177,8 +177,8 @@ test_that("colocboost_plot handles layout options", {
   # When ylim_each is FALSE, we need to provide a ylim parameter
   expect_error(suppressWarnings(colocboost_plot(cb_res, ylim_each = FALSE, ylim = c(0, 10))), NA)
   
-  # Test with gene_name option
-  expect_error(suppressWarnings(colocboost_plot(cb_res, gene_name = "BRCA1")), NA)
+  # Test with title_specific option
+  expect_error(suppressWarnings(colocboost_plot(cb_res, title_specific = "BRCA1")), NA)
   
   # Test with variant_coord option
   expect_error(suppressWarnings(colocboost_plot(cb_res, variant_coord = FALSE)), NA)
