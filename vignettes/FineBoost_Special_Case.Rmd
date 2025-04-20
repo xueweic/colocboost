@@ -27,6 +27,9 @@ library(colocboost)
 
 # 1. Fine-mapping with individual-level data
 
+In this section, we demonstrate how to perform fine-mapping using individual-level genotype (`X`) and phenotype (`Y`) data. 
+This approach directly uses the raw data to identify causal variants.
+
 
 ```{r load-example-indiviudal}
 # Load example data
@@ -41,6 +44,8 @@ colocboost_plot(res)
 
 # 2. Fine-mapping with summary statistics
 
+This section demonstrates fine-mapping analysis using summary statistics and a proper LD matrix. 
+
 ```{r load-example-sumstat}
 # Load example data
 data(Sumstat_5traits) 
@@ -52,6 +57,9 @@ colocboost_plot(res)
 ```
 
 # 3. LD-free fine-mapping with one causal variant assumption
+
+In scenarios where LD information is unavailable, FineBoost can still perform fine-mapping under the assumption of a single causal variant. 
+This approach is less computationally intensive but assumes that only one variant in a region is causal.
 
 ```{r ld-free}
 # Load example data

@@ -27,16 +27,16 @@ articles:
     - Interpret_ColocBoost_Output
     - Visualization_ColocBoost_Output
     - Partial_Overlap_Variants
+    - ColocBoost_Wrapper_Pipeline
+    - LD_Free_Colocalization
+    - ColocBoost_Diagnostics
+    - FineBoost_Special_Case
 
   - title: internal
     contents:
     - announcements
     - installation
-    - ColocBoost_tutorial_diagnostic
-    - LD_Free_Colocalization
-    - ColocBoost_Wrapper
     - Pairwise_Colocalization
-    - FineBoost_Special_Case
 
 reference:
   - title: "Example Data"
