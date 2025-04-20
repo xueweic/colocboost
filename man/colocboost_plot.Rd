@@ -15,7 +15,7 @@ colocboost_plot(
   outcome_idx = NULL,
   plot_all_outcome = FALSE,
   plot_focal_only = FALSE,
-  plot_focal_cos_outocme_only = FALSE,
+  plot_focal_cos_outcome_only = FALSE,
   points_color = "grey80",
   cos_color = NULL,
   add_vertical = FALSE,
@@ -56,7 +56,7 @@ colocboost_plot(
 
 \item{plot_focal_only}{Logical, if TRUE only plots colocalization with focal outcome, default is FALSE.}
 
-\item{plot_focal_cos_outocme_only}{Logical, if TRUE only plots colocalization including at least on colocalized outcome with focal outcome, default is FALSE.}
+\item{plot_focal_cos_outcome_only}{Logical, if TRUE only plots colocalization including at least on colocalized outcome with focal outcome, default is FALSE.}
 
 \item{points_color}{Background color for non-colocalized variables, default is "grey80".}
 

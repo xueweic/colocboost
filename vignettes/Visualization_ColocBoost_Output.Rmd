@@ -68,7 +68,7 @@ There are several advanced options available for customizing the plot by deepeni
 You can specify a zoom-in region by providing a `grange` argument, which is a vector indicating the indices of the region to be zoomed in.
 
 ```{r zoomin-plot}
-colocboost_plot(res, grange = c(1:1000, 2000:3000))
+colocboost_plot(res, grange = c(1:1000))
 ```
 
 
@@ -114,7 +114,7 @@ colocboost_plot(
 There are two options available for plotting the trait-specific (uncolocalized) variants:
 
 - `plot_ucos = FALSE` (default), if `TRUE` will plot all trait-specific (uncolocalized) sets.
-- `plot_ucos_idx = NULL` (default) indicates all confidence sets are plotted. `plot_cos_idx = 1` can be specified to plot the 1st confidence sets, and so on.
+- `plot_ucos_idx = NULL` (default) indicates all confidence sets are plotted. `plot_ucos_idx = 1` can be specified to plot the 1st uncolocalized confidence sets, and so on.
 
 *Important Note*: You should use `colocboost(..., output_level = 2)` to obtain the trait-specific (uncolocalized) information.
 

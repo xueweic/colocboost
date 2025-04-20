@@ -11,7 +11,7 @@
 #' @param outcome_idx Optional indices of outcomes to include in the plot. \code{outcome_idx=NULL} to plot only the outcomes having colocalization.
 #' @param plot_all_outcome Optional to plot all outcome in the same figure.
 #' @param plot_focal_only Logical, if TRUE only plots colocalization with focal outcome, default is FALSE.
-#' @param plot_focal_cos_outocme_only Logical, if TRUE only plots colocalization including at least on colocalized outcome with focal outcome, default is FALSE.
+#' @param plot_focal_cos_outcome_only Logical, if TRUE only plots colocalization including at least on colocalized outcome with focal outcome, default is FALSE.
 #' @param points_color Background color for non-colocalized variables, default is "grey80".
 #' @param cos_color Optional custom colors for CoS.
 #' @param add_vertical Logical, if TRUE adds vertical lines at specified positions, default is FALSE
@@ -75,7 +75,7 @@ colocboost_plot <- function(cb_output, y = "log10p",
                             outcome_idx = NULL,
                             plot_all_outcome = FALSE,
                             plot_focal_only = FALSE,
-                            plot_focal_cos_outocme_only = FALSE,
+                            plot_focal_cos_outcome_only = FALSE,
                             points_color = "grey80",
                             cos_color = NULL,
                             add_vertical = FALSE,
@@ -109,7 +109,7 @@ colocboost_plot <- function(cb_output, y = "log10p",
     variant_coord = variant_coord,
     outcome_names = outcome_names,
     plot_focal_only = plot_focal_only,
-    plot_focal_cos_outocme_only = plot_focal_cos_outocme_only,
+    plot_focal_cos_outcome_only = plot_focal_cos_outcome_only,
     show_cos_to_uncoloc = show_cos_to_uncoloc,
     show_cos_to_uncoloc_idx = show_cos_to_uncoloc_idx,
     show_cos_to_uncoloc_outcome = show_cos_to_uncoloc_outcome,
@@ -330,7 +330,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
                            variant_coord = FALSE,
                            outcome_names = NULL,
                            plot_focal_only = FALSE,
-                           plot_focal_cos_outocme_only = FALSE,
+                           plot_focal_cos_outcome_only = FALSE,
                            show_cos_to_uncoloc = FALSE,
                            show_cos_to_uncoloc_idx = NULL,
                            show_cos_to_uncoloc_outcome = NULL,
@@ -411,12 +411,12 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
       }
       select_cs <- plot_cos_idx
     } else {
-      if (plot_focal_only || plot_focal_cos_outocme_only) {
+      if (plot_focal_only || plot_focal_cos_outcome_only) {
         if (sum(if_focal) == 0) {
           message("No focal CoS, draw all CoS.")
         } else if (plot_focal_only) {
           select_cs <- which(if_focal)
-        } else {  # plot_focal_cos_outocme_only is true here
+        } else {  # plot_focal_cos_outcome_only is true here
           # Get all outcomes colocalized with focal CoS
           focal_outcomes <- unique(unlist(coloc_index[if_focal]))
           # Find CoS that include at least one of these focal outcomes
@@ -488,7 +488,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
           stop("Please check plot_ucos_idx!")
         }
         select_ucos <- plot_ucos_idx
-      } else if (plot_focal_cos_outocme_only && sum(if_focal) != 0) {
+      } else if (plot_focal_cos_outcome_only && sum(if_focal) != 0) {
         # Get all outcomes colocalized with focal CoS
         focal_outcomes <- unique(unlist(plot_input$coloc_index))
         # Find uCoS that include at least one of these focal outcomes
