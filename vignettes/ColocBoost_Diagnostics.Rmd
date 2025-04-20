@@ -1,0 +1,49 @@
+---
+title: "Diagnostic for ColocBoost"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Diagnostic for ColocBoost}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+This vignette demonstrates how to perform multi-trait colocalization analysis using diagnosic details in ColocBoost, 
+including model parameters, model fitting, and model performance metrics. There is `diagnostic_details` in ColocBoost output when setting `output_level = 3`:
+
+
+```{r setup}
+library(colocboost)
+# Run colocboost with diagnostic details
+data(Ind_5traits)
+res <- colocboost(X = Ind_5traits$X, Y = Ind_5traits$Y, output_level = 3)
+names(res)
+```
+
+# 1. Diagnostic details of the model parameters
+
+- **`cb_model_para`**: parameters used in fitting ColocBoost model.
+
+
+```{r cb-model}
+names(res$diagnostic_details$cb_model_para)
+```
+
+
+# 2. Diagnostic details of the model fitting
+
+- **`cb_model`**: trait-specific proximity gradient boosting model, including proximity weight at each iteration, residual after gradient boosting, et al.
+- **`weights_paths``**: individual trait-specific weights for each iteration.
+
+```{r cb-model-para}
+names(res$diagnostic_details$cb_model)
+names(res$diagnostic_details$cb_model$ind_outcome_1)
+```
+

@@ -1,0 +1,90 @@
+---
+title: "LD mismatch and LD-free Colocalization"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{LD mismatch and LD-free Colocalization}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+This vignette demonstrates LD mismatch diagnosis in the `colocboost` package and how to perform LD-free colocalization analysis,
+when some traits completely lack LD information or share only partial variant coverage with other traits.
+
+
+```{r setup}
+library(colocboost)
+```
+
+# 1. LD mismatch diagnosis
+
+ColocBoost provides the diagnostic warnings for LD matrix is not compatible with the summary statistics.
+
+- Estimated residual variance of the model is negative or greater than phenotypic variance (`rtr < 0` or `rtr > var_y`; 
+see details in Supplementary Note S3.5.2). 
+- Change in trait-specific profile log-likelihood according to a CoS is negative (see details in Supplementary Note S3.5.3).
+
+In this example, we create a simulated dataset with LD mismatch by changing the sign of Z-scores for 1% variants of each trait.
+
+```{r LD-mismatch}
+# Create a simulated dataset with LD mismatch
+data("Sumstat_5traits")
+data("Ind_5traits")
+LD <- get_cormat(Ind_5traits$X[[1]])
+
+# Change sign of Z-score for 1% variants of each trait by including mismatched with LD
+set.seed(1)
+miss_prop <- 0.01 
+sumstat <- lapply(Sumstat_5traits$sumstat, function(ss){
+  p <- nrow(ss)
+  pos_miss <- sample(1:p, ceiling(miss_prop*p))
+  ss$z[pos_miss] <- -ss$z[pos_miss]
+  return(ss)
+})
+```
+
+There may two types of warnings when running `colocboost` with LD mismatch:
+
+```{r LD-mismatch-runcode}
+res <- colocboost(sumstat = sumstat, LD = LD)
+```
+
+
+Note that the warning messages are not errors, and the analysis will still be performed. But the results may not be reliable due to the LD mismatch.
+Additional, the computational time may be longer than expected, as the algorithm may take longer to converge due to the LD mismatch.
+
+
+# 2. LD-free and LD-mismatch colocalization analysis
+
+ColocBoost can perform LD-free colocalization analysis when some traits completely lack LD information with one causal per trait per region assumption.
+There are two ways to perform LD-free and LD-mismatch colocalization analysis:
+
+- **LD-mismatch** (recommended): when LD matrix is esimated from out-of sample LD reference (smaller sample size or different population), 
+summary statistics are not compatible with the LD matrix but the LD matrix is still informative for indicating the correlations among different variants.
+We recommended to perform colocalization analysis with LD matrix and only 1 iteration of gradient boosting.
+In this case, the LD matrix is only used in checking the equivalence among the trait-specific best update variants.
+Specially, using the LD matrix for colocalization analysis can help to improve the accuracy of the results.
+
+```{r LD-mismatch-one-iter}
+res_mismatch <- colocboost(sumstat = sumstat, LD = LD, M=1)
+```
+
+
+- **LD-free**: when some traits completely lack LD information, the LD matrix is not required.
+
+```{r LD-free}
+res_free <- colocboost(sumstat = sumstat)
+```
+
+
+
+
+
+
