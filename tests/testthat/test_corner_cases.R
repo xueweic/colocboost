@@ -94,10 +94,12 @@ test_that("colocboost handles missing values in Y", {
   
   # Run colocboost - should handle NAs automatically
   expect_error(
-    result <- colocboost(
-      X = X_list, 
-      Y = Y_list,
-      M = 5  # Small number of iterations for testing
+    suppressWarnings(
+      result <- colocboost(
+        X = X_list, 
+        Y = Y_list,
+        M = 5  # Small number of iterations for testing
+      )
     ),
     NA
   )
@@ -114,9 +116,11 @@ test_that("colocboost handles different sample sizes", {
   
   # Run colocboost - should error without sample indices
   expect_error(
-    colocboost(
-      X = test_data$X, 
-      Y = test_data$Y
+    suppressWarnings(
+      colocboost(
+        X = test_data$X, 
+        Y = test_data$Y
+      )
     )
   )
   
@@ -144,13 +148,17 @@ test_that("colocboost handles different variant sets", {
   test_data <- generate_edge_case_data("different_variants")
   
   # Run colocboost
-  expect_warning(
+  warnings <- capture_warnings({
     result <- colocboost(
       X = test_data$X, 
       Y = test_data$Y,
       dict_YX = dict_YX,
       M = 5  # Small number of iterations for testing
     )
+  })
+  # Check if any of the expected warning patterns are present
+  expect_true(
+    any(grepl("did not coverage", warnings))
   )
   
   # Test that we get a colocboost object

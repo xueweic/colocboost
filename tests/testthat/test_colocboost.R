@@ -49,11 +49,19 @@ test_that("colocboost runs with individual data", {
   X_list <- list(test_data$X, test_data$X)
   
   # Run colocboost with minimal parameters
-  result <- colocboost(
-    X = X_list, 
-    Y = Y_list,
-    M = 10,  # Small number of iterations for testing
-    output_level = 2  # More detailed output for testing
+  warnings <- capture_warnings({
+    result <- colocboost(
+      X = X_list, 
+      Y = Y_list,
+      M = 10,  # Small number of iterations for testing
+      output_level = 2  # More detailed output for testing
+    )
+  })
+
+  # Check if any of the expected warning patterns are present
+  expect_true(
+    any(grepl("smallest number of variables", warnings)) || 
+    any(grepl("did not coverage", warnings))
   )
   
   # Test that we get a colocboost object
@@ -101,11 +109,19 @@ test_that("colocboost runs with summary statistics", {
   }
   
   # Run colocboost with summary statistics
-  result <- colocboost(
-    sumstat = sumstat_list,
-    LD = list(LD),
-    M = 10,  # Small number of iterations for testing
-    output_level = 2  # More detailed output for testing
+  warnings <- capture_warnings({
+    result <- colocboost(
+      sumstat = sumstat_list,
+      LD = list(LD),
+      M = 10,  # Small number of iterations for testing
+      output_level = 2  # More detailed output for testing
+    )
+  })
+
+  # Check if any of the expected warning patterns are present
+  expect_true(
+    any(grepl("smallest number of variables", warnings)) || 
+    any(grepl("did not coverage", warnings))
   )
   
   # Test that we get a colocboost object
@@ -124,12 +140,20 @@ test_that("colocboost handles focal outcome correctly", {
   X_list <- list(test_data$X, test_data$X)
   
   # Run colocboost with focal_outcome_idx = 1
-  result <- colocboost(
-    X = X_list, 
-    Y = Y_list,
-    focal_outcome_idx = 1,
-    M = 10,  # Small number of iterations for testing
-    output_level = 2  # More detailed output for testing
+  warnings <- capture_warnings({
+    result <- colocboost(
+      X = X_list, 
+      Y = Y_list,
+      focal_outcome_idx = 1,
+      M = 10,  # Small number of iterations for testing
+      output_level = 2  # More detailed output for testing
+    )
+  })
+
+  # Check if any of the expected warning patterns are present
+  expect_true(
+    any(grepl("smallest number of variables", warnings)) || 
+    any(grepl("did not coverage", warnings))
   )
   
   # Test that we get a colocboost object
@@ -148,11 +172,19 @@ test_that("get_cos_summary returns expected structure", {
   X_list <- list(test_data$X, test_data$X)
   
   # Run colocboost with minimal parameters
-  result <- colocboost(
-    X = X_list, 
-    Y = Y_list,
-    M = 10,  # Small number of iterations for testing
-    output_level = 2  # More detailed output for testing
+  warnings <- capture_warnings({
+    result <- colocboost(
+      X = X_list, 
+      Y = Y_list,
+      M = 10,  # Small number of iterations for testing
+      output_level = 2  # More detailed output for testing
+    )
+  })
+
+  # Check if any of the expected warning patterns are present
+  expect_true(
+    any(grepl("smallest number of variables", warnings)) || 
+    any(grepl("did not coverage", warnings))
   )
   
   # Get summary
@@ -182,11 +214,19 @@ test_that("colocboost_plot runs without error", {
   X_list <- list(test_data$X, test_data$X)
   
   # Run colocboost with minimal parameters
-  result <- colocboost(
-    X = X_list, 
-    Y = Y_list,
-    M = 10,  # Small number of iterations for testing
-    output_level = 2  # More detailed output for testing
+  warnings <- capture_warnings({
+    result <- colocboost(
+      X = X_list, 
+      Y = Y_list,
+      M = 10,  # Small number of iterations for testing
+      output_level = 2  # More detailed output for testing
+    )
+  })
+
+  # Check if any of the expected warning patterns are present
+  expect_true(
+    any(grepl("smallest number of variables", warnings)) || 
+    any(grepl("did not coverage", warnings))
   )
   
   # Basic plotting should not throw an error
@@ -202,11 +242,19 @@ test_that("get_robust_colocalization maintains colocboost structure", {
   X_list <- list(test_data$X, test_data$X)
   
   # Run colocboost with minimal parameters
-  result <- colocboost(
-    X = X_list, 
-    Y = Y_list,
-    M = 10,  # Small number of iterations for testing
-    output_level = 2  # More detailed output for testing
+  warnings <- capture_warnings({
+    result <- colocboost(
+      X = X_list, 
+      Y = Y_list,
+      M = 10,
+      output_level = 2
+    )
+  })
+
+  # Check if any of the expected warning patterns are present
+  expect_true(
+    any(grepl("smallest number of variables", warnings)) || 
+    any(grepl("did not coverage", warnings))
   )
   
   # Run get_strong_colocalization
@@ -234,5 +282,13 @@ test_that("colocboost handles missing/invalid inputs appropriately", {
   Y_list <- list(test_data$Y[,1], test_data$Y[,2])
   X_list <- list(X_bad, X_bad)
   
-  expect_error(colocboost(X = X_list, Y = Y_list), "Please provide the sample index of X and Y, since they do not have the same samples!")
+  expect_error(
+    suppressWarnings(
+      colocboost(
+        X = X_list, 
+        Y = Y_list
+      )
+    ),
+    "Please provide the sample index of X and Y, since they do not have the same samples!"
+  )
 })

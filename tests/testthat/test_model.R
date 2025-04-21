@@ -116,12 +116,18 @@ test_that("colocboost_workhorse performs boosting iterations", {
   
   # If the workhorse function is exported
   if (exists("colocboost_workhorse")) {
-    expect_error({
+    warnings <- capture_warnings({
       result <- colocboost_workhorse(
         cb_obj$cb_data,
         M = 5  # Small number for testing
       )
-    }, NA)
+    })
+    # Check if any of the expected warning patterns are present
+    expect_true(
+      any(grepl("did not coverage", warnings))
+    )
+    # Then test the result
+    expect_s3_class(result, "colocboost")
   } else {
     skip("colocboost_workhorse not directly accessible")
   }

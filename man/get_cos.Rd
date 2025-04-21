@@ -23,7 +23,11 @@ get_cos(
 
 \item{Xcorr}{Correlation matrix of correlations between variables. Alternative to X.}
 
-\item{n_purity}{The maximum number of CoS variables used in calculating the correlation (\dQuote{purity}) statistics.
+\item{n_purity}{The maximum number of CoS variables used in calculating the correlation (\dQuote{purity}) statistics.}
+
+\item{min_abs_corr}{The minimum absolute correlation value of variants in a CoS to be considered pass (\dQuote{purity}) statistics.}
+
+\item{median_abs_corr}{The median absolute correlation value of variants in a CoS to be considered pass (\dQuote{purity}) statistics.
 When the number of variables included in the CoS is greater than this number, the CoS variables are randomly subsampled.}
 }
 \value{

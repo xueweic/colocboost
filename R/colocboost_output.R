@@ -515,6 +515,8 @@ get_ucos_summary <- function(cb_output, outcome_names = NULL, region_name = NULL
 #' @param X Genotype matrix of values of the p variables. Used to compute correlations if Xcorr is not provided.
 #' @param Xcorr Correlation matrix of correlations between variables. Alternative to X.
 #' @param n_purity The maximum number of CoS variables used in calculating the correlation (\dQuote{purity}) statistics. 
+#' @param min_abs_corr The minimum absolute correlation value of variants in a CoS to be considered pass (\dQuote{purity}) statistics.
+#' @param median_abs_corr The median absolute correlation value of variants in a CoS to be considered pass (\dQuote{purity}) statistics.
 #' When the number of variables included in the CoS is greater than this number, the CoS variables are randomly subsampled.
 #'
 #' @return A list of indices of variables in each CoS.
