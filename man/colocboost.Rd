@@ -58,7 +58,7 @@ colocboost(
   weight_fudge_factor = 1.5,
   check_null = 0.1,
   check_null_method = "profile",
-  check_null_max = 0.02,
+  check_null_max = 0.025,
   weaker_effect = TRUE,
   LD_free = FALSE,
   output_level = 1
