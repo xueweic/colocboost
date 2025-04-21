@@ -109,7 +109,7 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data) {
       xtx <- cb_data$data[[X_dict]]$XtX
       cb_model[[i]]$res <- rep(0, cb_model_para$P)
       if (length(cb_data$data[[i]]$variable_miss) != 0) {
-        beta <- beta[-cb_data$data[[i]]$variable_miss]  / beta_scaling
+        beta <- cb_model[[i]]$beta[-cb_data$data[[i]]$variable_miss]  / beta_scaling
         xty <- cb_data$data[[i]]$XtY[-cb_data$data[[i]]$variable_miss]
         cb_model[[i]]$res[-cb_data$data[[i]]$variable_miss] <- xty - scaling_factor * xtx %*% beta
       } else {
