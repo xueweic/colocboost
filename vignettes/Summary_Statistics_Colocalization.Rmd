@@ -190,7 +190,7 @@ for (i in 1:length(X)){
   y <- Y[[i]]
   effect_n[i] <- length(y)
   # simple usiing `rr <- susieR::univariate_regression(X = x, y = y)`
-  output = matrix(0,ncol(X),2)
+  output = matrix(0,ncol(x),2)
   for (i in 1:ncol(x)) {
     fit = summary(lm(y ~ x[,i]))$coef
     if (nrow(fit) == 2)
