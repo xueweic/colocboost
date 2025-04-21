@@ -15,30 +15,31 @@ knitr::opts_chunk$set(
 ```
 
 
-This vignette demonstrates how to use the ColocBoost wrapper pipeline to perform colocalization analysis using `colocboost`. 
-See more details about functions in package `pecotmr` with [link](https://github.com/StatFunGen/pecotmr/tree/main) and 
+This vignette demonstrates how to use the ColocBoost wrapper pipeline to perform colocalization analysis with `colocboost`. 
+
+- See more details about functions in the package `pecotmr` with [link](https://github.com/StatFunGen/pecotmr/tree/main) and 
 `colocboost_pipeline` with [link](https://github.com/StatFunGen/pecotmr/blob/main/R/colocboost_pipeline.R). 
-See more etails about input data preparation in `xqtl_protocal` with [https://statfungen.github.io/xqtl-protocol/code/mnm_analysis/mnm_methods/colocboost.html].
+- See more details about input data preparation in `xqtl_protocol` with [link](https://statfungen.github.io/xqtl-protocol/code/mnm_analysis/mnm_methods/colocboost.html).
 
 
-# 1. Loading Data use `colocboost_analysis_pipeline` function
+# 1. Loading Data using `colocboost_analysis_pipeline` function
 
 
 This function harmonizes the input data and prepares it for colocalization analysis. 
 In this section, we introduce how to load the regional data required for the ColocBoost analysis using the `load_multitask_regional_data` function. 
-This function loads a mixture data sets for a specific region, including individual-level data (genotype, phenotype, covariate data)
-or summary statistics (sumstats, LD). Run \code{load_regional_univariate_data} and \code{load_rss_data} multiple times for different datasets
+This function loads mixed datasets for a specific region, including individual-level data (genotype, phenotype, covariate data)
+or summary statistics (sumstats, LD). Run `load_regional_univariate_data` and `load_rss_data` multiple times for different datasets.
 
 
 Below are the input parameters for this function:
 
-## 1.1. Loading individual level data from multiple corhorts
+## 1.1. Loading individual-level data from multiple cohorts
 
 
-- **`region`** (required): A string of `chr:start-end` for the phenotype region you want to analyzed. 
-- **`genotype_list`**: A vector of path for PLINK bed files containing genotype data. 
-- **`phenotype_list`**: A vector of path for phenotype file names.
-- **`covariate_list`**: A vector of path for covariate file names corresponding to the phenotype file vector.
+- **`region`** (required): A string of `chr:start-end` for the phenotype region you want to analyze. 
+- **`genotype_list`**: A vector of paths for PLINK bed files containing genotype data. 
+- **`phenotype_list`**: A vector of paths for phenotype file names.
+- **`covariate_list`**: A vector of paths for covariate file names corresponding to the phenotype file vector.
 - **`conditions_list_individual`**: A vector of strings representing different conditions or groups.
 - **`match_geno_pheno`**: A vector of indices of phenotypes matched to genotype if multiple genotype PLINK files are used.
 - **`maf_cutoff`**: Minimum minor allele frequency (MAF) cutoff. Default is 0.
@@ -50,14 +51,10 @@ Below are the input parameters for this function:
 - **`region_name_col`**: Column name containing the region name. Default is `NULL`.
 - **`keep_indel`**: Logical indicating whether to keep insertions/deletions (INDELs). Default is `TRUE`.
 - **`keep_samples`**: A vector of sample names to keep. Default is `NULL`.
-- **`phenotype_header`**: Number of rows to skip at the beginning of the transposed phenotype file (default is 4 for `chr`, `start`, `end`, and `ID`).
-- **`scale_residuals`**: Logical indicating whether to scale residuals. Default is `FALSE`.
-- **`tabix_header`**: Logical indicating whether the tabix file has a header. Default is `TRUE`.
-
 
 **Illustrated example**
 
-The following example demonstrates how to set up an input with 3 phenotypes and 2 cohorts, where the first cohort has 2 phenotypes and the second cohort has 1 phenotype.
+The following example demonstrates how to set up input data with 3 phenotypes and 2 cohorts, where the first cohort has 2 phenotypes and the second cohort has 1 phenotype.
 
 ```{r, data-loader-individual}
 # Example of loading individual-level data
@@ -80,7 +77,7 @@ imiss_cutoff = 0.9
 
 
 
-## 1.2. Loading summary statistics from multiple corhorts or data set
+## 1.2. Loading summary statistics from multiple cohorts or datasets
 
 - **`sumstat_path_list`**: A vector of file paths to the summary statistics.
 - **`column_file_path_list`**: A vector of file paths to the column mapping files.
@@ -98,7 +95,7 @@ imiss_cutoff = 0.9
 
 **Illustrated example**
 
-The following example demonstrates how to set up an input with 2 summary and one LD reference.
+The following example demonstrates how to set up input data with 2 summary statistics and one LD reference.
 
 ```{r, data-loader-sumstat}
 # Example of loading summary statistics
@@ -118,13 +115,13 @@ n_controls = c(20000, 40000)
 
 
 
-# Perform ColocBoost using `colocboost_analysis_pipeline` function
+# 2. Perform ColocBoost using `colocboost_analysis_pipeline` function
 
 In this section, we perform the colocalization analysis using the `colocboost_analysis_pipeline` function. Below are the input parameters for this function:
 
 
-- **`region_data`**: The output of the `load_multitask_regional_data` function, which contains harmonized summary statistics and LD matrices for the region of interest.
-- **`focal_trait`**: Name of trait if performing disease prioritized ColocBoost.
+- **`region_data`**: The output of the `load_multitask_regional_data` function.
+- **`focal_trait`**: Name of the trait if performing disease-prioritized ColocBoost.
 - **`event_filters`**: A list of patterns for filtering events based on context names. 
 Example: for sQTL, list(type_pattern = ".*clu_(\\d+_[+-?]).*", valid_pattern = "clu_(\\d+_[+-?]):PR:", exclude_pattern = "clu_(\\d+_[+-?]):IN:").
 - **`maf_cutoff`**: A scalar to remove variants with maf < maf_cutoff, default is 0.005.
@@ -135,4 +132,7 @@ Example: for sQTL, list(type_pattern = ".*clu_(\\d+_[+-?]).*", valid_pattern = "
 - **`impute_opts`**: A list of imputation options including rcond, R2_threshold, and minimum_ld (default: list(rcond = 0.01, R2_threshold = 0.6, minimum_ld = 5)).
 
 
-
+```{r, colocboost-analysis}
+# region_data <- load_multitask_regional_data(...)
+# res <- colocboost_analysis_pipeline(region_data)
+```

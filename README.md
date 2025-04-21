@@ -35,7 +35,7 @@ Learn how to perform colocalization analysis with step-by-step examples. For det
 
 If you use ColocBoost in your research, please cite:
 
-> Cao X, Sun H, Feng R, Mazumder R, Najar CFB, Li YI, de Jager PL, Bennett D, The Alzheimer's Disease Functional Genomics Consortium, Dey KK, Wang G. (2025+). Integrative multi-omics QTL colocalization maps regulatory architecture in aging human brain. medRxiv. [https://doi.org/](https://doi.org/)
+> Cao X, Sun H, Feng R, Mazumder R, Najar CFB, Li YI, de Jager PL, Bennett D, The Alzheimer's Disease Functional Genomics Consortium, Dey KK, Wang G. (2025+). Integrative multi-omics QTL colocalization maps regulatory architecture in aging human brain. medRxiv. [https://doi.org/10.1101/2025.04.17.25326042](https://doi.org/10.1101/2025.04.17.25326042)
 
 
 ## License

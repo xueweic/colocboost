@@ -38,7 +38,7 @@ res <- colocboost(X = Ind_5traits$X, Y = Ind_5traits$Y)
 
 The default plot of the colocboost results provides a visual representation of the colocalization events.
 
-- The x-axis indicates the indices of variants and y-axis indicates the -log10(p-value) from marginal associations.
+- The x-axis indicates the indices of variants, and the y-axis indicates the -log10(p-value) from marginal associations.
 - The colors of the points represent the colocalization events, with different colors indicating different colocalization events.
 
 ```{r basic-plot}
@@ -51,11 +51,11 @@ colocboost_plot(res)
 - `y = "log10p"` (default) with optional 
     - `y = "z_original"` for z-scores
     - `y = "vcp"` for variant colocalization probabilities (single plot for all variants),
-    - `y = "coef"` for regression coefficients estimated from the colocboost model.
+    - `y = "coef"` for regression coefficients estimated from the ColocBoost model.
     - `y = "cos_vcp"` for variant colocalization probabilities (multiple plots for each CoS - only draw VCP for variants in CoS to the colocalized traits).
 - `plot_cos_idx = NULL` (default) indicates all colocalization events are plotted. `plot_cos_idx = 1` can be specified to plot the 1st colocalization event, and so on.
 - `outcome_idx = NULL` (default) indicates only the traits with colocalization are plotted. `outcome_idx = c(1,2,5)` can be specified to plot the traits 1, 2, and 5.
-- `plot_all_outcome = FALSE` (default) indicates only the traits with colocalization are plotted. If `TRUE` can plot all traits.
+- `plot_all_outcome = FALSE` (default) indicates only the traits with colocalization are plotted. If `TRUE`, it will plot all traits.
 - `cos_color = NULL` (default) indicates the colors of the colocalization events. Specify a vector of colors to customize the plot.
 
 
@@ -65,7 +65,7 @@ There are several advanced options available for customizing the plot by deepeni
 
 ### 2.1. Plot with a zoom-in region
 
-You can specify a zoom-in region by providing a `grange` argument, which is a vector of length 2 indicating the start and end indices of the region to be zoomed in.
+You can specify a zoom-in region by providing a `grange` argument, which is a vector indicating the indices of the region to be zoomed in.
 
 ```{r zoomin-plot}
 colocboost_plot(res, grange = c(1:1000))
@@ -111,10 +111,10 @@ colocboost_plot(
 
 ### 2.5. Plot with trait-specific sets if exists
 
-There are two options avaiable for plotting the trait-specific (uncolocalized) variants:
+There are two options available for plotting the trait-specific (uncolocalized) variants:
 
 - `plot_ucos = FALSE` (default), if `TRUE` will plot all trait-specific (uncolocalized) sets.
-- `plot_ucos_idx = NULL` (default) indicates all confidence sets are plotted. `plot_cos_idx = 1` can be specified to plot the 1st confidence sets, and so on.
+- `plot_ucos_idx = NULL` (default) indicates all confidence sets are plotted. `plot_ucos_idx = 1` can be specified to plot the 1st uncolocalized confidence sets, and so on.
 
 *Important Note*: You should use `colocboost(..., output_level = 2)` to obtain the trait-specific (uncolocalized) information.
 
@@ -134,17 +134,17 @@ colocboost_plot(res, plot_ucos = TRUE)
 
 In this example, there are two colocalized sets (<span style="color:blue">blue</span> and <span style="color:orange">orange</span>) and
 two trait-specific sets for trait 4 only (<span style="color:green">green</span> and <span style="color:purple">purple</span>).
-For comprehensive tutorials on result interpretation, please please visit our documentation portal 
+For comprehensive tutorials on result interpretation, please visit our tutorials portal 
 at [Interpret ColocBoost Output](https://statfungen.github.io/colocboost/articles/Interpret_ColocBoost_Output.html).
 
 
 
 ### 2.6 Plot with focal trait for disease prioritized colocalization
 
-There are three options avaiable for plotting the results from disease prioritized colocalization, considering a focal trait:
+There are three options available for plotting the results from disease prioritized colocalization, considering a focal trait:
 
 - `plot_focal_only = FALSE` (default), if `TRUE` will only plot CoS with focal trait and ignoring other CoS.
-- `plot_focal_cos_outocme_only = FALSE` (default) and **recommend** for visulization for disease prioritized colocalization.
+- `plot_focal_cos_outcome_only = FALSE` (default) and **recommend** for visualization for disease prioritized colocalization.
 If `TRUE` will plot all CoS colocalized with at least on traits within CoS of focal traits.
 
 ```{r focal-colocalization}
@@ -164,7 +164,7 @@ res <- colocboost(X = X, Y = Y,
 # Only plot CoS with focal trait
 colocboost_plot(res, plot_focal_only = TRUE)
 # Plot all CoS including at least one traits colocalized with focal trait
-colocboost_plot(res, plot_focal_cos_outocme_only = TRUE)
+colocboost_plot(res, plot_focal_cos_outcome_only = TRUE)
 ```
 
 

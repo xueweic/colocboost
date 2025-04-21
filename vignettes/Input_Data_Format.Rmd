@@ -27,7 +27,8 @@ For analyses using individual-level data, the basic format for single trait is a
 - `X` is an $N \times P$ matrix with $N$ individuals and $P$ variants. Including variant names as column names is highly recommended, especially when working with multiple $X$ matrices and $Y$ vectors.
 - `Y` is a length $N$ vector containing phenotype values for the same $N$ individuals as $X$.
 
-The input format for multiple traits is similar, but `X` matrix should be a list of matrices, each corresponding to a different trait. `Y` vector should also be a list of vectors. 
+The input format for multiple traits is similar, but `X` should be a list of genotype matrices, each corresponding to a different trait. 
+`Y` should also be a list of phenotype vectors. 
 For example:
 
 - `X = list(X1, X2, X3, X4, X5)` where each `Xi` is a matrix for trait `i` - with the dimension of $N_i \times P_i$, where $N_i$ and $P_i$ do not need to be the same for different traits.
@@ -35,10 +36,10 @@ For example:
 
 
 `colocboost` also offers flexible input options (see detailed usage with different input formats, 
-refer to [Individual Level Data Colocalization](https://statfungen.github.io/colocboost/articles/Individual_Level_Colocalization.html).):
+refer to [Individual Level Data Colocalization](https://statfungen.github.io/colocboost/articles/Individual_Level_Colocalization.html)):
 
-- Single $X$ matrix with $N \times P$ with $Y$ matrix with $N \times L$ for $L$ traits.
-- Multiple $X$ matrices and unmatched $Y$ vectors with a mapping dictionary.
+- Single $X$ matrix with $N \times P$, and $Y$ matrix with $N \times L$ for $L$ traits.
+- Multiple $X$ matrices and unmatched $Y$ vectors with a mapping dictionary (example shown in section 3 below).
 
 
 # 2. Summary Statistics
@@ -60,11 +61,11 @@ head(Sumstat_5traits$sumstat[[1]])
 
 The input format for multiple traits is similar, but `sumstat` should be a list of data frames `sumstat = list(sumstat1, sumstat2, sumstat3)`. 
 The flexibility of input format for multiple traits is as follows (see detailed usage with different input formats, 
-refer to [Summary Statistics Colocalization](https://statfungen.github.io/colocboost/articles/Summary_Level_Colocalization.html).):
+refer to [Summary Statistics Colocalization](https://statfungen.github.io/colocboost/articles/Summary_Level_Colocalization.html)):
 
 - One LD matrix with a superset of variants in `sumstat` for all traits is allowed.
 - Multiple LD matrices, each corresponding to a different trait, are also allowed for the trait-specific LD structure.
-- Multiple LD matrices and unmatched `sumstat` data frames with a mapping dictionary are also allowed.  
+- Multiple LD matrices and unmatched `sumstat` data frames with a mapping dictionary are also allowed (example shown in section 3 below).  
 
 
 
@@ -104,5 +105,8 @@ For example, when anaylze $L$ traits for the same $P$ variants with the specifie
 - `effect_n` (highly recommended) is either a scalar or a vector of sample sizes for estimating regression coefficients.
 - `LD` (optional) is LD matrix for the $P$ variants. If it is not provided, it will apply LD-free ColocBoost.
 
-See more details about data format to implement LD-free ColocBoost and LD-mistmatch diagnosis in (LD mismatch diagnosis and LD-free analysis (avaiable soon)).
+
+See more details about Hyprcoloc compatible format in [Summary Statistics Colocalization](https://statfungen.github.io/colocboost/articles/Summary_Level_Colocalization.html)).
+
+See more details about data format to implement LD-free ColocBoost and LD-mistmatch diagnosis in [LD mismatch and LD-free Colocalization](https://statfungen.github.io/colocboost/articles/LD_Free_Colocalization.html)).
 

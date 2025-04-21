@@ -177,8 +177,8 @@ test_that("colocboost_plot handles layout options", {
   # When ylim_each is FALSE, we need to provide a ylim parameter
   expect_error(suppressWarnings(colocboost_plot(cb_res, ylim_each = FALSE, ylim = c(0, 10))), NA)
   
-  # Test with gene_name option
-  expect_error(suppressWarnings(colocboost_plot(cb_res, gene_name = "BRCA1")), NA)
+  # Test with title_specific option
+  expect_error(suppressWarnings(colocboost_plot(cb_res, title_specific = "BRCA1")), NA)
   
   # Test with variant_coord option
   expect_error(suppressWarnings(colocboost_plot(cb_res, variant_coord = FALSE)), NA)
@@ -305,8 +305,8 @@ test_that("colocboost_plot handles focal outcome in complex cases", {
   # Test plot_focal_only option
   expect_error(suppressWarnings(colocboost_plot(cb_res_focal, plot_focal_only = TRUE)), NA)
   
-  # Test plot_focal_cos_outocme_only option
-  expect_error(suppressWarnings(colocboost_plot(cb_res_focal, plot_focal_cos_outocme_only = TRUE)), NA)
+  # Test plot_focal_cos_outcome_only option
+  expect_error(suppressWarnings(colocboost_plot(cb_res_focal, plot_focal_cos_outcome_only = TRUE)), NA)
   
   # Combine focal outcome filtering with other options
   expect_error(suppressWarnings(colocboost_plot(cb_res_focal, 
@@ -314,12 +314,12 @@ test_that("colocboost_plot handles focal outcome in complex cases", {
                                                y = "cos_vcp")), NA)
   
   expect_error(suppressWarnings(colocboost_plot(cb_res_focal, 
-                                               plot_focal_cos_outocme_only = TRUE,
+                                               plot_focal_cos_outcome_only = TRUE,
                                                plot_ucos = TRUE)), NA)
   
   # Test focusing only on outcomes colocalized with focal outcome
   expect_error(suppressWarnings(colocboost_plot(cb_res_focal, 
-                                               plot_focal_cos_outocme_only = TRUE,
+                                               plot_focal_cos_outcome_only = TRUE,
                                                outcome_idx = 1:3)), NA)
 })
 

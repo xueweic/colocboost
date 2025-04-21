@@ -17,7 +17,7 @@ knitr::opts_chunk$set(
 
 This vignette demonstrates how to perform multi-trait colocalization analysis using a mixed-type dataset, including both individual level data and summary statistics. 
 ColocBoost provides a flexible framework to integrate data both at the individual level or at the summary statistic level, 
-allowing to handle scenarios where the individual data is available for some traits (like xQTLs) and the summary data is available for other traits (disease/trait GWAS).
+allowing the handling of scenarios where the individual data is available for some traits (like xQTLs) and the summary data is available for other traits (disease/trait GWAS).
 
 
 ```{r setup}
@@ -26,9 +26,9 @@ library(colocboost)
 
 # 1. Loading individual and summary statistics data
 
-To get started, load both Ind_5traits and Sumstat_5traits datasets into your R session. Once loaded, create a mixed dataset as follows:
+To get started, load both `Ind_5traits` and `Sumstat_5traits` datasets into your R session. Once loaded, create a mixed dataset as follows:
 
-- For traits 1, 2, 3, 4: use individual-level gentype and phenotype data.
+- For traits 1, 2, 3, 4: use individual level genotype and phenotype data.
 - For trait 5: use summary statistics data.
 - Note that `LD` could be calculated from the `X` data in the `Ind_5traits` dataset, but it is not included in the `Sumstat_5traits` dataset.
 
@@ -50,7 +50,7 @@ sumstat <- Sumstat_5traits$sumstat[5]
 LD <- get_cormat(Ind_5traits$X[[1]])
 ```
 
-For analyze the specific one type of data, you can refer to the following 
+For analyze a specific one type of data, you can refer to the following 
 tutorials [Individual Level Data Colocalization](https://statfungen.github.io/colocboost/articles/Individual_Level_Colocalization.html) and 
 [Summary Level Data Colocalization](https://statfungen.github.io/colocboost/articles/Summary_Level_Colocalization.html).
 
@@ -61,8 +61,8 @@ tutorials [Individual Level Data Colocalization](https://statfungen.github.io/co
 The preferred format for colocalization analysis in ColocBoost using mixed-type dataset:
 
 - **Individual level data**: `X` and `Y` are organized as lists, matched by trait index,
-    - `(X[1], Y[1])` contains individuals for trait 1,
-    - `(X[2], Y[2])` contains individuals for trait 2,
+    - `(X[1], Y[1])` contains individual level data for trait 1,
+    - `(X[2], Y[2])` contains individual level data for trait 2,
     - And so on for each trait under analysis.
 
 - **Summary level data**:
@@ -85,7 +85,7 @@ colocboost_plot(res)
 
 ### Results Interpretation
 
-For comprehensive tutorials on result interpretation and advanced visualization techniques, please visit our documentation portal 
+For comprehensive tutorials on result interpretation and advanced visualization techniques, please visit our tutorials portal 
 at [Visualization of ColocBoost Results](https://statfungen.github.io/colocboost/articles/Visualization_ColocBoost_Output.html) and
 [Interpret ColocBoost Output](https://statfungen.github.io/colocboost/articles/Interpret_ColocBoost_Output.html).
 
@@ -93,17 +93,15 @@ at [Visualization of ColocBoost Results](https://statfungen.github.io/colocboost
 
 # 3. ColocBoost in disease-prioritized mode
 
-Disease-prioritized mode of ColocBoost can 
-
-When integrating with GWAS data, to mitigate the risk of biasing early updates toward stronger xQTL signals in LD proximity—and 
-should in fact colocalize with—weaker signals from the disease trait of interest, 
+When integrating with GWAS data, to mitigate the risk of biasing early updates toward stronger xQTL signals in LD proximity-and 
+should in fact colocalize with-weaker signals from the disease trait of interest, 
 we also implement a disease-prioritized mode of ColocBoost as a soft prioritization strategy to colocalize variants with putative causal effects on the focal trait.
 
 To run the disease-prioritized mode, you need to specify the `focal_outcome_idx` argument in the `colocboost()` function.
 
 - `focal_outcome_idx` indicates the index of the focal trait in all traits of interest.
-- Note that the `focal_outcome_idx` are counted from *individual level data* to *summmary statistics*.
-Therefore, in this example, `focal_outcome_idx = 5` is used to indicate the index of the focal trait from (4 individual level traits) and (1 summary statistcs).
+- Note that the `focal_outcome_idx` are counted from *individual level data* to *summary statistics*.
+Therefore, in this example, `focal_outcome_idx = 5` is used to indicate the index of the focal trait from (4 individual level traits) and (1 summary statistics).
 
 
 ```{r disease-basic}
@@ -118,7 +116,7 @@ colocboost_plot(res, plot_focal_only = TRUE)
 
 
 Unlike the other existing methods, the disease-prioritized mode of ColocBoost only used a soft prioritization strategy.
-Therefore, it does not only identify the colocalization of the focal trait,  but also the colocalization across the other traits without the focal trait. 
+Therefore, it not only identify the colocalization of the focal trait, but also the colocalization across the other traits without the focal trait. 
 To extract all CoS and visualization of all colocalization results, you can use the following code:
 
 ```{r all-basic}
@@ -132,7 +130,7 @@ colocboost_plot(res)
 
 ### Results Interpretation
 
-For comprehensive tutorials on result interpretation and advanced visualization techniques, please visit our documentation portal 
+For comprehensive tutorials on result interpretation and advanced visualization techniques, please visit our tutotials portal 
 at [Visualization of ColocBoost Results](https://statfungen.github.io/colocboost/articles/Visualization_ColocBoost_Output.html) and
 [Interpret ColocBoost Output](https://statfungen.github.io/colocboost/articles/Interpret_ColocBoost_Output.html).
 

@@ -15,7 +15,7 @@ colocboost_plot(
   outcome_idx = NULL,
   plot_all_outcome = FALSE,
   plot_focal_only = FALSE,
-  plot_focal_cos_outocme_only = FALSE,
+  plot_focal_cos_outcome_only = FALSE,
   points_color = "grey80",
   cos_color = NULL,
   add_vertical = FALSE,
@@ -29,7 +29,7 @@ colocboost_plot(
   show_cos_to_uncoloc_outcome = NULL,
   plot_ucos = FALSE,
   plot_ucos_idx = NULL,
-  gene_name = NULL,
+  title_specific = NULL,
   ylim_each = TRUE,
   outcome_legend_pos = "top",
   outcome_legend_size = 1.8,
@@ -56,7 +56,7 @@ colocboost_plot(
 
 \item{plot_focal_only}{Logical, if TRUE only plots colocalization with focal outcome, default is FALSE.}
 
-\item{plot_focal_cos_outocme_only}{Logical, if TRUE only plots colocalization including at least on colocalized outcome with focal outcome, default is FALSE.}
+\item{plot_focal_cos_outcome_only}{Logical, if TRUE only plots colocalization including at least on colocalized outcome with focal outcome, default is FALSE.}
 
 \item{points_color}{Background color for non-colocalized variables, default is "grey80".}
 
@@ -84,7 +84,7 @@ colocboost_plot(
 
 \item{plot_ucos_idx}{Optional indices of trait-specific (uncolocalized) sets to plot when included}
 
-\item{gene_name}{Optional gene name to display in plot title}
+\item{title_specific}{Optional specific title to display in plot title}
 
 \item{ylim_each}{Logical, if TRUE uses separate y-axis limits for each plot, default is TRUE}
 

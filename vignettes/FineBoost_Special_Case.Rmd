@@ -15,9 +15,7 @@ knitr::opts_chunk$set(
 ```
 
 
-This vignette demonstrates how to perform single-trait fine-mapping analysis using FineBoost, a specialized single-trait version of ColocBoost,
-from both individual-level data and summary statistics. Specifically focusing on the 2nd trait with 2 causal variants (644 and 2289) from 
-`Ind_5traits` and `Sumstat_5traits` dataset included in the package.
+This vignette demonstrates how to perform single-trait fine-mapping analysis using FineBoost, a specialized single-trait version of ColocBoost, with both individual-level data and summary statistics. Specifically focusing on the 2nd trait with 2 causal variants (644 and 2289) from the `Ind_5traits` and `Sumstat_5traits` datasets included in the package.
 
 
 ```{r setup}
@@ -28,10 +26,10 @@ library(colocboost)
 # 1. Fine-mapping with individual-level data
 
 In this section, we demonstrate how to perform fine-mapping using individual-level genotype (`X`) and phenotype (`Y`) data. 
-This approach directly uses the raw data to identify causal variants.
+This approach uses raw data directly to identify causal variants.
 
 
-```{r load-example-indiviudal}
+```{r load-example-individual}
 # Load example data
 data(Ind_5traits)
 X <- Ind_5traits$X[[2]]
@@ -44,7 +42,7 @@ colocboost_plot(res)
 
 # 2. Fine-mapping with summary statistics
 
-This section demonstrates fine-mapping analysis using summary statistics and a proper LD matrix. 
+This section demonstrates fine-mapping analysis using summary statistics along with a proper LD matrix. 
 
 ```{r load-example-sumstat}
 # Load example data
@@ -56,10 +54,11 @@ res <- colocboost(sumstat = sumstat, LD = LD)
 colocboost_plot(res)
 ```
 
+
 # 3. LD-free fine-mapping with one causal variant assumption
 
-In scenarios where LD information is unavailable, FineBoost can still perform fine-mapping under the assumption of a single causal variant. 
-This approach is less computationally intensive but assumes that only one variant in a region is causal.
+In scenarios where LD information is unavailable, FineBoost can still perform fine-mapping under the assumption that there is a single causal variant. 
+This approach is less computationally intensive but assumes that only one variant within a region is causal.
 
 ```{r ld-free}
 # Load example data
