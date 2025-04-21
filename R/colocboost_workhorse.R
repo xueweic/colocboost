@@ -135,7 +135,9 @@ colocboost_workhorse <- function(cb_data,
         pos_rtr_stop <- which(sum_cor == 0)
         if (length(pos_rtr_stop) != 0) {
           cb_model_para$update_y[pos.update[pos_rtr_stop]] <- 0
-          message_focal_text <- if (focal_outcome_idx %in% pos.update[pos_rtr_stop]) "including focal outcome" else NULL
+          if (!is.null(focal_outcome_idx)){
+            message_focal_text <- if (focal_outcome_idx %in% pos.update[pos_rtr_stop]) "including focal outcome" else NULL
+          } else {message_focal_text <- NULL}
           message(paste(
             "Gradient boosting for outcome", paste(pos.update[pos_rtr_stop], collapse = ", "), message_focal_text,
             "stop since rtr < 0 or max(correlation) > 1 after", m, "iterations!",
