@@ -176,7 +176,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                        weight_fudge_factor = 1.5, # integrative weight
                        check_null = 0.1, # the cut off value for change conditional objective function
                        check_null_method = "profile", # the metric to check the null sets.
-                       check_null_max = 0.02, # the smallest value of change of profile loglikelihood for each outcome.
+                       check_null_max = 0.025, # the smallest value of change of profile loglikelihood for each outcome.
                        weaker_effect = TRUE,
                        LD_free = FALSE,
                        output_level = 1) {
