@@ -207,7 +207,6 @@ w_purity <- function(weights, X = NULL, Xcorr = NULL, N = NULL, n = 100, coverag
   return(is_pure)
 }
 
-
 #' Function to remove the spurious signals
 #' @importFrom utils head tail
 #' @keywords cb_post_inference
@@ -231,6 +230,8 @@ check_null_post <- function(cb_obj,
       mean((Y - X %*% as.matrix(cs_beta))^2) * N / (N - 1)
     } else if (!is.null(XtY)) {
       scaling_factor <- if (!is.null(N)) (N - 1) else 1
+      beta_scaling <- if (!is.null(N)) 1 else 100
+      cs_beta <- cs_beta / beta_scaling
       yty <- YtY / scaling_factor
       xtx <- XtX
       if (length(miss_idx) != 0) {
@@ -283,14 +284,15 @@ check_null_post <- function(cb_obj,
       return(Y - X %*% cs_beta)
     } else if (!is.null(XtX)) {
       scaling.factor <- if (!is.null(N)) N - 1 else 1
+      beta_scaling <- if (!is.null(N)) 1 else 100
       xtx <- XtX / scaling.factor
       if (length(miss_idx) != 0) {
         xty <- XtY[-miss_idx] / scaling.factor
         res.tmp <- rep(0, length(XtY))
-        res.tmp[-miss_idx] <- xty - xtx %*% cs_beta[-miss_idx]
+        res.tmp[-miss_idx] <- xty - xtx %*% (cs_beta[-miss_idx] / beta_scaling)
       } else {
         xty <- XtY / scaling.factor
-        res.tmp <- xty - xtx %*% cs_beta
+        res.tmp <- xty - xtx %*% (cs_beta / beta_scaling)
       }
       return(res.tmp)
     }
@@ -476,6 +478,8 @@ get_cos_evidence <- function(cb_obj, coloc_out, data_info) {
       yty <- var(Y)
     } else if (!is.null(XtY)) {
       scaling_factor <- if (!is.null(N)) (N - 1) else 1
+      beta_scaling <- if (!is.null(N)) 1 else 100
+      cs_beta <- cs_beta / beta_scaling
       yty <- YtY / scaling_factor
       xtx <- XtX
       if (length(miss_idx) != 0) {

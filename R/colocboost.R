@@ -468,8 +468,8 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
       warning(
         "Providing the sample size (n), or even a rough estimate of n, ",
         "is highly recommended. Without n, the implicit assumption is ",
-        "n is large (Inf) and the effect sizes are small (close to zero).",
-        "outcome ", paste(p_no, collapse = ","), " in sumstat don't contain 'n'!"
+        "n is large (Inf) and the effect sizes are small (close to zero). ",
+        "Outcome ", paste(p_no, collapse = ", "), " in sumstat don't contain 'n'!"
       )
     }
 

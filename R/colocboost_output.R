@@ -744,8 +744,14 @@ get_data_info <- function(cb_obj) {
     is_focal[cb_obj$cb_model_para$focal_outcome_idx] <- TRUE
   }
   is_sumstat <- grepl("sumstat_outcome", names(cb_obj$cb_data$data))
+  N <- cb_obj$cb_model_para$N
+  check_no_N <- sapply(cb_obj$cb_model_para$N, is.null)
+  if (sum(check_no_N)!=0){
+    N[which(check_no_N)] <- "NA"
+    N <- unlist(N)
+  }
   outcome_info <- data.frame(
-    "outcome_names" = analysis_outcome, "sample_size" = cb_obj$cb_model_para$N,
+    "outcome_names" = analysis_outcome, "sample_size" = N,
     "is_sumstats" = is_sumstat, "is_focal" = is_focal
   )
   rownames(outcome_info) <- paste0("y", 1:n_outcome)

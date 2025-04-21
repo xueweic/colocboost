@@ -41,10 +41,12 @@ colocboost_init_data <- function(X, Y, dict_YX,
   class(cb_data) <- "colocboost"
   if (!is.null(dict_YX) & !is.null(dict_sumstatLD)) {
     dict <- c(dict_YX, max(dict_YX) + dict_sumstatLD)
+    n_ind_variable <- max(dict_YX)
   } else if (!is.null(dict_YX) & is.null(dict_sumstatLD)) {
     dict <- dict_YX
   } else if (is.null(dict_YX) & !is.null(dict_sumstatLD)) {
     dict <- dict_sumstatLD
+    n_ind_variable <- 0
   }
   if (focal_outcome_variables & !is.null(focal_outcome_idx)) {
     if (focal_outcome_idx > length(dict)) {
@@ -85,7 +87,7 @@ colocboost_init_data <- function(X, Y, dict_YX,
   if (!is.null(Z) & !is.null(LD)) {
     ####################### need to consider more #########################
     # ------ only code up one sumstat
-    variant_lists <- keep_variables[c(flag:length(keep_variables))]
+    variant_lists <- keep_variables[c((n_ind_variable+1):length(keep_variables))]
     sumstat_formated <- process_sumstat(
       Z, N_sumstat, Var_y, SeBhat, LD,
       variant_lists, dict_sumstatLD,
@@ -350,6 +352,8 @@ get_correlation <- function(X = NULL, res = NULL, XtY = NULL, N = NULL,
   } else if (!is.null(XtY)) {
     corr <- rep(0, length(XtY))
     scaling_factor <- if (!is.null(N)) (N - 1) else 1
+    beta_scaling <- if (!is.null(N)) 1 else 100
+    beta_k <- beta_k / beta_scaling
     YtY <- YtY / scaling_factor
     XtX <- XtX
     if (length(miss_idx) != 0) {

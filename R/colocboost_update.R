@@ -104,15 +104,16 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data) {
       profile_log <- mean((y - x %*% beta)^2) * adj_dep
     } else if (!is.null(cb_data$data[[X_dict]]$XtX)) {
       scaling_factor <- if (!is.null(cb_data$data[[i]]$N)) cb_data$data[[i]]$N - 1 else 1
+      beta_scaling <- if (!is.null(cb_data$data[[i]]$N)) 1 else 100
       # - summary statistics
       xtx <- cb_data$data[[X_dict]]$XtX
       cb_model[[i]]$res <- rep(0, cb_model_para$P)
       if (length(cb_data$data[[i]]$variable_miss) != 0) {
-        beta <- cb_model[[i]]$beta[-cb_data$data[[i]]$variable_miss]
+        beta <- beta[-cb_data$data[[i]]$variable_miss]  / beta_scaling
         xty <- cb_data$data[[i]]$XtY[-cb_data$data[[i]]$variable_miss]
         cb_model[[i]]$res[-cb_data$data[[i]]$variable_miss] <- xty - scaling_factor * xtx %*% beta
       } else {
-        beta <- cb_model[[i]]$beta
+        beta <- cb_model[[i]]$beta / beta_scaling
         xty <- cb_data$data[[i]]$XtY
         cb_model[[i]]$res <- xty - scaling_factor * xtx %*% beta
       }
