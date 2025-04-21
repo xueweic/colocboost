@@ -6,7 +6,7 @@ citEntry(
   author   = c(person("Xuewei", "Cao"),
                person("Haochen", "Sun"),
                person("Ru", "Feng"),
-               person("Rajib", "Mazumder"),
+               person("Rahul", "Mazumder"),
                person("Cristian F. B.", "Najar"),
                person("Yang I.", "Li"),
                person("Philip L.", "de Jager"),
