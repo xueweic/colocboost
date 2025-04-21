@@ -507,14 +507,19 @@ get_ucos_summary <- function(cb_output, outcome_names = NULL, region_name = NULL
 }
 
 #' Extract CoS at different coverages
-#'
-#' @description `get_cos` get the colocalization confidence sets (CoS) with different coverage. If Genotype...provided...check purity
-#'
+#' 
+#' @description `get_cos` extracts colocalization confidence sets (CoS) at different coverage levels 
+#' from ColocBoost results. When genotype data (X) or correlation matrix (Xcorr) is provided, it 
+#' can also calculate and filter CoS based on purity statistics, ensuring that variants within 
+#' each CoS are sufficiently correlated.
+#' 
 #' @param cb_output Output object from `colocboost` analysis
 #' @param coverage A number between 0 and 1 specifying the \dQuote{coverage} of the estimated colocalization confidence sets (CoS) (default is 0.95).
 #' @param X Genotype matrix of values of the p variables. Used to compute correlations if Xcorr is not provided.
 #' @param Xcorr Correlation matrix of correlations between variables. Alternative to X.
 #' @param n_purity The maximum number of CoS variables used in calculating the correlation (\dQuote{purity}) statistics. 
+#' @param min_abs_corr The minimum absolute correlation value of variants in a CoS to be considered pass (\dQuote{purity}) statistics.
+#' @param median_abs_corr The median absolute correlation value of variants in a CoS to be considered pass (\dQuote{purity}) statistics.
 #' When the number of variables included in the CoS is greater than this number, the CoS variables are randomly subsampled.
 #'
 #' @return A list of indices of variables in each CoS.

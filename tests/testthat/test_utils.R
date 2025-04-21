@@ -175,14 +175,6 @@ test_that("get_cormat calculates correlation matrix correctly", {
   expect_equal(result, expected, tolerance = 1e-6)
 })
 
-# Test for check_jk_jkeach function
-test_that("check_jk_jkeach identifies equivalent variants based on LD", {
-  skip("Internal function being tested through main function")
-  
-  # This function is harder to test directly as it relies on internal colocboost objects
-  # We'll test it indirectly through colocboost main function
-})
-
 # Test for get_between_purity function
 test_that("get_between_purity calculates correlation between sets", {
   # Create test data with known correlation structure
@@ -213,12 +205,6 @@ test_that("get_between_purity calculates correlation between sets", {
   expect_lt(result2[1], 0.5)
 })
 
-# Test for get_max_profile function
-test_that("get_max_profile updates check_null_max correctly", {
-  skip("Internal function being tested through main function")
-  
-  # This function modifies internal CB object - hard to test directly
-})
 
 # Test for get_merge_ordered_with_indices function
 test_that("get_merge_ordered_with_indices merges vectors", {
