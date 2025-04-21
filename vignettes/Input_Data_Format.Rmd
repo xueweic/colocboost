@@ -61,7 +61,7 @@ head(Sumstat_5traits$sumstat[[1]])
 
 The input format for multiple traits is similar, but `sumstat` should be a list of data frames `sumstat = list(sumstat1, sumstat2, sumstat3)`. 
 The flexibility of input format for multiple traits is as follows (see detailed usage with different input formats, 
-refer to [Summary Statistics Colocalization](https://statfungen.github.io/colocboost/articles/Summary_Level_Colocalization.html).):
+refer to [Summary Statistics Colocalization](https://statfungen.github.io/colocboost/articles/Summary_Level_Colocalization.html)):
 
 - One LD matrix with a superset of variants in `sumstat` for all traits is allowed.
 - Multiple LD matrices, each corresponding to a different trait, are also allowed for the trait-specific LD structure.
@@ -104,6 +104,9 @@ For example, when anaylze $L$ traits for the same $P$ variants with the specifie
 - `effect_se` (required) is $P \times L$ matrix of standard errors for the regression coefficients.
 - `effect_n` (highly recommended) is either a scalar or a vector of sample sizes for estimating regression coefficients.
 - `LD` (optional) is LD matrix for the $P$ variants. If it is not provided, it will apply LD-free ColocBoost.
+
+
+See more details about Hyprcoloc compatible format in [Summary Statistics Colocalization](https://statfungen.github.io/colocboost/articles/Summary_Level_Colocalization.html)).
 
 See more details about data format to implement LD-free ColocBoost and LD-mistmatch diagnosis in [LD mismatch and LD-free Colocalization](https://statfungen.github.io/colocboost/articles/LD_Free_Colocalization.html)).
 

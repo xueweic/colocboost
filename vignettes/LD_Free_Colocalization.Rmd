@@ -114,3 +114,32 @@ res_free <- colocboost(sumstat = sumstat)
 While this method is computationally efficient, it has limitations due to the strong assumption of a single causal variant per trait per region. 
 Users should interpret the results with caution, especially in regions with complex LD structures or multiple causal variants.
 
+
+ColocBoost also provides a flexibility to use Hyprcoloc compatible format for summary statistics without LD matrix.
+
+```{r hyprcoloc-compatible}
+# Loading the Dataset
+data(Ind_5traits)
+X <- Ind_5traits$X
+Y <- Ind_5traits$Y
+
+# Coverting to Hyprcoloc compatible format
+effect_est <- effect_se <- effect_n <- c()
+for (i in 1:length(X)){
+  x <- X[[i]]
+  y <- Y[[i]]
+  effect_n[i] <- length(y)
+  rr <- susieR::univariate_regression(X = x, y = y)
+  effect_est <- cbind(effect_est, rr$betahat)
+  effect_se <- cbind(effect_se, rr$sebetahat)
+}
+colnames(effect_est) <- colnames(effect_se) <- c("Y1", "Y2", "Y3", "Y4", "Y5")
+rownames(effect_est) <- rownames(effect_se) <- colnames(X[[1]])
+
+# Run colocboost
+res <- colocboost(effect_est = effect_est, effect_se = effect_se, effect_n = effect_n)
+
+# Identified CoS
+res$cos_details$cos$cos_index
+```
+
