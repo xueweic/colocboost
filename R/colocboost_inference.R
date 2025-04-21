@@ -60,9 +60,9 @@ get_cormat <- function(X, intercepte = TRUE) {
   return(cr)
 }
 
-#' @title Perform modularity-based hierarchical clustering
+#' @title Perform modularity-based hierarchical clustering for a correlation matrix
 #' @description
-#' This function performs a modularity-based hierarchical clustering approach to identify clusters from a correlation matrix (LD matrix).
+#' This function performs a modularity-based hierarchical clustering approach to identify clusters from a correlation matrix.
 #'
 #' @param cormat A correlation matrix.
 #' @param min_cluster_corr The small correlation for the weights distributions across different iterations to be decided having only one cluster. Default is 0.8.
@@ -495,7 +495,7 @@ get_cos_evidence <- function(cb_obj, coloc_out, data_info) {
     if (delta <= 0) {
       warning(paste(
         "Warning message: potential sumstat & LD mismatch may happens for outcome", outcome_idx,
-        ". Using logLR  = CoS(profile) - max(profile). Please check our website."
+        ". Using logLR  = CoS(profile) - max(profile). Please check our website https://statfungen.github.io/colocboost/articles/."
       ))
     }
     cos_profile

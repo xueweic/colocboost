@@ -977,7 +977,9 @@ get_model_info <- function(cb_obj, outcome_names = NULL) {
 
   profile_loglik <- cb_obj$cb_model_para$profile_loglike
   n_updates <- cb_obj$cb_model_para$num_updates
+  n_updates_outcome <- cb_obj$cb_model_para$num_updates_outcome
   model_coveraged <- cb_obj$cb_model_para$coveraged
+  model_coveraged_outcome <- cb_obj$cb_model_para$coveraged_outcome
   jk_update <- cb_obj$cb_model_para$real_update_jk
   if (!is.null(jk_update)){
     rownames(jk_update) <- paste0("jk_star_", 1:nrow(jk_update))
@@ -987,7 +989,8 @@ get_model_info <- function(cb_obj, outcome_names = NULL) {
   outcome_coupled_best_update_obj <- lapply(cb_obj$cb_model, function(cb) cb$obj_single)
   outcome_profile_loglik <- lapply(cb_obj$cb_model, function(cb) cb$profile_loglike_each)
   names(outcome_proximity_obj) <- names(outcome_coupled_best_update_obj) <-
-    names(outcome_profile_loglik) <- outcome_names
+    names(outcome_profile_loglik) <- names(n_updates_outcome) <- 
+    names(model_coveraged_outcome) <- outcome_names
   ll <- list(
     "model_coveraged" = model_coveraged,
     "n_updates" = n_updates,
@@ -995,6 +998,8 @@ get_model_info <- function(cb_obj, outcome_names = NULL) {
     "outcome_profile_loglik" = outcome_profile_loglik,
     "outcome_proximity_obj" = outcome_proximity_obj,
     "outcome_coupled_best_update_obj" = outcome_coupled_best_update_obj,
+    "outcome_model_coveraged" = model_coveraged_outcome,
+    "outcome_n_updates" = n_updates_outcome,
     "jk_star" = jk_update
   )
   return(ll)

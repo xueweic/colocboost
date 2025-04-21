@@ -175,7 +175,7 @@ boost_KL_delta <- function(z, ld_feature, adj_dep,
 }
 
 
-boost_check_stop <- function(cb_model, cb_model_para, pos_stop,
+boost_check_stop <- function(cb_model, cb_model_para, pos_stop, stop_no_coverage,
                              multi_test_max = 1) {
   # - check the iteration for the stop outcome (pos_stop has the same jk with original data)
   iter_each <- sapply(pos_stop, function(i) {
@@ -189,6 +189,7 @@ boost_check_stop <- function(cb_model, cb_model_para, pos_stop,
     # --- stop all pos_stop outcomes
     cb_model_para$update_y[pos_stop] <- 0
     cb_model_para$true_stop <- pos_stop
+    cb_model_para$no_coverage_stop <- which(stop_no_coverage==TRUE)
     cb_model_para$need_more <- NULL
   } else {
     # keep boosting for outcome with <= 10 iterations

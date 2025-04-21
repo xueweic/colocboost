@@ -263,6 +263,11 @@ colocboost_init_para <- function(cb_data, cb_model, tau = 0.01,
   }
   # - initial coloc_thresh
   coloc_thresh <- (1 - coloc_thresh) * max(sapply(1:length(cb_model), function(i) max(cb_model[[i]]$change_loglike)))
+  # - initial num_updates_outcome and coveraged outcome
+  num_updates_outcome <- lapply(1:L, function(i) 1)
+  coveraged_outcome <- lapply(1:L, function(i) TRUE)
+  names(num_updates_outcome) <- names(coveraged_outcome) <- names(cb_model)
+  
   cb_model_para <- list(
     "L" = L,
     "P" = P,
@@ -289,7 +294,9 @@ colocboost_init_para <- function(cb_data, cb_model, tau = 0.01,
     "variables" = cb_data$variable.names,
     "focal_outcome_idx" = focal_outcome_idx,
     "coveraged" = TRUE,
-    "num_updates" = 1
+    "num_updates" = 1,
+    "coveraged_outcome" = coveraged_outcome,
+    "num_updates_outcome" = num_updates_outcome
   )
   class(cb_model_para) <- "colocboost"
 

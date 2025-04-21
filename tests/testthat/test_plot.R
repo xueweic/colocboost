@@ -133,8 +133,8 @@ test_that("colocboost_plot handles filtering options", {
   # Test with plot_focal_only
   expect_error(suppressWarnings(colocboost_plot(cb_res, plot_focal_only = TRUE)), NA)
   
-  # Test with plot_focal_cos_outocme_only
-  expect_error(suppressWarnings(colocboost_plot(cb_res, plot_focal_cos_outocme_only = TRUE)), NA)
+  # Test with plot_focal_cos_outcome_only
+  expect_error(suppressWarnings(colocboost_plot(cb_res, plot_focal_cos_outcome_only = TRUE)), NA)
 })
 
 # Test colocboost_plot with visual customization options
