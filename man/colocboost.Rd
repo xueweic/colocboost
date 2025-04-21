@@ -23,7 +23,7 @@ colocboost(
   effect_est = NULL,
   effect_se = NULL,
   effect_n = NULL,
-  M = NULL,
+  M = 500,
   stop_thresh = 1e-06,
   tau = 0.01,
   learning_rate_init = 0.01,
@@ -105,7 +105,7 @@ The innovation: do not provide the same matrix in \code{LD} to reduce the comput
 
 \item{effect_n}{A scalar or a vector of sample sizes for estimating regression coefficients. Highly recommended!}
 
-\item{M}{The maximum number of gradient boosting rounds. If the number of outcomes are large, it will be automatically increased to a larger number.}
+\item{M}{The maximum number of gradient boosting rounds for each outcome (default is 500).}
 
 \item{stop_thresh}{The stop criterion for overall profile loglikelihood function.}
 

@@ -1,13 +1,13 @@
 ---
-title: "Summary Statistics Colocalization"
+title: "Summary Statistics Data Colocalization"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Summary Statistics Colocalization}
+  %\VignetteIndexEntry{Summary Statistics Data Colocalization}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
+```{r, include = FALSE}s
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"

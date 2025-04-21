@@ -2,7 +2,7 @@
 % Please edit documentation in R/colocboost_inference.R
 \name{get_hierarchical_clusters}
 \alias{get_hierarchical_clusters}
-\title{Perform modularity-based hierarchical clustering}
+\title{Perform modularity-based hierarchical clustering for a correlation matrix}
 \usage{
 get_hierarchical_clusters(cormat, min_cluster_corr = 0.8)
 }
@@ -17,7 +17,7 @@ A list containing:
 \item{Q_modularity}{The modularity values for the identified clusters.}
 }
 \description{
-This function performs a modularity-based hierarchical clustering approach to identify clusters from a correlation matrix (LD matrix).
+This function performs a modularity-based hierarchical clustering approach to identify clusters from a correlation matrix.
 }
 \examples{
 # Example usage

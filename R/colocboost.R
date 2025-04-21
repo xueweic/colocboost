@@ -39,7 +39,7 @@
 #' @param effect_se Matrix of standard errors associated with the beta values
 #' @param effect_n A scalar or a vector of sample sizes for estimating regression coefficients. Highly recommended!
 #'
-#' @param M The maximum number of gradient boosting rounds. If the number of outcomes are large, it will be automatically increased to a larger number.
+#' @param M The maximum number of gradient boosting rounds for each outcome (default is 500).
 #' @param stop_thresh The stop criterion for overall profile loglikelihood function.
 #' @param tau The smooth parameter for proximity adaptive smoothing weights for the best update jk-star.
 #' @param learning_rate_init The minimum learning rate for updating in each iteration.
@@ -140,7 +140,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                        effect_se = NULL, # same as HyPrColoc, sebeta hat matrix with rowname of variable names
                        effect_n = NULL,
                        ###### - Model Parameters
-                       M = NULL, # maximum iteration time
+                       M = 500, # maximum iteration for each outcome 
                        stop_thresh = 1e-06, # stop criterion for profile_log and objective functions
                        tau = 0.01, # kernal_tau parameter for proximity smoothing weight
                        learning_rate_init = 0.01, # minimum step size for updating in each boosting round
