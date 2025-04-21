@@ -34,7 +34,10 @@ When the number of variables included in the CoS is greater than this number, th
 A list of indices of variables in each CoS.
 }
 \description{
-\code{get_cos} get the colocalization confidence sets (CoS) with different coverage. If Genotype...provided...check purity
+\code{get_cos} extracts colocalization confidence sets (CoS) at different coverage levels
+from ColocBoost results. When genotype data (X) or correlation matrix (Xcorr) is provided, it
+can also calculate and filter CoS based on purity statistics, ensuring that variants within
+each CoS are sufficiently correlated.
 }
 \examples{
 # colocboost example
