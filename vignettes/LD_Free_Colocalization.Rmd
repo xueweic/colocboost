@@ -129,12 +129,21 @@ for (i in 1:length(X)){
   x <- X[[i]]
   y <- Y[[i]]
   effect_n[i] <- length(y)
-  rr <- susieR::univariate_regression(X = x, y = y)
-  effect_est <- cbind(effect_est, rr$betahat)
-  effect_se <- cbind(effect_se, rr$sebetahat)
+  # simply use `rr <- susieR::univariate_regression(X = x, y = y)`
+  output = matrix(0,ncol(x),2)
+  for (i in 1:ncol(x)) {
+    fit = summary(lm(y ~ x[,i]))$coef
+    if (nrow(fit) == 2)
+      output[i,] = as.vector(fit[2,1:2])
+    else
+      output[i,] = c(0,0)
+  }
+  effect_est <- cbind(effect_est, output[,1])
+  effect_se <- cbind(effect_se, output[,2])
 }
 colnames(effect_est) <- colnames(effect_se) <- c("Y1", "Y2", "Y3", "Y4", "Y5")
 rownames(effect_est) <- rownames(effect_se) <- colnames(X[[1]])
+
 
 # Run colocboost
 res <- colocboost(effect_est = effect_est, effect_se = effect_se, effect_n = effect_n)
