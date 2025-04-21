@@ -34,6 +34,7 @@ An inaccurate LD matrix may lead to unreliable colocalization results, especiall
 ### Why LD Mismatch Matters
 
 An inaccurate LD matrix can cause inconsistencies between the summary statistics and the reference LD matrix, leading to:
+
 - Biased estimates of causal variants.
 - Increased computational time due to slower algorithm convergence.
 - Potentially misleading colocalization results.
@@ -93,6 +94,7 @@ To address these challenges, ColocBoost provides two alternative approaches for 
 with the assumption of one causal variant per trait per region:
 
 - **One iteration approach** (recommended): performing only 1 iteration of gradient boosting with the LD matrix ensures that:
+
   - The LD matrix is only used to check the equivalence among trait-specific best update variants.
   - The accuracy of the results is improved compared to completely ignoring the LD matrix.
 
