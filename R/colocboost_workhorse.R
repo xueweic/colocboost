@@ -69,9 +69,10 @@ colocboost_workhorse <- function(cb_data,
     func_compare = func_compare,
     coloc_thresh = coloc_thresh
   )
-            
+  
+  M_single_outcome <- 200      
   if (is.null(M)) {
-    M <- cb_model_para$L * 200
+    M <- cb_model_para$L * M_single_outcome
   }
   cb_model_para$M <- M
   # - if multi_test value > multi_test cutoff for some outcomes, we will not update them.
@@ -158,9 +159,10 @@ colocboost_workhorse <- function(cb_data,
             )
             cb_model[[i]]$multi_correction <- multiple_testing_correction
             stop2 <- all(multiple_testing_correction >= cb_model[[i]]$stop_null)
+            stop3 <- (M_i > M_single_outcome)
             # -- to ensure if some outcomes do not update previously
             if (length(cb_model[[i]]$profile_loglike_each) >= 2) {
-              stop[i] <- (stop1 | stop2) # (stop2 | stop3) # (stop1 | stop2 | stop3)
+              stop[i] <- (stop1 | stop2 | stop3) # (stop2 | stop3) # (stop1 | stop2 | stop3)
             } else {
               stop[i] <- FALSE
             }

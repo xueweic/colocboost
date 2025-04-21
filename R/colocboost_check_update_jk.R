@@ -584,6 +584,8 @@ estimate_change_profile_res <- function(jk,
     xtr <- t(X[, jk]) %*% res / (N - 1)
   } else if (!is.null(XtY)) {
     scaling_factor <- if (!is.null(N)) (N - 1) else 1
+    beta_scaling <- if (!is.null(N)) 1 else 100
+    beta_k <- beta_k / beta_scaling
     yty <- YtY / scaling_factor
     xtr <- res[jk] / scaling_factor
     xtx <- XtX # / scaling_factor
