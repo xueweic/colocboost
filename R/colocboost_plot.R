@@ -25,6 +25,7 @@
 #' @param show_cos_to_uncoloc_outcome Optional outcomes for showing CoS to uncolocalized outcomes
 #' @param plot_ucos Logical, if TRUE plots also trait-specific (uncolocalized) sets , default is FALSE
 #' @param plot_ucos_idx Optional indices of trait-specific (uncolocalized) sets to plot when included
+#' @param show_ambiguous_ucos Logical, if TRUE shows ambiguous uCoS, default is FALSE
 #' @param title_specific Optional specific title to display in plot title
 #' @param ylim_each Logical, if TRUE uses separate y-axis limits for each plot, default is TRUE
 #' @param outcome_legend_pos Position for outcome legend, default is "top"
@@ -89,6 +90,7 @@ colocboost_plot <- function(cb_output, y = "log10p",
                             show_cos_to_uncoloc_outcome = NULL,
                             plot_ucos = FALSE,
                             plot_ucos_idx = NULL,
+                            show_ambiguous_ucos = FALSE,
                             title_specific = NULL,
                             ylim_each = TRUE,
                             outcome_legend_pos = "top",
@@ -113,7 +115,8 @@ colocboost_plot <- function(cb_output, y = "log10p",
     show_cos_to_uncoloc = show_cos_to_uncoloc,
     show_cos_to_uncoloc_idx = show_cos_to_uncoloc_idx,
     show_cos_to_uncoloc_outcome = show_cos_to_uncoloc_outcome,
-    plot_ucos = plot_ucos, plot_ucos_idx = plot_ucos_idx
+    plot_ucos = plot_ucos, plot_ucos_idx = plot_ucos_idx,
+    show_ambiguous_ucos = show_ambiguous_ucos
   )
   # get initial set up of plot
   cb_plot_init <- plot_initial(cb_plot_input,
@@ -335,7 +338,8 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
                            show_cos_to_uncoloc_idx = NULL,
                            show_cos_to_uncoloc_outcome = NULL,
                            plot_ucos = FALSE,
-                           plot_ucos_idx = NULL) {
+                           plot_ucos_idx = NULL,
+                           show_ambiguous_ucos = FALSE) {
 
   # check ucos exists
   if (plot_ucos && !"ucos_details" %in% names(cb_output)) {
@@ -589,6 +593,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
     )
     plot_input$uncoloc <- uncoloc
   }
+
   class(plot_input) <- "colocboost"
   return(plot_input)
 }
