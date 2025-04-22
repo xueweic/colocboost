@@ -223,7 +223,6 @@ colocboost_assemble <- function(cb_obj,
 
     # - save model and all coloc and single information for diagnostic
     if (output_level != 1) {
-      cb_obj <- get_max_profile(cb_obj, check_null_max = max(0.015,check_null_max*0.5), check_null_method = check_null_method)
       tmp <- get_full_output(
         cb_obj = cb_obj, past_out = past_out, variables = data_info$variables,
         cb_output = cb_output
