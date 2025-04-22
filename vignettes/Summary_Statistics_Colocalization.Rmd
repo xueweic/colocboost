@@ -191,8 +191,8 @@ for (i in 1:length(X)){
   y <- Y[[i]]
   effect_n[i] <- length(y)
   output <- susieR::univariate_regression(X = x, y = y)
-  effect_est <- cbind(effect_est, output[,1])
-  effect_se <- cbind(effect_se, output[,2])
+  effect_est <- cbind(effect_est, output$beta)
+  effect_se <- cbind(effect_se, output$sebeta)
 }
 colnames(effect_est) <- colnames(effect_se) <- c("Y1", "Y2", "Y3", "Y4", "Y5")
 rownames(effect_est) <- rownames(effect_se) <- colnames(X[[1]])
