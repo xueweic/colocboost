@@ -1,0 +1,69 @@
+---
+title: "Ambiguous Colocalization from Trait-Specific Effects"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Ambiguous Colocalization from Trait-Specific Effects}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+This vignette demonstrates an example of ambiguous colocalization from trait-specific effects using the `colocboost` package. 
+Specifically, we will use the `Ambiguous_Colocalization`, which is an example result from one of our real data applications, 
+showing an ambiguous colocalization between eQTL and GWAS.
+
+
+```{r setup}
+library(colocboost)
+# Run colocboost with diagnostic details
+data(Ambiguous_Colocalization)
+names(Ambiguous_Colocalization)
+```
+
+# 1. ColocBoost results
+
+
+```{r colocboost-results}
+# Trait-specific effects for both eQTL and GWAS
+Ambiguous_Colocalization$ColocBoost_Results$ucos_details$ucos$ucos_index
+
+# Intersection of eQTL and GWAS variants
+Reduce(intersect, Ambiguous_Colocalization$ColocBoost_Results$ucos_details$ucos$ucos_index)
+
+# With-in and between purity
+Ambiguous_Colocalization$ColocBoost_Results$ucos_details$ucos_purity
+```
+
+```{r colocboost-plot}
+colocboost_plot(
+  Ambiguous_Colocalization$ColocBoost_Results, 
+  plot_cols = 1,
+  plot_ucos = TRUE,
+  show_cos_to_uncoloc = TRUE
+)
+```
+
+
+# 2. Fine-mapping results from SuSiE
+
+```{r susie-results}
+susie_eQTL <- Ambiguous_Colocalization$SuSiE_Results$SuSiE_eQTL
+susie_GWAS <- Ambiguous_Colocalization$SuSiE_Results$SuSiE_GWAS
+
+# Fine-mapped eQTL
+susie_eQTL$sets$cs$L1
+
+# Fine-mapped GWAS variants
+susie_GWAS$sets$cs$L1
+
+# Intersection of fine-mapped eQTL and GWAS variants
+intersect(susie_eQTL$sets$cs$L1, susie_GWAS$sets$cs$L1)
+```
+

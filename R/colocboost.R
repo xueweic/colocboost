@@ -85,8 +85,9 @@
 #' @param check_null_max The smallest value of change of profile loglikelihood for each outcome.
 #' @param weaker_effect If \code{weaker_effect = TRUE}, consider the weaker single effect due to coupling effects
 #' @param LD_free When \code{LD_free = FALSE}, objective function doesn't include LD information.
-#' @param output_level When \code{output_level = 2}, return the ucos details for the single specific effects.
-#'                      When \code{output_level = 3}, return the entire Colocboost model to diagnostic results (more space).
+#' @param output_level When \code{output_level = 1}, return basic cos details for colocalization results
+#'                     When \code{output_level = 2}, return the ucos details for the single specific effects.
+#'                     When \code{output_level = 3}, return the entire Colocboost model to diagnostic results (more space).
 #'
 #' @return A \code{"colocboost"} object with some or all of the following elements:
 #'
@@ -95,7 +96,9 @@
 #' \item{cos_details}{A object with all information for colocalization results.}
 #' \item{data_info}{A object with detailed information from input data}
 #' \item{model_info}{A object with detailed information for colocboost model}
-#'
+#' \item{ucos_details}{A object with all information for trait-specific effects when \code{output_level = 2}.}
+#' \item{diagnositci_details}{A object with diagnostic details for ColocBoost model when \code{output_level = 3}.}
+#' 
 #' @examples
 #' # colocboost example
 #' set.seed(1)

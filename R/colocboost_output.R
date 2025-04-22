@@ -1,3 +1,109 @@
+#' @rdname get_colocboost_summary
+#'
+#' @title Get summary tables from a ColocBoost output.
+#'
+#' @description `get_colocboost_summary` get colocalization and trait-specific summary table 
+#' with or without the outcomes of interest.
+#'
+#' @param cb_output Output object from `colocboost` analysis
+#' @param outcome_names Optional vector of names of outcomes, which has the same order as Y in the original analysis.
+#' @param interest_outcome Optional vector specifying a subset of outcomes from \code{outcome_names} to focus on. When provided, only colocalization events that include at least one of these outcomes will be returned.
+#' @param region_name Optional character string. When provided, adds a column with this gene name to the output table for easier filtering in downstream analyses.
+#'
+#' @return A list of all summary tables for colocalization events and trait-specific associations if exists.
+#' 
+#' \item{cos_summary}{A summary table for colocalization events with the following columns:
+#'   \itemize{
+#'     \item{focal_outcome}{The focal outcome being analyzed if exists. Otherwise, it is \code{FALSE}.}
+#'     \item{colocalized_outcomes}{Colocalized outcomes for colocalization confidence set (CoS)}
+#'     \item{cos_id}{Unique identifier for colocalization confidence set (CoS)}
+#'     \item{purity}{Minimum absolute correlation of variables with in colocalization confidence set (CoS)}
+#'     \item{top_variable}{The variable with highest variant colocalization probability (VCP)}
+#'     \item{top_variable_vcp}{Variant colocalization probability for the top variable}
+#'     \item{cos_npc}{Normalized probability of colocalization}
+#'     \item{min_npc_outcome}{Minimum normalized probability of colocalized traits}
+#'     \item{n_variables}{Number of variables in colocalization confidence set (CoS)}
+#'     \item{colocalized_index}{Indices of colocalized variables}
+#'     \item{colocalized_variables}{List of colocalized variables}
+#'     \item{colocalized_variables_vcp}{Variant colocalization probabilities for all colocalized variables}
+#'   }
+#' }
+#'
+#' \item{ambigouse_cos_summary}{Colocalized outcomes for colocalization confidence set (CoS) }
+#' 
+#' \item{ucos_summary}{A summary table for trait-specific, uncolocalized associations with the following columns:
+#'   \itemize{
+#'     \item{outcomes}{Outcome being analyzed}
+#'     \item{ucos_id}{Unique identifier for trait-specific confidence sets}
+#'     \item{purity}{Minimum absolute correlation of variables within trait-specific confidence sets}
+#'     \item{top_variable}{The variable with highest variant-level probability of association (VPA)}
+#'     \item{top_variable_vpa}{Variant-level probability of association (VPA) for the top variable}
+#'     \item{ucos_npc}{Normalized probability of causal association for the trait-specific confidence set}
+#'     \item{n_variables}{Number of variables in trait-specific confidence set}
+#'     \item{ucos_index}{Indices of variables in the trait-specific confidence set}
+#'     \item{ucos_variables}{List of variables in the trait-specific confidence set}
+#'     \item{ucos_variables_vpa}{Variant-level probability of association (VPA) for all variables in the confidence set}
+#'     \item{region_name}{Region name if provided through the region_name parameter}
+#'   }
+#' }
+#' 
+#' @examples
+#' # colocboost example
+#' set.seed(1)
+#' N <- 1000
+#' P <- 100
+#' # Generate X with LD structure
+#' sigma <- 0.9^abs(outer(1:P, 1:P, "-"))
+#' X <- MASS::mvrnorm(N, rep(0, P), sigma)
+#' colnames(X) <- paste0("SNP", 1:P)
+#' L <- 3
+#' true_beta <- matrix(0, P, L)
+#' true_beta[10, 1] <- 0.5 # SNP10 affects trait 1
+#' true_beta[10, 2] <- 0.4 # SNP10 also affects trait 2 (colocalized)
+#' true_beta[50, 2] <- 0.3 # SNP50 only affects trait 2
+#' true_beta[80, 3] <- 0.6 # SNP80 only affects trait 3
+#' Y <- matrix(0, N, L)
+#' for (l in 1:L) {
+#'   Y[, l] <- X %*% true_beta[, l] + rnorm(N, 0, 1)
+#' }
+#' res <- colocboost(X = X, Y = Y)
+#' get_cos_summary(res)
+#'
+#' @source See detailed instructions in our tutorial portal:
+#'  \url{https://statfungen.github.io/colocboost/articles/Interpret_ColocBoost_Output.html}
+#' 
+#' @family colocboost_inference
+#' @export
+#' 
+get_colocboost_summary <- function(cb_output,
+                                   outcome_names = NULL,
+                                   interest_outcome = NULL,
+                                   region_name = NULL,
+                                   min_abs_corr = 0.5,
+                                   median_cos_abs_corr = 0.8){
+
+    if (!inherits(cb_output, "colocboost")) {
+      stop("Input must from colocboost output!")
+    }
+    cos_summary <- get_cos_summary(cb_output, outcome_names, interest_outcome, region_name) 
+
+    if ("ucos_detais" %in% names(cb_output)) {
+      ucos_summary <- get_ucos_summary(cb_output, outcome_names, region_name)
+
+    } else {
+      ucos_summary <- NULL
+    }
+
+    summary_tables <- list(
+      cos_summary = cos_summary,
+      ucos_summary = NULL,
+      ambigouse_cos_summary = NULL
+    )
+                  
+}
+
+
+
 #' @rdname get_cos_summary
 #'
 #' @title Get colocalization summary table from a ColocBoost output.
@@ -152,6 +258,7 @@ get_cos_summary <- function(cb_output,
 #' \item{cos_details}{A object with all information for colocalization results.}
 #' \item{data_info}{A object with detailed information from input data}
 #' \item{model_info}{A object with detailed information for colocboost model}
+#' \item{ucos_from_cos}{A object with information for trait-specific effects if exists after removing weaker signals.}
 #'
 #' @examples
 #' # colocboost example
@@ -621,6 +728,147 @@ get_in_cos <- function(weights, coverage = 0.95) {
 }
 
 
+#' @rdname get_ambiguous_colocalization
+#'
+#' @title Get ambiguous colocalization events from trait-specific (uncolocalized) effects.
+#'
+#' @description `get_ambiguous_colocalization` get the colocalization by discarding the weaker colocalization events or colocalized outcomes
+#'
+#' @param cb_output Output object from `colocboost` analysis
+#' @param min_abs_corr_between_ucos Minimum absolute correlation for variants across two trait-specific (uncolocalized) effects to be considered colocalized. The default is 0.5.
+#' @param median_abs_corr_between_ucos Median absolute correlation for variants across two trait-specific (uncolocalized) effects to be considered colocalized. The default is 0.8.
+#' @param tol A small, non-negative number specifying the convergence tolerance for checking the overlap of the variables in different sets.
+#'
+#' @return A \code{"colocboost"} object of colocboost output with additional elements:
+#' \item{ambiguous_ucos}{If exists, a list of ambiguous trait-specific (uncolocalized) effects.}
+#'
+#' @examples
+#' data(Ambiguous_Colocalization)
+#' test_colocboost_results <- Ambiguous_Colocalization$ColocBoost_Results
+#' res <- get_ambiguous_colocalization(test_colocboost_results)
+#' names(res$ambigous_ucos)
+#' 
+#' @source See detailed instructions in our tutorial portal: 
+#' \url{https://statfungen.github.io/colocboost/articles/Interpret_ColocBoost_Output.html}
+#'
+#' @family colocboost_inference
+#' @export
+get_ambiguous_colocalization <- function(cb_output, 
+                                         min_abs_corr_between_ucos = 0.5, 
+                                         median_abs_corr_between_ucos = 0.8,
+                                         tol = 1e-9) {
+
+    if (!inherits(cb_output, "colocboost")) {
+      stop("Input must from colocboost output!")
+    }
+
+    if (!("ucos_details" %in% names(cb_output))) {
+      warning(
+        "Since you want to extract ambiguous colocalization from trait-specific (uncolocalized) sets,",
+        " but there is no output of ucos_details from colocboost.\n",
+        " Please run colocboost model with output_level=2!",
+      )
+      return(cb_output)
+    }
+
+    if (is.null(cb_output$ucos_details)){
+      message("No trait-specific (uncolocalized) effects in this region!")
+      return(cb_output)
+    }
+
+    ucos_details <- cb_output$ucos_details
+    nucos <- length(ucos_details$ucos$ucos_index)
+    if (nucos == 1){
+      message("Only one trait-specific (uncolocalized) effect in this region!")
+      return(cb_output)
+    }
+
+    # Function to merge ambiguous ucos
+    merge_sets <- function(vec) {
+      split_lists <- lapply(vec, function(x) as.numeric(unlist(strsplit(x, ";"))))
+      result <- list()
+      while (length(split_lists) > 0) {
+        current <- split_lists[[1]]
+        split_lists <- split_lists[-1]
+        repeat {
+          overlap_index <- NULL
+          for (i in seq_along(split_lists)) {
+            if (length(intersect(current, split_lists[[i]])) > 0) {
+              overlap_index <- i
+              break
+            }
+          }
+          if (!is.null(overlap_index)) {
+            current <- union(current, split_lists[[overlap_index]])
+            split_lists <- split_lists[-overlap_index]
+          } else {
+            break
+          }
+        }
+        result <- c(result, list(paste(sort(current), collapse = ";")))
+      }
+      return(result)
+    }
+
+
+    purity <- ucos_details$ucos_purity
+    min_abs_cor <- purity$min_abs_cor
+    median_abs_cor <- purity$median_abs_cor
+    max_abs_cor <- purity$max_abs_cor
+    is_ambiguous <- (min_abs_cor > min_abs_corr_between_ucos) * 
+      (abs(max_abs_cor - 1) < tol) * 
+      (median_abs_cor > median_abs_corr_between_ucos)
+    diag(is_ambiguous) <- 0 # no need to check within ucos
+
+    if (sum(is.between) == 0){
+      message("No ambiguous colocalization events!")
+      return(cb_output)
+    } else {
+      message("There exists the ambiguous colocalization events from trait-specific effects. Extracting!")
+    }
+
+    temp <- sapply(1:nrow(is_ambiguous), function(x) {
+      tt <- c(x, which(is_ambiguous[x, ] != 0))
+      return(paste0(sort(tt), collapse = ";"))
+    })
+    temp <- merge_sets(temp)
+    potential_merged <- lapply(temp, function(x) as.numeric(unlist(strsplit(x, ";"))))
+    potential_merged <- potential_merged[which(sapply(potential_merged, length) >= 2)]
+
+    ambigous_events <- list()
+    ambigouse_ucos_names <- c()
+    for (i in 1:length(potential_merged)) {
+      idx <- potential_merged[[i]]
+      test_outcome <- unique(unlist(ucos_details$ucos_outcomes$outcome_index[idx]))
+      if (length(test_outcome) == 1) next
+      ambigouse_ucos_names[i] <- paste0(names(ucos_details$ucos$ucos_index)[idx], collapse = ";")
+      tmp <- list(
+        ambigouse_ucos = list(
+          ucos_index = ucos_details$ucos$ucos_index[idx],
+          ucos_variables = ucos_details$ucos$ucos_variables[idx]
+        ),
+        ambigouse_ucos_outcomes = list(
+          outcome_idx = ucos_details$ucos_outcomes$outcome_index[idx],
+          outcome_name = ucos_details$ucos_outcomes$outcome_name[idx]
+        ),
+        ambigous_ucos_weight = ucos_details$ucos_weight[idx],
+        ambigous_ucos_puriry = list(
+          min_abs_cor = min_abs_cor[idx, idx],
+          median_abs_cor = median_abs_cor[idx, idx],
+          max_abs_cor = max_abs_cor[idx, idx]
+        )
+      )
+      ambigous_events[[i]] <- tmp
+    }
+    names(ambigous_events) <- ambigouse_ucos_names
+    message(paste("There are", length(ambigous_events), "ambiguous trait-specific effects."))
+
+    cb_output$ambigous_ucos <- ambigous_events
+    return(cb_output)
+          
+}
+
+
 #' Calculate purity within and in-between CoS 
 #'
 #' @description Calculate purity statistics between all pairs of colocalization confidence sets (CoS)
@@ -879,7 +1127,7 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL) {
           cset2 <- coloc_csets$cos_index[[j]]
           y.i <- coloc_outcomes$outcome_index[[i]]
           y.j <- coloc_outcomes$outcome_index[[j]]
-          yy <- unique(y.i, y.j)
+          yy <- unique(c(y.i, y.j))
           res <- list()
           flag <- 1
           for (ii in yy) {
@@ -1133,7 +1381,7 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
               cset2 <- specific_css$ucos_index[[j]]
               y.i <- specific_outcomes$outcome_index[[i]]
               y.j <- specific_outcomes$outcome_index[[j]]
-              yy <- unique(y.i, y.j)
+              yy <- unique(c(y.i, y.j))
               res <- list()
               flag <- 1
               for (ii in yy) {
@@ -1173,7 +1421,7 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
               cset2 <- specific_css$ucos_index[[j]]
               y.i <- cb_output$cos_details$cos_outcomes$outcome_index[[i]]
               y.j <- specific_outcomes$outcome_index[[j]]
-              yy <- unique(y.i, y.j)
+              yy <- unique(c(y.i, y.j))
               res <- list()
               flag <- 1
               for (ii in yy) {

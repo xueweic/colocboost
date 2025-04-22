@@ -38,6 +38,7 @@ A \code{"colocboost"} object with some or all of the following elements:
 \item{cos_details}{A object with all information for colocalization results.}
 \item{data_info}{A object with detailed information from input data}
 \item{model_info}{A object with detailed information for colocboost model}
+\item{ucos_from_cos}{A object with information for trait-specific effects if exists after removing weaker signals.}
 }
 \description{
 \code{get_robust_colocalization} get the colocalization by discarding the weaker colocalization events or colocalized outcomes
@@ -69,6 +70,8 @@ filter_res$cos_details$cos$cos_index
 }
 \seealso{
 Other colocboost_inference: 
+\code{\link{get_ambiguous_colocalization}()},
+\code{\link{get_colocboost_summary}()},
 \code{\link{get_cos_summary}()},
 \code{\link{get_ucos_summary}()}
 }

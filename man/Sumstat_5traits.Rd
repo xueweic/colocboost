@@ -28,6 +28,7 @@ An example dataset with simulated statistics for 5 traits
 }
 \seealso{
 Other colocboost_data: 
+\code{\link{Ambiguous_Colocalization}},
 \code{\link{Heterogeneous_Effect}},
 \code{\link{Ind_5traits}},
 \code{\link{Non_Causal_Strongest_Marginal}},

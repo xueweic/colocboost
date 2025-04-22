@@ -38,6 +38,7 @@ articles:
     - Partial_Overlap_Variants
     - ColocBoost_Wrapper_Pipeline
     - LD_Free_Colocalization
+    - Ambiguous_Colocalization
     - FineBoost_Special_Case
 
   - title: internal
@@ -45,7 +46,6 @@ articles:
     - announcements
     - installation
     - Pairwise_Colocalization
-    - ColocBoost_Diagnostics
 
 reference:
   - title: "Example Data"
