@@ -131,15 +131,7 @@ for (i in 1:length(X)){
   x <- X[[i]]
   y <- Y[[i]]
   effect_n[i] <- length(y)
-  # simply use `rr <- susieR::univariate_regression(X = x, y = y)`
-  output = matrix(0,ncol(x),2)
-  for (i in 1:ncol(x)) {
-    fit = summary(lm(y ~ x[,i]))$coef
-    if (nrow(fit) == 2)
-      output[i,] = as.vector(fit[2,1:2])
-    else
-      output[i,] = c(0,0)
-  }
+  output <- susieR::univariate_regression(X = x, y = y)
   effect_est <- cbind(effect_est, output[,1])
   effect_se <- cbind(effect_se, output[,2])
 }

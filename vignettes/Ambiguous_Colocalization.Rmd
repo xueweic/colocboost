@@ -105,6 +105,13 @@ susie_GWAS$sets$cs$L1
 intersect(susie_eQTL$sets$cs$L1, susie_GWAS$sets$cs$L1)
 ```
 
+To visulize the fine-mapping results,
+
+```{r plot-susie}
+susieR::susie_plot(susie_eQTL, y = "PIP")
+susieR::susie_plot(susie_GWAS, y = "PIP")
+```
+
 
 # 3. Get the ambiguous colocalization results and summary
 
