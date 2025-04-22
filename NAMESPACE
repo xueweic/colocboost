@@ -2,6 +2,8 @@
 
 export(colocboost)
 export(colocboost_plot)
+export(get_ambiguous_colocalization)
+export(get_colocboost_summary)
 export(get_cormat)
 export(get_cos)
 export(get_cos_purity)

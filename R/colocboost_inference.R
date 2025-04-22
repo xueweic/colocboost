@@ -568,3 +568,4 @@ get_cos_evidence <- function(cb_obj, coloc_out, data_info) {
   names(normalization_evidence) <- names(npc) <- names(coloc_out$cos)
   return(list(normalization_evidence = normalization_evidence, npc = npc))
 }
+

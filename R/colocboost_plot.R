@@ -589,6 +589,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
     )
     plot_input$uncoloc <- uncoloc
   }
+
   class(plot_input) <- "colocboost"
   return(plot_input)
 }

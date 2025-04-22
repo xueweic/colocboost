@@ -90,3 +90,23 @@
 #' 
 #' @family colocboost_data
 "Non_Causal_Strongest_Marginal"
+
+
+
+#' A real data example includes an ambiguous colocalization between eQTL and GWAS
+#'
+#' An example result from one of our real data applications, which shows an ambiguous colocalization between eQTL and GWAS.
+#'
+#' @format ## `Ambiguous_Colocalization`
+#' A list with 2 elements
+#' \describe{
+#'   \item{ColocBoost_Results}{A `colocboost` output objective}
+#'   \item{SuSiE_Results}{Two `susie` output objective for eQTL and GWAS}
+#' }
+#' @source The Ambiguous_Colocalization dataset contains a real data example from one of our real data applications,
+#' which shows an ambiguous colocalization between eQTL and GWAS.
+#' The dataset is specifically designed for evaluating and demonstrating the capabilities of ColocBoost in real data applications.
+#' See details in tutorial vignette \url{https://statfungen.github.io/colocboost/articles/index.html}.
+#' 
+#' @family colocboost_data
+"Ambiguous_Colocalization"
