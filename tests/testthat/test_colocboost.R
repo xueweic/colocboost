@@ -132,37 +132,7 @@ test_that("colocboost runs with summary statistics", {
   expect_equal(result$data_info$n_outcomes, 2)
 })
 
-# Test focal outcome functionality
-test_that("colocboost handles focal outcome correctly", {
-  
-  # Convert Y to list
-  Y_list <- list(test_data$Y[,1], test_data$Y[,2])
-  X_list <- list(test_data$X, test_data$X)
-  
-  # Run colocboost with focal_outcome_idx = 1
-  warnings <- capture_warnings({
-    result <- colocboost(
-      X = X_list, 
-      Y = Y_list,
-      focal_outcome_idx = 1,
-      M = 10,  # Small number of iterations for testing
-      output_level = 2  # More detailed output for testing
-    )
-  })
 
-  # Check if any of the expected warning patterns are present
-  expect_true(
-    any(grepl("smallest number of variables", warnings)) || 
-    any(grepl("did not coverage", warnings))
-  )
-  
-  # Test that we get a colocboost object
-  expect_s3_class(result, "colocboost")
-  
-  # Check focal outcome is correctly set
-  expect_equal(result$data_info$outcome_info$is_focal[1], TRUE)
-  expect_equal(result$data_info$outcome_info$is_focal[2], FALSE)
-})
 
 # Test get_cos_summary functionality
 test_that("get_cos_summary returns expected structure", {
@@ -204,6 +174,39 @@ test_that("get_cos_summary returns expected structure", {
     # If no colocalization is found, just check that the summary is NULL
     expect_null(result$cos_summary)
   }
+})
+
+
+# Test focal outcome functionality
+test_that("colocboost handles focal outcome correctly", {
+  
+  # Convert Y to list
+  Y_list <- list(test_data$Y[,1], test_data$Y[,2])
+  X_list <- list(test_data$X, test_data$X)
+  
+  # Run colocboost with focal_outcome_idx = 1
+  warnings <- capture_warnings({
+    result <- colocboost(
+      X = X_list, 
+      Y = Y_list,
+      focal_outcome_idx = 1,
+      M = 10,  # Small number of iterations for testing
+      output_level = 2  # More detailed output for testing
+    )
+  })
+
+  # Check if any of the expected warning patterns are present
+  expect_true(
+    any(grepl("smallest number of variables", warnings)) || 
+    any(grepl("did not coverage", warnings))
+  )
+  
+  # Test that we get a colocboost object
+  expect_s3_class(result, "colocboost")
+  
+  # Check focal outcome is correctly set
+  expect_equal(result$data_info$outcome_info$is_focal[1], TRUE)
+  expect_equal(result$data_info$outcome_info$is_focal[2], FALSE)
 })
 
 # Test colocboost_plot functionality (basic call should not error)

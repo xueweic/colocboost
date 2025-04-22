@@ -187,7 +187,7 @@ test_that("get_hierarchical_clusters functions correctly", {
 })
 
 
-# Test get_robust_colocalization function
+# Test get_ambiguous_colocalization function
 test_that("get_ambiguous_colocalization identifies ambiguous colocalizations correctly", {
   # The function expects a specialized test dataset that has ambiguous colocalizations
   # There's a reference in the example to a dataset named "Ambiguous_Colocalization"
@@ -210,8 +210,10 @@ test_that("get_ambiguous_colocalization identifies ambiguous colocalizations cor
     expect_true("ambigouse_ucos_outcomes" %in% names(result$ambigous_ucos[[1]]))
     expect_true("ambigous_ucos_weight" %in% names(result$ambigous_ucos[[1]]))
     expect_true("ambigous_ucos_puriry" %in% names(result$ambigous_ucos[[1]]))
-    expect_true("ambigouse_ucos_unoin" %in% names(result$ambigous_ucos[[1]]))
+    expect_true("ambigouse_ucos_union" %in% names(result$ambigous_ucos[[1]]))
     expect_true("ambigouse_ucos_overlap" %in% names(result$ambigous_ucos[[1]]))
+    expect_true("recalibrated_cos_vcp" %in% names(result$ambigous_ucos[[1]]))
+    expect_true("recalibrated_cos" %in% names(result$ambigous_ucos[[1]]))
   }
   
   # Test with custom correlation thresholds
@@ -248,3 +250,125 @@ test_that("get_ambiguous_colocalization identifies ambiguous colocalizations cor
 
 })
 
+
+
+# Test get_ucos_summary function
+test_that("get_ucos_summary funtionality", {
+  # The function expects a specialized test dataset that has ambiguous colocalizations
+  # There's a reference in the example to a dataset named "Ambiguous_Colocalization"
+  data(Ambiguous_Colocalization)
+  test_colocboost_results <- Ambiguous_Colocalization$ColocBoost_Results
+  
+  # Basic call with default parameters
+  summary <- get_ucos_summary(test_colocboost_results)
+  
+  # Check structure of summary table
+  expect_true(is.data.frame(summary))
+    
+  # Check expected columns exist
+  expected_cols <- c(
+    "outcomes", "ucos_id", "purity",
+    "top_variable", "top_variable_vpa", "n_variables", "ucos_index",
+    "ucos_variables", "ucos_variables_vpa"
+  )
+  for (col in expected_cols) {
+    expect_true(col %in% colnames(summary))
+  }
+
+  # Basic call with default parameters
+  summary_ambiguous <- get_ucos_summary(test_colocboost_results, ambiguous_ucos = TRUE)
+  expect_true(all.equal(names(summary_ambiguous), c("ucos_summary", "ambiguous_ucos_summary")))
+    
+  # Check expected columns exist
+  expected_cols <- c(
+    "outcomes", "ucos_id", "min_between_purity", "median_between_purity",
+    "overlap_idx", "overlap_variables", "n_recalibrated_variables",
+    "recalibrated_index", "recalibrated_variables", "recalibrated_variables_vcp"
+  )
+  for (col in expected_cols) {
+    expect_true(col %in% colnames(summary_ambiguous$ambiguous_ucos_summary))
+  }
+
+})
+
+
+test_that("get_colocboost_summary works correctly", {
+  # Setup mock data
+  set.seed(1)
+  N <- 1000
+  P <- 100
+  # Generate X with LD structure
+  sigma <- 0.9^abs(outer(1:P, 1:P, "-"))
+  X <- MASS::mvrnorm(N, rep(0, P), sigma)
+  colnames(X) <- paste0("SNP", 1:P)
+  L <- 3
+  true_beta <- matrix(0, P, L)
+  true_beta[10, 1] <- 0.5 # SNP10 affects trait 1
+  true_beta[10, 2] <- 0.4 # SNP10 also affects trait 2 (colocalized)
+  true_beta[50, 2] <- 0.3 # SNP50 only affects trait 2
+  true_beta[80, 3] <- 0.6 # SNP80 only affects trait 3
+  Y <- matrix(0, N, L)
+  for (l in 1:L) {
+    Y[, l] <- X %*% true_beta[, l] + rnorm(N, 0, 1)
+  }
+  
+  # Run colocboost
+  cb_output <- colocboost(X = X, Y = Y)
+  
+  # Test summary_level = 1 (default)
+  summary1 <- get_colocboost_summary(cb_output)
+  
+  # Check structure
+  expect_type(summary1, "list")
+  expect_named(summary1, "cos_summary")
+  expect_s3_class(summary1$cos_summary, "data.frame")
+  
+  # Check required columns in cos_summary
+  expected_cols <- c("focal_outcome", "colocalized_outcomes", "cos_id", 
+                    "purity", "top_variable", "top_variable_vcp", 
+                    "cos_npc", "min_npc_outcome", "n_variables")
+  expect_true(all(expected_cols %in% colnames(summary1$cos_summary)))
+  
+  # Test with outcome_names
+  outcome_names <- c("Trait1", "Trait2", "Trait3")
+  summary_with_names <- get_colocboost_summary(cb_output, outcome_names = outcome_names)
+  coloc_outcome <- strsplit(summary_with_names$cos_summary$colocalized_outcomes, "; ")[[1]]
+  expect_true(all( coloc_outcome %in% 
+                 c("Trait1", "Trait2", "Trait3", paste(outcome_names, collapse = ", "))))
+  
+  # Test with region_name
+  region_summary <- get_colocboost_summary(cb_output, region_name = "TestRegion")
+  expect_true("region_name" %in% colnames(region_summary$cos_summary))
+  expect_equal(unique(region_summary$cos_summary$region), "TestRegion")
+  
+  # Test summary_level = 2
+  expect_warning(summary2 <- get_colocboost_summary(cb_output, summary_level = 2),
+  "Please run colocboost model with output_level=2")
+
+  cb_output <- colocboost(X = X, Y = Y, output_level = 2)
+  summary2 <- get_colocboost_summary(cb_output, summary_level = 2)
+  expect_named(summary2, c("cos_summary", "ucos_summary"))
+  expect_s3_class(summary2$ucos_summary, "data.frame")
+  
+  # Test summary_level = 3
+  summary3 <- get_colocboost_summary(cb_output, 
+                                    summary_level = 3, 
+                                    min_abs_corr_between_ucos = 0.4,
+                                    median_abs_corr_between_ucos = 0.7)
+  expect_named(summary3, c("cos_summary", "ucos_summary", "ambiguous_ucos_summary"))
+  expect_s3_class(summary3$ucos_summary, "data.frame")
+  
+  # Test with interest_outcome
+  interest_summary <- get_colocboost_summary(cb_output, 
+                                           outcome_names = outcome_names,
+                                           interest_outcome = c("Trait1"))
+  # Should only contain colocalization events involving Trait1
+  if(nrow(interest_summary$cos_summary) > 0) {
+    expect_true(all(sapply(interest_summary$cos_summary$colocalized_outcomes, 
+                         function(x) grepl("Trait1", x))))
+  }
+  
+  # Test error handling
+  expect_error(get_colocboost_summary("not_a_colocboost_object"), 
+              "Input must from colocboost output!")
+})

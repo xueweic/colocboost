@@ -61,6 +61,8 @@ reference:
   - title: "Inference and summary"
     desc: "Functions for inference and summary from fitted model."
     contents:
+    - get_robust_colocalization
+    - get_colocboost_summary
     - has_concept("colocboost_inference")
 
   - title: "Visualization"

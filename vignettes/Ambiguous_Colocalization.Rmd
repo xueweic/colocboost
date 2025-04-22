@@ -15,7 +15,7 @@ knitr::opts_chunk$set(
 ```
 
 
-This vignette demonstrates an example of ambiguous colocalization from trait-specific effects using the `colocboost` package. 
+This vignette demonstrates an example of ambiguous colocalization from trait-specific effects using the `colocboost`. 
 Specifically, we will use the `Ambiguous_Colocalization`, which is an example result from one of our real data applications, 
 showing an ambiguous colocalization between eQTL and GWAS.
 
@@ -27,8 +27,27 @@ data(Ambiguous_Colocalization)
 names(Ambiguous_Colocalization)
 ```
 
-# 1. ColocBoost results
+# 1. The `Ambiguous_Colocalization` Dataset
 
+The `Ambiguous_Colocalization` dataset contains results from a colocboost analysis of a real genomic region showing ambiguous trait-specific effects between eQTL 
+(expression quantitative trait loci) and GWAS (genome-wide association study) signals. 
+Ambiguous colocalization occurs when there appears to be shared causal variants between traits, 
+but the evidence is complicated by the presence of trait-specific effects. This dataset is structured as a list with two main components:
+
+1. `ColocBoost_Results`: Contains the output from running the ColocBoost algorithm.
+
+2. `SuSiE_Results`: Contains fine-mapping results from the SuSiE algorithm for both eQTL and GWAS data separately.
+
+
+
+# 2. ColocBoost results
+
+In this example, there are two trait-specifc effects for the eQTL and GWAS signals, respectively. But two uCoS have overlapping variants, 
+which indicates that the two uCoS are not independent. ColocBoost identifies two uCoS:
+
+- `ucos1:y1`: eQTL trait-specific effect has 6 variants.
+- `ucos2:y2`: GWAS trait-specific effect has 22 variants.
+- There are 3 variants that are overlapping between the two uCoS.
 
 ```{r colocboost-results}
 # Trait-specific effects for both eQTL and GWAS
@@ -36,22 +55,41 @@ Ambiguous_Colocalization$ColocBoost_Results$ucos_details$ucos$ucos_index
 
 # Intersection of eQTL and GWAS variants
 Reduce(intersect, Ambiguous_Colocalization$ColocBoost_Results$ucos_details$ucos$ucos_index)
+```
 
+After checking the correlation of variants between the two uCoS, we can see the high correlation between the two uCoS.
+
+- The minimum absolute correlation between the two uCoS is 0.636 (off-diagonal `purity$min_abs_corr`).
+- The median absolute correlation between the two uCoS is 0.837 (off-diagonal `purity$median_abs_corr`).
+- The maximum absolute correlation between the two uCoS is 1 (off-diagonal `purity$max_abs_corr`), indicating overlapping variants exists.
+
+```{r colocboost-purity}
 # With-in and between purity
 Ambiguous_Colocalization$ColocBoost_Results$ucos_details$ucos_purity
 ```
 
-```{r colocboost-plot}
+Based on the results, we can see that the two uCoS are not independent, but they are not fully overlapping.
+
+```{r plot-ambiguous}
+n_variables <- Ambiguous_Colocalization$ColocBoost_Results$data_info$n_variables
 colocboost_plot(
   Ambiguous_Colocalization$ColocBoost_Results, 
   plot_cols = 1,
+  grange = c(2000:n_variables),
   plot_ucos = TRUE,
   show_cos_to_uncoloc = TRUE
 )
 ```
 
 
+
 # 2. Fine-mapping results from SuSiE
+
+In this example, we also have fine-mapping results from SuSiE for both eQTL and GWAS data separately.
+
+- For eQTL, SuSiE shows 40 variants in 95% credible set (CS).
+- For GWAS, SuSiE shows 57 variants in 95% credible set (CS).
+- There are 24 variants are overlapping between the two credible sets.
 
 ```{r susie-results}
 susie_eQTL <- Ambiguous_Colocalization$SuSiE_Results$eQTL
@@ -67,3 +105,42 @@ susie_GWAS$sets$cs$L1
 intersect(susie_eQTL$sets$cs$L1, susie_GWAS$sets$cs$L1)
 ```
 
+
+# 3. Get the ambiguous colocalization results and summary
+
+ColocBoost provides a function to get the ambiguous colocalization results and summary from trait-specifc effects, by considering the correlation of variants between the two uCoS.
+
+The `get_ambiguous_colocalization` function will return the ambiguous results in `ambigous_ucos` object, if the following conditions are met:
+
+- The two uCoS should have at least one overlapping variant.
+- The minimum absolute correlation between the two uCoS is greater than `min_abs_corr_between_ucos` (default is 0.5).
+- The median absolute correlation between the two uCoS is greater than `median_abs_corr_between_ucos` (default is 0.8).
+
+
+```{r ambiguous-results}
+colocboost_results <- Ambiguous_Colocalization$ColocBoost_Results
+res <- get_ambiguous_colocalization(colocboost_results, min_abs_corr_between_ucos = 0.5, median_abs_corr_between_ucos = 0.8)
+names(res)
+names(res$ambigous_ucos)
+```
+
+To get the summary of ambiguous colocalization results, we can use the `get_colocboost_summary` function.
+
+- `summary_level = 1` (default): get the summary table for only the colocalization results, same as `cos_summary` in ColocBoost output.
+- `summary_level = 2`: get the summary table for both colocalization and trait-specific effects if exists.
+- `summary_level = 3`: get the summary table for colocalization, trait-specific effects and ambiguous colocalization results if exists.
+
+```{r ambiguous-summary}
+# Get the full summary results from colocboost
+full_summary <- get_colocboost_summary(colocboost_results, summary_level = 3)
+names(full_summary)
+
+# Get the summary of ambiguous colocalization results
+summary_ambiguous <- full_summary$ambiguous_ucos_summary
+colnames(summary_ambiguous)
+```
+
+
+- `recalibrated_*`: giving the recalibrated weigths and recalibrated 95% colocalization confidece sets (CoS) from the trait-specific effects.
+
+See details of function usage in the [Functions](https://statfungen.github.io/colocboost/reference/index.html).

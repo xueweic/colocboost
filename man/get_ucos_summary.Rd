@@ -23,6 +23,12 @@ get_ucos_summary(
 \item{outcome_names}{Optional vector of names of outcomes, which has the same order as Y in the original analysis.}
 
 \item{region_name}{Optional character string. When provided, adds a column with this gene name to the output table for easier filtering in downstream analyses.}
+
+\item{ambiguous_ucos}{Logical indicating whether to include ambiguous colocalization events. The default is FALSE.}
+
+\item{min_abs_corr_between_ucos}{Minimum absolute correlation for variants across two trait-specific (uncolocalized) effects to be considered colocalized. The default is 0.5.}
+
+\item{median_abs_corr_between_ucos}{Median absolute correlation for variants across two trait-specific (uncolocalized) effects to be considered colocalized. The default is 0.8.}
 }
 \value{
 A list containing:

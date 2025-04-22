@@ -12,8 +12,7 @@
 #' @param region_name Optional character string. When provided, adds a column with this gene name to the output table for easier filtering in downstream analyses.
 #' @param min_abs_corr_between_ucos Minimum absolute correlation for variants across two trait-specific (uncolocalized) effects to be considered colocalized. The default is 0.5.
 #' @param median_abs_corr_between_ucos Median absolute correlation for variants across two trait-specific (uncolocalized) effects to be considered colocalized. The default is 0.8.
-#' @param tol A small, non-negative number specifying the convergence tolerance for checking the overlap of the variables in different sets.
-#'
+#' 
 #' @return A list containing results from the ColocBoost analysis:
 #' \itemize{
 #'   \item When \code{summary_level = 1} (default):
@@ -83,8 +82,7 @@ get_colocboost_summary <- function(cb_output,
                                    interest_outcome = NULL,
                                    region_name = NULL,
                                    min_abs_corr_between_ucos = 0.5,
-                                   median_abs_corr_between_ucos = 0.8,
-                                   tol = 1e-9) {
+                                   median_abs_corr_between_ucos = 0.8) {
 
     if (!inherits(cb_output, "colocboost")) {
       stop("Input must from colocboost output!")
@@ -105,8 +103,7 @@ get_colocboost_summary <- function(cb_output,
         cb_output, outcome_names, region_name,
          ambiguous_ucos = TRUE,
          min_abs_corr_between_ucos = min_abs_corr_between_ucos,
-         median_abs_corr_between_ucos = median_abs_corr_between_ucos,
-         tol = tol
+         median_abs_corr_between_ucos = median_abs_corr_between_ucos
       )
       return(list("cos_summary" = cos_summary, 
                   "ucos_summary" = ucos_summary$ucos_summary,
@@ -703,7 +700,9 @@ get_cos_summary <- function(cb_output,
 #' @param cb_output Output object from `colocboost` analysis
 #' @param outcome_names Optional vector of names of outcomes, which has the same order as Y in the original analysis.
 #' @param region_name Optional character string. When provided, adds a column with this gene name to the output table for easier filtering in downstream analyses.
-#'
+#' @param ambiguous_ucos Logical indicating whether to include ambiguous colocalization events. The default is FALSE.
+#' @param min_abs_corr_between_ucos Minimum absolute correlation for variants across two trait-specific (uncolocalized) effects to be considered colocalized. The default is 0.5.
+#' @param median_abs_corr_between_ucos Median absolute correlation for variants across two trait-specific (uncolocalized) effects to be considered colocalized. The default is 0.8.
 #' 
 #' @return A list containing:
 #' \itemize{
@@ -841,11 +840,11 @@ get_ucos_summary <- function(cb_output, outcome_names = NULL, region_name = NULL
 
   ambiguous_summary[, 1] <- unlist(sapply(ambiguous_results, function(tmp) paste0(tmp$ambigouse_ucos_outcomes$outcome_name, collapse = "; ")))
   ambiguous_summary[, 2] <- names(ambiguous_results)
-  ambiguous_summary[, 3] <- sapply(ambiguous_results, function(tmp) max(tmp$ambigous_ucos_puriry$min_abs_cor[lower.tri(min_abs_cor)]) )
-  ambiguous_summary[, 4] <- sapply(ambiguous_results, function(tmp) max(tmp$ambigous_ucos_puriry$median_abs_cor[lower.tri(min_abs_cor)]) )
+  ambiguous_summary[, 3] <- sapply(ambiguous_results, function(tmp) max(tmp$ambigous_ucos_puriry$min_abs_cor[lower.tri(tmp$ambigous_ucos_puriry$min_abs_cor)]) )
+  ambiguous_summary[, 4] <- sapply(ambiguous_results, function(tmp) max(tmp$ambigous_ucos_puriry$median_abs_cor[lower.tri(tmp$ambigous_ucos_puriry$median_abs_cor)]) )
   ambiguous_summary[, 5] <- unlist(sapply(ambiguous_results, function(tmp) paste0(tmp$ambigouse_ucos_overlap$ucos_index, collapse = "; ")))
   ambiguous_summary[, 6] <- unlist(sapply(ambiguous_results, function(tmp) paste0(tmp$ambigouse_ucos_overlap$ucos_variables, collapse = "; ")))
-  ambiguous_summary[, 7] <- as.numeric(sapply(cos_recalibrated, length))
+  ambiguous_summary[, 7] <- as.numeric(sapply(ambiguous_results, function(tmp) length(tmp$recalibrated_cos$cos_index)))
   ambiguous_summary[, 8] <- unlist(sapply(ambiguous_results, function(tmp) paste0(tmp$recalibrated_cos$cos_index, collapse = "; ")))
   ambiguous_summary[, 9] <- unlist(sapply(ambiguous_results, function(tmp) paste0(tmp$recalibrated_cos$cos_variables, collapse = "; ")))
   ambiguous_summary[, 10] <- unlist(sapply(ambiguous_results, function(tmp) paste0(tmp$recalibrated_cos_vcp[tmp$recalibrated_cos$cos_index], collapse = "; ")))

@@ -15,8 +15,7 @@ get_colocboost_summary(
   interest_outcome = NULL,
   region_name = NULL,
   min_abs_corr_between_ucos = 0.5,
-  median_abs_corr_between_ucos = 0.8,
-  tol = 1e-09
+  median_abs_corr_between_ucos = 0.8
 )
 }
 \arguments{
@@ -33,8 +32,6 @@ get_colocboost_summary(
 \item{min_abs_corr_between_ucos}{Minimum absolute correlation for variants across two trait-specific (uncolocalized) effects to be considered colocalized. The default is 0.5.}
 
 \item{median_abs_corr_between_ucos}{Median absolute correlation for variants across two trait-specific (uncolocalized) effects to be considered colocalized. The default is 0.8.}
-
-\item{tol}{A small, non-negative number specifying the convergence tolerance for checking the overlap of the variables in different sets.}
 }
 \value{
 A list containing results from the ColocBoost analysis:
