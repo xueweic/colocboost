@@ -335,3 +335,58 @@ test_that("colocboost prioritizes focal outcome correctly", {
   expect_equal(result_focal2$data_info$outcome_info$is_focal[1], FALSE)
   expect_equal(result_focal2$data_info$outcome_info$is_focal[2], TRUE)
 })
+
+
+# Test with ambiguous corner cases
+test_that("get_ambiguous_colocalization handles edge cases with correlation thresholds", {
+
+  data(Ambiguous_Colocalization)
+  test_colocboost_results <- Ambiguous_Colocalization$ColocBoost_Results
+  
+  # Test with very high correlation thresholds (should find fewer ambiguities)
+  result_high_thresh <- get_ambiguous_colocalization(
+    test_colocboost_results,
+    min_abs_corr_between_ucos = 0.95,
+    median_abs_corr_between_ucos = 0.98
+  )
+  
+  # Test with very low correlation thresholds (should find more ambiguities)
+  result_low_thresh <- get_ambiguous_colocalization(
+    test_colocboost_results,
+    min_abs_corr_between_ucos = 0.1,
+    median_abs_corr_between_ucos = 0.3
+  )
+  
+  # Compare number of ambiguous events found with different thresholds
+  # Generally expect: n_high_thresh <= n_default <= n_low_thresh
+  n_high <- length(result_high_thresh$ambigous_ucos)
+  n_default <- length(get_ambiguous_colocalization(test_colocboost_results)$ambigous_ucos)
+  n_low <- length(result_low_thresh$ambigous_ucos)
+  
+  # Higher thresholds should find equal or fewer ambiguities than default
+  expect_true(n_high <= n_default)
+  
+  # Lower thresholds should find equal or more ambiguities than default
+  expect_true(n_low >= n_default)
+  
+  # Test with extreme threshold (min=1.0, median=1.0) - should find very few or no ambiguities
+  expect_message(
+    result_extreme <- get_ambiguous_colocalization(
+      test_colocboost_results,
+      min_abs_corr_between_ucos = 1.0,
+      median_abs_corr_between_ucos = 1.0
+    ),
+    "No ambiguous colocalization events!"
+  )
+  
+  # Test with threshold at 0 - should find many/all potential ambiguities
+  result_zero <- get_ambiguous_colocalization(
+    test_colocboost_results,
+    min_abs_corr_between_ucos = 0.0,
+    median_abs_corr_between_ucos = 0.0
+  )
+  expect_true(length(result_zero$ambigous_ucos) >= n_low)
+  
+  
+})
+

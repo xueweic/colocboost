@@ -54,8 +54,8 @@ colocboost_plot(
 # 2. Fine-mapping results from SuSiE
 
 ```{r susie-results}
-susie_eQTL <- Ambiguous_Colocalization$SuSiE_Results$SuSiE_eQTL
-susie_GWAS <- Ambiguous_Colocalization$SuSiE_Results$SuSiE_GWAS
+susie_eQTL <- Ambiguous_Colocalization$SuSiE_Results$eQTL
+susie_GWAS <- Ambiguous_Colocalization$SuSiE_Results$GWAS
 
 # Fine-mapped eQTL
 susie_eQTL$sets$cs$L1

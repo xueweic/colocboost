@@ -6,46 +6,48 @@
 #' with or without the outcomes of interest.
 #'
 #' @param cb_output Output object from `colocboost` analysis
+#' @param summary_level When \code{summary_level = 1}, return basic sumamry table for colocalization results. See details in `get_ucos_summary` function when \code{summary_level = 2}.
 #' @param outcome_names Optional vector of names of outcomes, which has the same order as Y in the original analysis.
 #' @param interest_outcome Optional vector specifying a subset of outcomes from \code{outcome_names} to focus on. When provided, only colocalization events that include at least one of these outcomes will be returned.
 #' @param region_name Optional character string. When provided, adds a column with this gene name to the output table for easier filtering in downstream analyses.
+#' @param min_abs_corr_between_ucos Minimum absolute correlation for variants across two trait-specific (uncolocalized) effects to be considered colocalized. The default is 0.5.
+#' @param median_abs_corr_between_ucos Median absolute correlation for variants across two trait-specific (uncolocalized) effects to be considered colocalized. The default is 0.8.
+#' @param tol A small, non-negative number specifying the convergence tolerance for checking the overlap of the variables in different sets.
 #'
-#' @return A list of all summary tables for colocalization events and trait-specific associations if exists.
-#' 
-#' \item{cos_summary}{A summary table for colocalization events with the following columns:
+#' @return A list containing results from the ColocBoost analysis:
+#' \itemize{
+#'   \item When \code{summary_level = 1} (default):
 #'   \itemize{
-#'     \item{focal_outcome}{The focal outcome being analyzed if exists. Otherwise, it is \code{FALSE}.}
-#'     \item{colocalized_outcomes}{Colocalized outcomes for colocalization confidence set (CoS)}
-#'     \item{cos_id}{Unique identifier for colocalization confidence set (CoS)}
-#'     \item{purity}{Minimum absolute correlation of variables with in colocalization confidence set (CoS)}
-#'     \item{top_variable}{The variable with highest variant colocalization probability (VCP)}
-#'     \item{top_variable_vcp}{Variant colocalization probability for the top variable}
-#'     \item{cos_npc}{Normalized probability of colocalization}
-#'     \item{min_npc_outcome}{Minimum normalized probability of colocalized traits}
-#'     \item{n_variables}{Number of variables in colocalization confidence set (CoS)}
-#'     \item{colocalized_index}{Indices of colocalized variables}
-#'     \item{colocalized_variables}{List of colocalized variables}
-#'     \item{colocalized_variables_vcp}{Variant colocalization probabilities for all colocalized variables}
+#'     \item \code{cos_summary}: A summary table for colocalization events with the following columns:
+#'     \itemize{
+#'       \item \code{focal_outcome}: The focal outcome being analyzed if exists. Otherwise, it is \code{FALSE}.
+#'       \item \code{colocalized_outcomes}: Colocalized outcomes for colocalization confidence set (CoS)
+#'       \item \code{cos_id}: Unique identifier for colocalization confidence set (CoS)
+#'       \item \code{purity}: Minimum absolute correlation of variables within colocalization confidence set (CoS)
+#'       \item \code{top_variable}: The variable with highest variant colocalization probability (VCP)
+#'       \item \code{top_variable_vcp}: Variant colocalization probability for the top variable
+#'       \item \code{cos_npc}: Normalized probability of colocalization
+#'       \item \code{min_npc_outcome}: Minimum normalized probability of colocalized traits
+#'       \item \code{n_variables}: Number of variables in colocalization confidence set (CoS)
+#'       \item \code{colocalized_index}: Indices of colocalized variables
+#'       \item \code{colocalized_variables}: List of colocalized variables
+#'       \item \code{colocalized_variables_vcp}: Variant colocalization probabilities for all colocalized variables
+#'     }
+#'   }
+#'   \item When \code{summary_level = 2}:
+#'   \itemize{
+#'     \item \code{cos_summary}: As described above
+#'     \item \code{ucos_summary}: A summary table for trait-specific (uncolocalized) effects
+#'   }
+#'   \item When \code{summary_level = 3}:
+#'   \itemize{
+#'     \item \code{cos_summary}: As described above
+#'     \item \code{ucos_summary}: A summary table for trait-specific (uncolocalized) effects
+#'     \item \code{ambiguous_ucos_summary}: A summary table for ambiguous colocalization events from trait-specific effects
 #'   }
 #' }
-#'
-#' \item{ambigouse_cos_summary}{Colocalized outcomes for colocalization confidence set (CoS) }
-#' 
-#' \item{ucos_summary}{A summary table for trait-specific, uncolocalized associations with the following columns:
-#'   \itemize{
-#'     \item{outcomes}{Outcome being analyzed}
-#'     \item{ucos_id}{Unique identifier for trait-specific confidence sets}
-#'     \item{purity}{Minimum absolute correlation of variables within trait-specific confidence sets}
-#'     \item{top_variable}{The variable with highest variant-level probability of association (VPA)}
-#'     \item{top_variable_vpa}{Variant-level probability of association (VPA) for the top variable}
-#'     \item{ucos_npc}{Normalized probability of causal association for the trait-specific confidence set}
-#'     \item{n_variables}{Number of variables in trait-specific confidence set}
-#'     \item{ucos_index}{Indices of variables in the trait-specific confidence set}
-#'     \item{ucos_variables}{List of variables in the trait-specific confidence set}
-#'     \item{ucos_variables_vpa}{Variant-level probability of association (VPA) for all variables in the confidence set}
-#'     \item{region_name}{Region name if provided through the region_name parameter}
-#'   }
-#' }
+#' @details When \code{summary_level = 2} or \code{summary_level = 3}, additional details for trait-specific effects and ambiguous 
+#' colocalization events are included. See \code{\link{get_ucos_summary}} for details on these tables.
 #' 
 #' @examples
 #' # colocboost example
@@ -67,7 +69,7 @@
 #'   Y[, l] <- X %*% true_beta[, l] + rnorm(N, 0, 1)
 #' }
 #' res <- colocboost(X = X, Y = Y)
-#' get_cos_summary(res)
+#' get_colocboost_summary(res)
 #'
 #' @source See detailed instructions in our tutorial portal:
 #'  \url{https://statfungen.github.io/colocboost/articles/Interpret_ColocBoost_Output.html}
@@ -76,165 +78,41 @@
 #' @export
 #' 
 get_colocboost_summary <- function(cb_output,
+                                   summary_level = 1,
                                    outcome_names = NULL,
                                    interest_outcome = NULL,
                                    region_name = NULL,
-                                   min_abs_corr = 0.5,
-                                   median_cos_abs_corr = 0.8){
+                                   min_abs_corr_between_ucos = 0.5,
+                                   median_abs_corr_between_ucos = 0.8,
+                                   tol = 1e-9) {
 
     if (!inherits(cb_output, "colocboost")) {
       stop("Input must from colocboost output!")
     }
     cos_summary <- get_cos_summary(cb_output, outcome_names, interest_outcome, region_name) 
+    if (summary_level == 1) {
+      return(list("cos_summary" = cos_summary))
+    }
 
-    if ("ucos_detais" %in% names(cb_output)) {
+    if (summary_level == 2){
       ucos_summary <- get_ucos_summary(cb_output, outcome_names, region_name)
-
-    } else {
-      ucos_summary <- NULL
+      return(list("cos_summary" = cos_summary, 
+                  "ucos_summary" = ucos_summary))
     }
 
-    summary_tables <- list(
-      cos_summary = cos_summary,
-      ucos_summary = NULL,
-      ambigouse_cos_summary = NULL
-    )
+    if (summary_level == 3){
+      ucos_summary <- get_ucos_summary(
+        cb_output, outcome_names, region_name,
+         ambiguous_ucos = TRUE,
+         min_abs_corr_between_ucos = min_abs_corr_between_ucos,
+         median_abs_corr_between_ucos = median_abs_corr_between_ucos,
+         tol = tol
+      )
+      return(list("cos_summary" = cos_summary, 
+                  "ucos_summary" = ucos_summary$ucos_summary,
+                  "ambiguous_ucos_summary" = ucos_summary$ambiguous_ucos_summary))
+    }
                   
-}
-
-
-
-#' @rdname get_cos_summary
-#'
-#' @title Get colocalization summary table from a ColocBoost output.
-#'
-#' @description `get_cos_summary` get the colocalization summary table with or without the outcomes of interest.
-#'
-#' @param cb_output Output object from `colocboost` analysis
-#' @param outcome_names Optional vector of names of outcomes, which has the same order as Y in the original analysis.
-#' @param interest_outcome Optional vector specifying a subset of outcomes from \code{outcome_names} to focus on. When provided, only colocalization events that include at least one of these outcomes will be returned.
-#' @param region_name Optional character string. When provided, adds a column with this gene name to the output table for easier filtering in downstream analyses.
-#'
-#' @return A summary table for colocalization events with the following columns:
-#' \item{focal_outcome}{The focal outcome being analyzed if exists. Otherwise, it is \code{FALSE}.}
-#' \item{colocalized_outcomes}{Colocalized outcomes for colocalization confidence set (CoS) }
-#' \item{cos_id}{Unique identifier for colocalization confidence set (CoS) }
-#' \item{purity}{Minimum absolute correlation of variables with in colocalization confidence set (CoS) }
-#' \item{top_variable}{The variable with highest variant colocalization probability (VCP) }
-#' \item{top_variable_vcp}{Variant colocalization probability for the top variable}
-#' \item{cos_npc}{Normalized probability of colocalization}
-#' \item{min_npc_outcome}{Minimum normalized probability of colocalized traits}
-#' \item{n_variables}{Number of variables in colocalization confidence set (CoS)}
-#' \item{colocalized_index}{Indices of colocalized variables}
-#' \item{colocalized_variables}{List of colocalized variables}
-#' \item{colocalized_variables_vcp}{Variant colocalization probabilities for all colocalized variables}
-#'
-#' @examples
-#' # colocboost example
-#' set.seed(1)
-#' N <- 1000
-#' P <- 100
-#' # Generate X with LD structure
-#' sigma <- 0.9^abs(outer(1:P, 1:P, "-"))
-#' X <- MASS::mvrnorm(N, rep(0, P), sigma)
-#' colnames(X) <- paste0("SNP", 1:P)
-#' L <- 3
-#' true_beta <- matrix(0, P, L)
-#' true_beta[10, 1] <- 0.5 # SNP10 affects trait 1
-#' true_beta[10, 2] <- 0.4 # SNP10 also affects trait 2 (colocalized)
-#' true_beta[50, 2] <- 0.3 # SNP50 only affects trait 2
-#' true_beta[80, 3] <- 0.6 # SNP80 only affects trait 3
-#' Y <- matrix(0, N, L)
-#' for (l in 1:L) {
-#'   Y[, l] <- X %*% true_beta[, l] + rnorm(N, 0, 1)
-#' }
-#' res <- colocboost(X = X, Y = Y)
-#' get_cos_summary(res)
-#'
-#' @source See detailed instructions in our tutorial portal:
-#'  \url{https://statfungen.github.io/colocboost/articles/Interpret_ColocBoost_Output.html}
-#' 
-#' @family colocboost_inference
-#' @export
-get_cos_summary <- function(cb_output,
-                            outcome_names = NULL,
-                            interest_outcome = NULL,
-                            region_name = NULL) {
-  if (!inherits(cb_output, "colocboost")) {
-    stop("Input must from colocboost output!")
-  }
-
-  coloc_csets <- cb_output$cos_details$cos$cos_index
-  if (length(coloc_csets) != 0) {
-    analysis_outcome <- cb_output$data_info$outcome_info$outcome_names
-    if (!is.null(outcome_names)) {
-      analysis_outcome <- outcome_names
-    }
-    coloc_outcome <- lapply(cb_output$cos_details$cos_outcomes$outcome_index, function(idx) analysis_outcome[idx])
-    coloc_sets <- cb_output$cos_details$cos$cos_index
-    if (!is.null(cb_output$cos_warnings)) {
-      cos_warnings
-    }
-    vcp <- as.numeric(cb_output$vcp)
-
-    summary_table <- matrix(NA, nrow = length(coloc_sets), ncol = 12)
-    colnames(summary_table) <- c(
-      "focal_outcome", "colocalized_outcomes", "cos_id", "purity",
-      "top_variable", "top_variable_vcp", "cos_npc", "min_npc_outcome", "n_variables",
-      "colocalized_index", "colocalized_variables", "colocalized_variables_vcp"
-    )
-    summary_table <- as.data.frame(summary_table)
-    summary_table[, 1] <- FALSE
-    summary_table[, 2] <- unlist(sapply(coloc_outcome, function(tmp) paste0(tmp, collapse = "; ")))
-    summary_table[, 3] <- names(coloc_sets)
-    summary_table[, 4] <- as.numeric(diag(as.matrix(cb_output$cos_details$cos_purity$min_abs_cor)))
-    summary_table[, 5] <- unlist(sapply(cb_output$cos_details$cos$cos_variables, function(tmp) tmp[1]))
-    summary_table[, 6] <- sapply(coloc_sets, function(tmp) max(vcp[tmp]))
-    summary_table[, 7] <- round(as.numeric(cb_output$cos_details$cos_npc), 4)
-    summary_table[, 8] <- round(as.numeric(cb_output$cos_details$cos_min_npc_outcome), 4)
-    summary_table[, 9] <- as.numeric(sapply(coloc_sets, length))
-    summary_table[, 10] <- unlist(sapply(coloc_sets, function(tmp) paste0(tmp, collapse = "; ")))
-    summary_table[, 11] <- unlist(sapply(cb_output$cos_details$cos$cos_variables, function(tmp) paste0(tmp, collapse = "; ")))
-    summary_table[, 12] <- unlist(sapply(coloc_sets, function(tmp) paste0(vcp[tmp], collapse = "; ")))
-    if (!is.null(region_name)) {
-      summary_table$region_name <- region_name
-    }
-    # - if focal colocalization
-    focal_outcome_idx <- which(cb_output$data_info$outcome_info$is_focal)
-    if (length(focal_outcome_idx) != 0) {
-      focal_outcome <- analysis_outcome[focal_outcome_idx]
-      tmp <- sapply(focal_outcome, function(tmp) grep(paste0(tmp, "\\b"), analysis_outcome))
-      if.focal <- sapply(coloc_outcome, function(cp) {
-        tt <- sapply(focal_outcome, function(tmp) grep(paste0(tmp, "\\b"), cp))
-        all(sapply(tt, length) != 0)
-      })
-      summary_table$focal_outcome <- ifelse(if.focal, focal_outcome, FALSE)
-      summary_table <- summary_table[order(summary_table$focal_outcome == "FALSE"), ]
-      if (sum(if.focal) == 0) {
-        warning("No colocalization with focal outcomes.")
-      }
-    }
-    # - if extract only interest outcome colocalization
-    if (!is.null(interest_outcome)) {
-      tmp <- sapply(interest_outcome, function(tmp) grep(paste0(tmp, "\\b"), analysis_outcome))
-      if (all(sapply(tmp, length) != 0)) {
-        if.interest <- sapply(coloc_outcome, function(cp) {
-          tt <- sapply(interest_outcome, function(tmp) grep(paste0(tmp, "\\b"), cp))
-          all(sapply(tt, length) != 0)
-        })
-        summary_table$interest_outcome <- paste0(interest_outcome, collapse = "; ")
-        summary_table <- summary_table[which(if.interest), ]
-        if (sum(if.interest) == 0) {
-          warning("No colocalization with interest outcomes.")
-        }
-      } else {
-        warning("Interest outcome is not in the analysis outcomes, please check.")
-      }
-    }
-  } else {
-    summary_table <- NULL
-  }
-  return(summary_table)
 }
 
 
@@ -521,6 +399,297 @@ get_robust_colocalization <- function(cb_output,
   return(cb_output)
 }
 
+#' @rdname get_ambiguous_colocalization
+#'
+#' @title Get ambiguous colocalization events from trait-specific (uncolocalized) effects.
+#'
+#' @description `get_ambiguous_colocalization` get the colocalization by discarding the weaker colocalization events or colocalized outcomes
+#'
+#' @param cb_output Output object from `colocboost` analysis
+#' @param min_abs_corr_between_ucos Minimum absolute correlation for variants across two trait-specific (uncolocalized) effects to be considered colocalized. The default is 0.5.
+#' @param median_abs_corr_between_ucos Median absolute correlation for variants across two trait-specific (uncolocalized) effects to be considered colocalized. The default is 0.8.
+#' @param tol A small, non-negative number specifying the convergence tolerance for checking the overlap of the variables in different sets.
+#'
+#' @return A \code{"colocboost"} object of colocboost output with additional elements:
+#' \item{ambiguous_ucos}{If exists, a list of ambiguous trait-specific (uncolocalized) effects.}
+#'
+#' @examples
+#' data(Ambiguous_Colocalization)
+#' test_colocboost_results <- Ambiguous_Colocalization$ColocBoost_Results
+#' res <- get_ambiguous_colocalization(test_colocboost_results)
+#' names(res$ambigous_ucos)
+#' 
+#' @source See detailed instructions in our tutorial portal: 
+#' \url{https://statfungen.github.io/colocboost/articles/Interpret_ColocBoost_Output.html}
+#'
+#' @family colocboost_inference
+#' @export
+get_ambiguous_colocalization <- function(cb_output, 
+                                         min_abs_corr_between_ucos = 0.5, 
+                                         median_abs_corr_between_ucos = 0.8,
+                                         tol = 1e-9) {
+
+    if (!inherits(cb_output, "colocboost")) {
+      stop("Input must from colocboost output!")
+    }
+
+    if (!("ucos_details" %in% names(cb_output))) {
+      warning(
+        "Since you want to extract ambiguous colocalization from trait-specific (uncolocalized) sets,",
+        " but there is no output of ucos_details from colocboost.\n",
+        " Please run colocboost model with output_level=2!"
+      )
+      return(cb_output)
+    }
+
+    if (is.null(cb_output$ucos_details)){
+      message("No trait-specific (uncolocalized) effects in this region!")
+      return(cb_output)
+    }
+
+    ucos_details <- cb_output$ucos_details
+    nucos <- length(ucos_details$ucos$ucos_index)
+    if (nucos == 1) {
+      message("Only one trait-specific (uncolocalized) effect in this region!")
+      return(cb_output)
+    }
+
+    # Function to merge ambiguous ucos
+    merge_sets <- function(vec) {
+      split_lists <- lapply(vec, function(x) as.numeric(unlist(strsplit(x, ";"))))
+      result <- list()
+      while (length(split_lists) > 0) {
+        current <- split_lists[[1]]
+        split_lists <- split_lists[-1]
+        repeat {
+          overlap_index <- NULL
+          for (i in seq_along(split_lists)) {
+            if (length(intersect(current, split_lists[[i]])) > 0) {
+              overlap_index <- i
+              break
+            }
+          }
+          if (!is.null(overlap_index)) {
+            current <- union(current, split_lists[[overlap_index]])
+            split_lists <- split_lists[-overlap_index]
+          } else {
+            break
+          }
+        }
+        result <- c(result, list(paste(sort(current), collapse = ";")))
+      }
+      return(result)
+    }
+
+
+    purity <- ucos_details$ucos_purity
+    min_abs_cor <- purity$min_abs_cor
+    median_abs_cor <- purity$median_abs_cor
+    max_abs_cor <- purity$max_abs_cor
+    is_ambiguous <- (min_abs_cor > min_abs_corr_between_ucos) * 
+      (abs(max_abs_cor - 1) < tol) * 
+      (median_abs_cor > median_abs_corr_between_ucos)
+    diag(is_ambiguous) <- 0 # no need to check within ucos
+
+    if (sum(is_ambiguous) == 0){
+      message("No ambiguous colocalization events!")
+      return(cb_output)
+    } else {
+      message("There exists the ambiguous colocalization events from trait-specific effects. Extracting!")
+    }
+
+    temp <- sapply(1:nrow(is_ambiguous), function(x) {
+      tt <- c(x, which(is_ambiguous[x, ] != 0))
+      return(paste0(sort(tt), collapse = ";"))
+    })
+    temp <- merge_sets(temp)
+    potential_merged <- lapply(temp, function(x) as.numeric(unlist(strsplit(x, ";"))))
+    potential_merged <- potential_merged[which(sapply(potential_merged, length) >= 2)]
+
+    ambigous_events <- list()
+    ambigouse_ucos_names <- c()
+    for (i in 1:length(potential_merged)) {
+      idx <- potential_merged[[i]]
+      test_outcome <- unique(unlist(ucos_details$ucos_outcomes$outcome_index[idx]))
+      if (length(test_outcome) == 1) next
+      ambigouse_ucos_names[i] <- paste0(names(ucos_details$ucos$ucos_index)[idx], collapse = ";")
+      tmp <- list(
+        ambigouse_ucos = list(
+          ucos_index = ucos_details$ucos$ucos_index[idx],
+          ucos_variables = ucos_details$ucos$ucos_variables[idx]
+        ),
+        ambigouse_ucos_overlap = list(
+          ucos_index = Reduce(intersect, ucos_details$ucos$ucos_index[idx]),
+          ucos_variables = Reduce(intersect, ucos_details$ucos$ucos_variables[idx])
+        ),
+        ambigouse_ucos_union = list(
+          ucos_index = Reduce(union, ucos_details$ucos$ucos_index[idx]),
+          ucos_variables = Reduce(union, ucos_details$ucos$ucos_variables[idx])
+        ),
+        ambigouse_ucos_outcomes = list(
+          outcome_idx = unique(unlist(ucos_details$ucos_outcomes$outcome_index[idx])),
+          outcome_name = unique(unlist(ucos_details$ucos_outcomes$outcome_name[idx]))
+        ),
+        ambigous_ucos_weight = ucos_details$ucos_weight[idx],
+        ambigous_ucos_puriry = list(
+          min_abs_cor = min_abs_cor[idx, idx],
+          median_abs_cor = median_abs_cor[idx, idx],
+          max_abs_cor = max_abs_cor[idx, idx]
+        )
+      )
+      w <- tmp$ambigous_ucos_weight
+      w <- do.call(cbind, w)
+      tmp$recalibrated_cos_vcp <- get_integrated_weight(w)
+      tmp$recalibrated_cos <- list(
+        "cos_index" = unlist(get_in_cos(tmp$recalibrated_cos_vcp)),
+        "cos_variables" = lapply(unlist(get_in_cos(tmp$recalibrated_cos_vcp)), function(idx) cb_output$data_info$variables[idx])
+      )
+      ambigous_events[[i]] <- tmp
+    }
+    names(ambigous_events) <- ambigouse_ucos_names
+    message(paste("There are", length(ambigous_events), "ambiguous trait-specific effects."))
+
+    cb_output$ambigous_ucos <- ambigous_events
+    return(cb_output)
+          
+}
+
+
+
+
+#' @rdname get_cos_summary
+#'
+#' @title Get colocalization summary table from a ColocBoost output.
+#'
+#' @description `get_cos_summary` get the colocalization summary table with or without the outcomes of interest.
+#'
+#' @param cb_output Output object from `colocboost` analysis
+#' @param outcome_names Optional vector of names of outcomes, which has the same order as Y in the original analysis.
+#' @param interest_outcome Optional vector specifying a subset of outcomes from \code{outcome_names} to focus on. When provided, only colocalization events that include at least one of these outcomes will be returned.
+#' @param region_name Optional character string. When provided, adds a column with this gene name to the output table for easier filtering in downstream analyses.
+#'
+#' @return A summary table for colocalization events with the following columns:
+#' \item{focal_outcome}{The focal outcome being analyzed if exists. Otherwise, it is \code{FALSE}.}
+#' \item{colocalized_outcomes}{Colocalized outcomes for colocalization confidence set (CoS) }
+#' \item{cos_id}{Unique identifier for colocalization confidence set (CoS) }
+#' \item{purity}{Minimum absolute correlation of variables with in colocalization confidence set (CoS) }
+#' \item{top_variable}{The variable with highest variant colocalization probability (VCP) }
+#' \item{top_variable_vcp}{Variant colocalization probability for the top variable}
+#' \item{cos_npc}{Normalized probability of colocalization}
+#' \item{min_npc_outcome}{Minimum normalized probability of colocalized traits}
+#' \item{n_variables}{Number of variables in colocalization confidence set (CoS)}
+#' \item{colocalized_index}{Indices of colocalized variables}
+#' \item{colocalized_variables}{List of colocalized variables}
+#' \item{colocalized_variables_vcp}{Variant colocalization probabilities for all colocalized variables}
+#'
+#' @examples
+#' # colocboost example
+#' set.seed(1)
+#' N <- 1000
+#' P <- 100
+#' # Generate X with LD structure
+#' sigma <- 0.9^abs(outer(1:P, 1:P, "-"))
+#' X <- MASS::mvrnorm(N, rep(0, P), sigma)
+#' colnames(X) <- paste0("SNP", 1:P)
+#' L <- 3
+#' true_beta <- matrix(0, P, L)
+#' true_beta[10, 1] <- 0.5 # SNP10 affects trait 1
+#' true_beta[10, 2] <- 0.4 # SNP10 also affects trait 2 (colocalized)
+#' true_beta[50, 2] <- 0.3 # SNP50 only affects trait 2
+#' true_beta[80, 3] <- 0.6 # SNP80 only affects trait 3
+#' Y <- matrix(0, N, L)
+#' for (l in 1:L) {
+#'   Y[, l] <- X %*% true_beta[, l] + rnorm(N, 0, 1)
+#' }
+#' res <- colocboost(X = X, Y = Y)
+#' get_cos_summary(res)
+#'
+#' @source See detailed instructions in our tutorial portal:
+#'  \url{https://statfungen.github.io/colocboost/articles/Interpret_ColocBoost_Output.html}
+#' 
+#' @keywords colocboost_inference
+#' @family colocboost_utilities
+#' @export
+get_cos_summary <- function(cb_output,
+                            outcome_names = NULL,
+                            interest_outcome = NULL,
+                            region_name = NULL) {
+  if (!inherits(cb_output, "colocboost")) {
+    stop("Input must from colocboost output!")
+  }
+
+  coloc_csets <- cb_output$cos_details$cos$cos_index
+  if (length(coloc_csets) != 0) {
+    analysis_outcome <- cb_output$data_info$outcome_info$outcome_names
+    if (!is.null(outcome_names)) {
+      analysis_outcome <- outcome_names
+    }
+    coloc_outcome <- lapply(cb_output$cos_details$cos_outcomes$outcome_index, function(idx) analysis_outcome[idx])
+    coloc_sets <- cb_output$cos_details$cos$cos_index
+    if (!is.null(cb_output$cos_warnings)) {
+      cos_warnings
+    }
+    vcp <- as.numeric(cb_output$vcp)
+
+    summary_table <- matrix(NA, nrow = length(coloc_sets), ncol = 12)
+    colnames(summary_table) <- c(
+      "focal_outcome", "colocalized_outcomes", "cos_id", "purity",
+      "top_variable", "top_variable_vcp", "cos_npc", "min_npc_outcome", "n_variables",
+      "colocalized_index", "colocalized_variables", "colocalized_variables_vcp"
+    )
+    summary_table <- as.data.frame(summary_table)
+    summary_table[, 1] <- FALSE
+    summary_table[, 2] <- unlist(sapply(coloc_outcome, function(tmp) paste0(tmp, collapse = "; ")))
+    summary_table[, 3] <- names(coloc_sets)
+    summary_table[, 4] <- as.numeric(diag(as.matrix(cb_output$cos_details$cos_purity$min_abs_cor)))
+    summary_table[, 5] <- unlist(sapply(cb_output$cos_details$cos$cos_variables, function(tmp) tmp[1]))
+    summary_table[, 6] <- sapply(coloc_sets, function(tmp) max(vcp[tmp]))
+    summary_table[, 7] <- round(as.numeric(cb_output$cos_details$cos_npc), 4)
+    summary_table[, 8] <- round(as.numeric(cb_output$cos_details$cos_min_npc_outcome), 4)
+    summary_table[, 9] <- as.numeric(sapply(coloc_sets, length))
+    summary_table[, 10] <- unlist(sapply(coloc_sets, function(tmp) paste0(tmp, collapse = "; ")))
+    summary_table[, 11] <- unlist(sapply(cb_output$cos_details$cos$cos_variables, function(tmp) paste0(tmp, collapse = "; ")))
+    summary_table[, 12] <- unlist(sapply(coloc_sets, function(tmp) paste0(vcp[tmp], collapse = "; ")))
+    if (!is.null(region_name)) {
+      summary_table$region_name <- region_name
+    }
+    # - if focal colocalization
+    focal_outcome_idx <- which(cb_output$data_info$outcome_info$is_focal)
+    if (length(focal_outcome_idx) != 0) {
+      focal_outcome <- analysis_outcome[focal_outcome_idx]
+      tmp <- sapply(focal_outcome, function(tmp) grep(paste0(tmp, "\\b"), analysis_outcome))
+      if.focal <- sapply(coloc_outcome, function(cp) {
+        tt <- sapply(focal_outcome, function(tmp) grep(paste0(tmp, "\\b"), cp))
+        all(sapply(tt, length) != 0)
+      })
+      summary_table$focal_outcome <- ifelse(if.focal, focal_outcome, FALSE)
+      summary_table <- summary_table[order(summary_table$focal_outcome == "FALSE"), ]
+      if (sum(if.focal) == 0) {
+        warning("No colocalization with focal outcomes.")
+      }
+    }
+    # - if extract only interest outcome colocalization
+    if (!is.null(interest_outcome)) {
+      tmp <- sapply(interest_outcome, function(tmp) grep(paste0(tmp, "\\b"), analysis_outcome))
+      if (all(sapply(tmp, length) != 0)) {
+        if.interest <- sapply(coloc_outcome, function(cp) {
+          tt <- sapply(interest_outcome, function(tmp) grep(paste0(tmp, "\\b"), cp))
+          all(sapply(tt, length) != 0)
+        })
+        summary_table$interest_outcome <- paste0(interest_outcome, collapse = "; ")
+        summary_table <- summary_table[which(if.interest), ]
+        if (sum(if.interest) == 0) {
+          warning("No colocalization with interest outcomes.")
+        }
+      } else {
+        warning("Interest outcome is not in the analysis outcomes, please check.")
+      }
+    }
+  } else {
+    summary_table <- NULL
+  }
+  return(summary_table)
+}
 
 
 #' @rdname get_ucos_summary
@@ -535,18 +704,38 @@ get_robust_colocalization <- function(cb_output,
 #' @param outcome_names Optional vector of names of outcomes, which has the same order as Y in the original analysis.
 #' @param region_name Optional character string. When provided, adds a column with this gene name to the output table for easier filtering in downstream analyses.
 #'
-#' @return A summary table for trait-specific, uncolocalized associations with the following columns:
-#' \item{outcomes}{Outcome being analyzed}
-#' \item{ucos_id}{Unique identifier for trait-specific confidence sets}
-#' \item{purity}{Minimum absolute correlation of variables within trait-specific confidence sets}
-#' \item{top_variable}{The variable with highest variant-level probability of association (VPA)}
-#' \item{top_variable_vpa}{Variant-level probability of association (VPA) for the top variable}
-#' \item{ucos_npc}{Normalized probability of causal association for the trait-specific confidence set}
-#' \item{n_variables}{Number of variables in trait-specific confidence set}
-#' \item{ucos_index}{Indices of variables in the trait-specific confidence set}
-#' \item{ucos_variables}{List of variables in the trait-specific confidence set}
-#' \item{ucos_variables_vpa}{Variant-level probability of association (VPA) for all variables in the confidence set}
-#' \item{region_name}{Region name if provided through the region_name parameter}
+#' 
+#' @return A list containing:
+#' \itemize{
+#'   \item \code{ucos_summary}: A summary table for trait-specific, uncolocalized associations with the following columns:
+#'   \itemize{
+#'     \item \code{outcomes}: Outcome being analyzed
+#'     \item \code{ucos_id}: Unique identifier for trait-specific confidence sets
+#'     \item \code{purity}: Minimum absolute correlation of variables within trait-specific confidence sets
+#'     \item \code{top_variable}: The variable with highest variant-level probability of association (VPA)
+#'     \item \code{top_variable_vpa}: Variant-level probability of association (VPA) for the top variable
+#'     \item \code{ucos_npc}: Normalized probability of causal association for the trait-specific confidence set
+#'     \item \code{n_variables}: Number of variables in trait-specific confidence set
+#'     \item \code{ucos_index}: Indices of variables in the trait-specific confidence set
+#'     \item \code{ucos_variables}: List of variables in the trait-specific confidence set
+#'     \item \code{ucos_variables_vpa}: Variant-level probability of association (VPA) for all variables in the confidence set
+#'     \item \code{region_name}: Region name if provided through the region_name parameter
+#'   }
+#'   \item \code{ambiguous_ucos_summary}: A summary table for ambiguous colocalization events with the following columns:
+#'   \itemize{
+#'     \item \code{outcomes}: Outcome in the ambiguous colocalization event
+#'     \item \code{ucos_id}: Unique identifiers for the ambiguous event 
+#'     \item \code{min_between_purity}: Minimum absolute correlation between variables across trait-specific sets in the ambiguous event
+#'     \item \code{median_between_purity}: Median absolute correlation between variables across trait-specific sets in the ambiguous event
+#'     \item \code{overlap_idx}: Indices of variables that overlap between ambiguous trait-specific sets
+#'     \item \code{overlap_variables}: Names of variables that overlap between ambiguous trait-specific sets
+#'     \item \code{n_recalibrated_variables}: Number of variables in the recalibrated colocalization set from an ambiguous event
+#'     \item \code{recalibrated_index}: Indices of variables in the recalibrated colocalization set from an ambiguous event
+#'     \item \code{recalibrated_variables}: Names of variables in the recalibrated colocalization set from an ambiguous event
+#'     \item \code{recalibrated_variables_vcp}: Variant colocalization probabilities for recalibrated variables from an ambiguous event
+#'     \item \code{region_name}: Region name if provided through the region_name parameter
+#'   }
+#' }
 #'
 #' @examples
 #' # colocboost example with single trait analysis
@@ -569,48 +758,103 @@ get_robust_colocalization <- function(cb_output,
 #' @source See detailed instructions in our tutorial portal: 
 #' \url{https://statfungen.github.io/colocboost/articles/Interpret_ColocBoost_Output.html}
 #'
-#' @family colocboost_inference
+#' @keywords colocboost_inference
+#' @family colocboost_utilities
 #' @export
-get_ucos_summary <- function(cb_output, outcome_names = NULL, region_name = NULL) {
+get_ucos_summary <- function(cb_output, outcome_names = NULL, region_name = NULL, 
+                             ambiguous_ucos = FALSE,
+                             min_abs_corr_between_ucos = 0.5, 
+                             median_abs_corr_between_ucos = 0.8) {
+
+  # - check input
   if (!inherits(cb_output, "colocboost")) {
     stop("Input must from colocboost object!")
   }
 
-  specific_cs <- cb_output$ucos_details
-  if (length(specific_cs$ucos$ucos_index) != 0) {
-    cs_outcome <- cb_output$data_info$outcome_info$outcome_names
-    if (!is.null(outcome_names)) {
-      cs_outcome <- outcome_names
-    }
-    vpa <- as.numeric(cb_output$vpa)
-    if (length(vpa) == 0){
-      w <- do.call(cbind, specific_cs$ucos_weight)
-      vpa <- as.vector(1 - apply(1 - w, 1, prod))
-    }
-
-    summary_table <- matrix(NA, nrow = length(specific_cs$ucos$ucos_index), ncol = 9)
-    colnames(summary_table) <- c(
-      "outcomes", "ucos_id", "purity",
-      "top_variable", "top_variable_vpa", "n_variables", "ucos_index",
-      "ucos_variables", "ucos_variables_vpa"
+  if (!("ucos_details" %in% names(cb_output))) {
+    warning(
+      "Since you want to extract trait-specific (uncolocalized) sets,",
+      " but there is no output of ucos_details from colocboost.\n",
+      " Please run colocboost model with output_level=2!"
     )
-    summary_table <- as.data.frame(summary_table)
-    summary_table[, 1] <- cs_outcome[unlist(specific_cs$ucos_outcomes$outcome_index)]
-    summary_table[, 2] <- names(specific_cs$ucos$ucos_index)
-    summary_table[, 3] <- as.numeric(diag(as.matrix(specific_cs$ucos_purity$min_abs_cor)))
-    summary_table[, 4] <- unlist(sapply(specific_cs$ucos$ucos_variables, function(tmp) tmp[1]))
-    summary_table[, 5] <- sapply(specific_cs$ucos$ucos_index, function(tmp) max(vpa[tmp]))
-    summary_table[, 6] <- as.numeric(sapply(specific_cs$ucos$ucos_index, length))
-    summary_table[, 7] <- unlist(sapply(specific_cs$ucos$ucos_index, function(tmp) paste0(tmp, collapse = "; ")))
-    summary_table[, 8] <- unlist(sapply(specific_cs$ucos$ucos_variables, function(tmp) paste0(tmp, collapse = "; ")))
-    summary_table[, 9] <- unlist(sapply(specific_cs$ucos$ucos_index, function(tmp) paste0(vpa[tmp], collapse = "; ")))
-    if (!is.null(region_name)) {
-      summary_table$region_name <- region_name
-    }
-  } else {
-    summary_table <- NULL
+    return(NULL)
   }
-  return(summary_table)
+
+  if (is.null(cb_output$ucos_details)){
+    message("No trait-specific (uncolocalized) effects in this region!")
+    return(NULL)
+  }
+
+  specific_cs <- cb_output$ucos_details
+  cs_outcome <- cb_output$data_info$outcome_info$outcome_names
+  if (!is.null(outcome_names)) {
+    cs_outcome <- outcome_names
+  }
+  vpa <- as.numeric(cb_output$vpa)
+  if (length(vpa) == 0){
+    w <- do.call(cbind, specific_cs$ucos_weight)
+    vpa <- as.vector(1 - apply(1 - w, 1, prod))
+  }
+
+  summary_table <- matrix(NA, nrow = length(specific_cs$ucos$ucos_index), ncol = 9)
+  colnames(summary_table) <- c(
+    "outcomes", "ucos_id", "purity",
+    "top_variable", "top_variable_vpa", "n_variables", "ucos_index",
+    "ucos_variables", "ucos_variables_vpa"
+  )
+  summary_table <- as.data.frame(summary_table)
+  summary_table[, 1] <- cs_outcome[unlist(specific_cs$ucos_outcomes$outcome_index)]
+  summary_table[, 2] <- names(specific_cs$ucos$ucos_index)
+  summary_table[, 3] <- as.numeric(diag(as.matrix(specific_cs$ucos_purity$min_abs_cor)))
+  summary_table[, 4] <- unlist(sapply(specific_cs$ucos$ucos_variables, function(tmp) tmp[1]))
+  summary_table[, 5] <- sapply(specific_cs$ucos$ucos_index, function(tmp) max(vpa[tmp]))
+  summary_table[, 6] <- as.numeric(sapply(specific_cs$ucos$ucos_index, length))
+  summary_table[, 7] <- unlist(sapply(specific_cs$ucos$ucos_index, function(tmp) paste0(tmp, collapse = "; ")))
+  summary_table[, 8] <- unlist(sapply(specific_cs$ucos$ucos_variables, function(tmp) paste0(tmp, collapse = "; ")))
+  summary_table[, 9] <- unlist(sapply(specific_cs$ucos$ucos_index, function(tmp) paste0(vpa[tmp], collapse = "; ")))
+  if (!is.null(region_name)) {
+    summary_table$region_name <- region_name
+  }
+  summary_table <- as.data.frame(summary_table)
+  if (!ambiguous_ucos) return(summary_table)
+
+
+  # advanced summary for ambiguous colocalization at post-processing
+  output_summary <- list(
+    ucos_summary = summary_table,
+    ambiguous_ucos_summary = NULL
+  )
+  test <- get_ambiguous_colocalization(
+    cb_output,
+    min_abs_corr_between_ucos = min_abs_corr_between_ucos,
+    median_abs_corr_between_ucos = median_abs_corr_between_ucos
+  )
+  if (length(test$ambigous_ucos) == 0) return(output_summary)
+
+  ambiguous_results <- test$ambigous_ucos
+  ambiguous_summary <- matrix(NA, nrow = length(ambiguous_results), ncol = 10)
+  colnames(ambiguous_summary) <- c(
+    "outcomes", "ucos_id", "min_between_purity", "median_between_purity",
+    "overlap_idx", "overlap_variables", "n_recalibrated_variables",
+    "recalibrated_index", "recalibrated_variables", "recalibrated_variables_vcp"
+  )
+
+  ambiguous_summary[, 1] <- unlist(sapply(ambiguous_results, function(tmp) paste0(tmp$ambigouse_ucos_outcomes$outcome_name, collapse = "; ")))
+  ambiguous_summary[, 2] <- names(ambiguous_results)
+  ambiguous_summary[, 3] <- sapply(ambiguous_results, function(tmp) max(tmp$ambigous_ucos_puriry$min_abs_cor[lower.tri(min_abs_cor)]) )
+  ambiguous_summary[, 4] <- sapply(ambiguous_results, function(tmp) max(tmp$ambigous_ucos_puriry$median_abs_cor[lower.tri(min_abs_cor)]) )
+  ambiguous_summary[, 5] <- unlist(sapply(ambiguous_results, function(tmp) paste0(tmp$ambigouse_ucos_overlap$ucos_index, collapse = "; ")))
+  ambiguous_summary[, 6] <- unlist(sapply(ambiguous_results, function(tmp) paste0(tmp$ambigouse_ucos_overlap$ucos_variables, collapse = "; ")))
+  ambiguous_summary[, 7] <- as.numeric(sapply(cos_recalibrated, length))
+  ambiguous_summary[, 8] <- unlist(sapply(ambiguous_results, function(tmp) paste0(tmp$recalibrated_cos$cos_index, collapse = "; ")))
+  ambiguous_summary[, 9] <- unlist(sapply(ambiguous_results, function(tmp) paste0(tmp$recalibrated_cos$cos_variables, collapse = "; ")))
+  ambiguous_summary[, 10] <- unlist(sapply(ambiguous_results, function(tmp) paste0(tmp$recalibrated_cos_vcp[tmp$recalibrated_cos$cos_index], collapse = "; ")))
+  if (!is.null(region_name)) {
+    ambiguous_summary$region_name <- region_name
+  }
+  output_summary$ambiguous_ucos_summary <- as.data.frame(ambiguous_summary)
+
+  return(output_summary)
 }
 
 #' Extract CoS at different coverages
@@ -701,6 +945,7 @@ get_cos <- function(cb_output, coverage = 0.95, X = NULL, Xcorr = NULL, n_purity
   return(cos_refined)
 }
 
+
 #' Get integrated weight from different outcomes
 #' @keywords cb_get_functions
 #' @noRd
@@ -725,147 +970,6 @@ get_in_cos <- function(weights, coverage = 0.95) {
   # Order these indices by their weights in decreasing order
   csets <- indices[order(weights[indices], decreasing = TRUE)]
   return(list(csets))
-}
-
-
-#' @rdname get_ambiguous_colocalization
-#'
-#' @title Get ambiguous colocalization events from trait-specific (uncolocalized) effects.
-#'
-#' @description `get_ambiguous_colocalization` get the colocalization by discarding the weaker colocalization events or colocalized outcomes
-#'
-#' @param cb_output Output object from `colocboost` analysis
-#' @param min_abs_corr_between_ucos Minimum absolute correlation for variants across two trait-specific (uncolocalized) effects to be considered colocalized. The default is 0.5.
-#' @param median_abs_corr_between_ucos Median absolute correlation for variants across two trait-specific (uncolocalized) effects to be considered colocalized. The default is 0.8.
-#' @param tol A small, non-negative number specifying the convergence tolerance for checking the overlap of the variables in different sets.
-#'
-#' @return A \code{"colocboost"} object of colocboost output with additional elements:
-#' \item{ambiguous_ucos}{If exists, a list of ambiguous trait-specific (uncolocalized) effects.}
-#'
-#' @examples
-#' data(Ambiguous_Colocalization)
-#' test_colocboost_results <- Ambiguous_Colocalization$ColocBoost_Results
-#' res <- get_ambiguous_colocalization(test_colocboost_results)
-#' names(res$ambigous_ucos)
-#' 
-#' @source See detailed instructions in our tutorial portal: 
-#' \url{https://statfungen.github.io/colocboost/articles/Interpret_ColocBoost_Output.html}
-#'
-#' @family colocboost_inference
-#' @export
-get_ambiguous_colocalization <- function(cb_output, 
-                                         min_abs_corr_between_ucos = 0.5, 
-                                         median_abs_corr_between_ucos = 0.8,
-                                         tol = 1e-9) {
-
-    if (!inherits(cb_output, "colocboost")) {
-      stop("Input must from colocboost output!")
-    }
-
-    if (!("ucos_details" %in% names(cb_output))) {
-      warning(
-        "Since you want to extract ambiguous colocalization from trait-specific (uncolocalized) sets,",
-        " but there is no output of ucos_details from colocboost.\n",
-        " Please run colocboost model with output_level=2!",
-      )
-      return(cb_output)
-    }
-
-    if (is.null(cb_output$ucos_details)){
-      message("No trait-specific (uncolocalized) effects in this region!")
-      return(cb_output)
-    }
-
-    ucos_details <- cb_output$ucos_details
-    nucos <- length(ucos_details$ucos$ucos_index)
-    if (nucos == 1){
-      message("Only one trait-specific (uncolocalized) effect in this region!")
-      return(cb_output)
-    }
-
-    # Function to merge ambiguous ucos
-    merge_sets <- function(vec) {
-      split_lists <- lapply(vec, function(x) as.numeric(unlist(strsplit(x, ";"))))
-      result <- list()
-      while (length(split_lists) > 0) {
-        current <- split_lists[[1]]
-        split_lists <- split_lists[-1]
-        repeat {
-          overlap_index <- NULL
-          for (i in seq_along(split_lists)) {
-            if (length(intersect(current, split_lists[[i]])) > 0) {
-              overlap_index <- i
-              break
-            }
-          }
-          if (!is.null(overlap_index)) {
-            current <- union(current, split_lists[[overlap_index]])
-            split_lists <- split_lists[-overlap_index]
-          } else {
-            break
-          }
-        }
-        result <- c(result, list(paste(sort(current), collapse = ";")))
-      }
-      return(result)
-    }
-
-
-    purity <- ucos_details$ucos_purity
-    min_abs_cor <- purity$min_abs_cor
-    median_abs_cor <- purity$median_abs_cor
-    max_abs_cor <- purity$max_abs_cor
-    is_ambiguous <- (min_abs_cor > min_abs_corr_between_ucos) * 
-      (abs(max_abs_cor - 1) < tol) * 
-      (median_abs_cor > median_abs_corr_between_ucos)
-    diag(is_ambiguous) <- 0 # no need to check within ucos
-
-    if (sum(is.between) == 0){
-      message("No ambiguous colocalization events!")
-      return(cb_output)
-    } else {
-      message("There exists the ambiguous colocalization events from trait-specific effects. Extracting!")
-    }
-
-    temp <- sapply(1:nrow(is_ambiguous), function(x) {
-      tt <- c(x, which(is_ambiguous[x, ] != 0))
-      return(paste0(sort(tt), collapse = ";"))
-    })
-    temp <- merge_sets(temp)
-    potential_merged <- lapply(temp, function(x) as.numeric(unlist(strsplit(x, ";"))))
-    potential_merged <- potential_merged[which(sapply(potential_merged, length) >= 2)]
-
-    ambigous_events <- list()
-    ambigouse_ucos_names <- c()
-    for (i in 1:length(potential_merged)) {
-      idx <- potential_merged[[i]]
-      test_outcome <- unique(unlist(ucos_details$ucos_outcomes$outcome_index[idx]))
-      if (length(test_outcome) == 1) next
-      ambigouse_ucos_names[i] <- paste0(names(ucos_details$ucos$ucos_index)[idx], collapse = ";")
-      tmp <- list(
-        ambigouse_ucos = list(
-          ucos_index = ucos_details$ucos$ucos_index[idx],
-          ucos_variables = ucos_details$ucos$ucos_variables[idx]
-        ),
-        ambigouse_ucos_outcomes = list(
-          outcome_idx = ucos_details$ucos_outcomes$outcome_index[idx],
-          outcome_name = ucos_details$ucos_outcomes$outcome_name[idx]
-        ),
-        ambigous_ucos_weight = ucos_details$ucos_weight[idx],
-        ambigous_ucos_puriry = list(
-          min_abs_cor = min_abs_cor[idx, idx],
-          median_abs_cor = median_abs_cor[idx, idx],
-          max_abs_cor = max_abs_cor[idx, idx]
-        )
-      )
-      ambigous_events[[i]] <- tmp
-    }
-    names(ambigous_events) <- ambigouse_ucos_names
-    message(paste("There are", length(ambigous_events), "ambiguous trait-specific effects."))
-
-    cb_output$ambigous_ucos <- ambigous_events
-    return(cb_output)
-          
 }
 
 
@@ -959,528 +1063,3 @@ get_cos_purity <- function(cos, X = NULL, Xcorr = NULL, n_purity = 100) {
   return(cos_purity)
 }
 
-
-#' @title Set of internal functions to re-organize ColocBoost output format
-#'
-#' @description
-#' The `colocboost_output_reorganization` functions access basic properties inferences from a fitted ColocBoost model. This documentation serves as a summary for all related post-inference functions.
-#'
-#' @details
-#' The following functions are included in this set:
-#' `get_data_info` get formatted \code{data_info} in ColocBoost output
-#' `get_cos_details` get formatted \code{cos_details} in ColocBoost output
-#' `get_model_info` get formatted \code{model_info} in ColocBoost output
-#' `get_full_output` get formatted additional information in ColocBoost output when \code{output_level!=1}
-#'
-#' These functions are not exported individually and are accessed via `colocboost_output_reorganization`.
-#'
-#' @rdname colocboost_output_reorganization
-#' @keywords cb_reorganization
-#' @noRd
-colocboost_output_reorganization <- function() {
-  message("This function re-formats colocboost output as internal used. See details for more information.")
-}
-
-#' Get formatted \code{data_info} in ColocBoost output
-#' @noRd
-#' @keywords cb_reorganization
-get_data_info <- function(cb_obj) {
-  ## - analysis data information
-  n_outcome <- cb_obj$cb_model_para$L
-  n_variables <- cb_obj$cb_model_para$P
-  analysis_outcome <- cb_obj$cb_model_para$outcome_names
-  variables <- cb_obj$cb_data$variable.names
-  focal_outcome <- NULL
-  is_focal <- rep(FALSE, n_outcome)
-  if (!is.null(cb_obj$cb_model_para$focal_outcome_idx)) {
-    focal_outcome <- analysis_outcome[cb_obj$cb_model_para$focal_outcome_idx]
-    is_focal[cb_obj$cb_model_para$focal_outcome_idx] <- TRUE
-  }
-  is_sumstat <- grepl("sumstat_outcome", names(cb_obj$cb_data$data))
-  N <- cb_obj$cb_model_para$N
-  check_no_N <- sapply(cb_obj$cb_model_para$N, is.null)
-  if (sum(check_no_N)!=0){
-    N[which(check_no_N)] <- "NA"
-    N <- unlist(N)
-  }
-  outcome_info <- data.frame(
-    "outcome_names" = analysis_outcome, "sample_size" = N,
-    "is_sumstats" = is_sumstat, "is_focal" = is_focal
-  )
-  rownames(outcome_info) <- paste0("y", 1:n_outcome)
-
-  ## - marginal associations
-  z_scores <- lapply(cb_obj$cb_model, function(cb) {
-    as.numeric(cb$z_univariate)
-  })
-  betas <- lapply(cb_obj$cb_model, function(cb) {
-    as.numeric(cb$beta)
-  })
-  names(z_scores) <- names(betas) <- analysis_outcome
-  ## - output data info
-  data.info <- list(
-    "n_outcomes" = n_outcome,
-    "n_variables" = n_variables,
-    "outcome_info" = outcome_info,
-    "variables" = variables,
-    "coef" = betas,
-    "z" = z_scores
-  )
-  return(data.info)
-}
-
-#' Get formatted \code{cos_details} in ColocBoost output
-#' @noRd
-#' @keywords cb_reorganization
-get_cos_details <- function(cb_obj, coloc_out, data_info = NULL) {
-  if (is.null(data_info)) {
-    data_info <- get_data_info(cb_obj)
-  }
-
-
-  ### ----- Define the colocalization results
-  coloc_sets <- coloc_out$cos
-  if (length(coloc_sets) != 0) {
-    # - colocalization outcome configurations
-    tmp <- get_cos_evidence(cb_obj, coloc_out, data_info)
-    normalization_evidence <- tmp$normalization_evidence
-    npc <- tmp$npc
-    cos_min_npc_outcome <- sapply(normalization_evidence, function(cp) min(cp$npc_outcome))
-
-    # - colocalized outcomes
-    analysis_outcome <- cb_obj$cb_model_para$outcome_names
-    coloc_outcome_index <- coloc_outcome <- list()
-    colocset_names <- c()
-    for (i in 1:length(coloc_out$cos)) {
-      coloc_outcome_index[[i]] <- coloc_out$coloc_outcomes[[i]]
-      coloc_outcome[[i]] <- analysis_outcome[coloc_outcome_index[[i]]]
-      colocset_names[i] <- paste0("cos", i, ":", paste0(paste0("y", coloc_outcome_index[[i]]), collapse = "_"))
-      if (grepl("merged", names(coloc_sets)[i])) {
-        colocset_names[i] <- paste0(colocset_names[i], ":merged")
-      }
-    }
-    names(coloc_outcome) <- names(coloc_outcome_index) <- colocset_names
-    names(npc) <- names(normalization_evidence) <- names(cos_min_npc_outcome) <- colocset_names
-    coloc_outcomes <- list("outcome_index" = coloc_outcome_index, "outcome_name" = coloc_outcome)
-
-    # - colocalized sets for variables
-    coloc_csets_variableidx <- coloc_out$cos
-    coloc_csets_variablenames <- lapply(coloc_csets_variableidx, function(coloc_tmp) {
-      cb_obj$cb_model_para$variables[coloc_tmp]
-    })
-    coloc_csets_variableidx <- lapply(coloc_csets_variablenames, function(variable) match(variable, data_info$variables))
-    names(coloc_csets_variableidx) <- names(coloc_csets_variablenames) <- colocset_names
-    coloc_csets_original <- list("cos_index" = coloc_csets_variableidx, "cos_variables" = coloc_csets_variablenames)
-
-    # - colocalized set cs_change
-    cs_change <- coloc_out$cs_change
-    rownames(cs_change) <- colocset_names
-    colnames(cs_change) <- analysis_outcome
-
-    # - VCP
-    cos_weights <- lapply(coloc_out$avWeight, function(w) {
-      pos <- match(data_info$variables, cb_obj$cb_model_para$variables)
-      return(w[pos, , drop = FALSE])
-    })
-    int_weight <- lapply(cos_weights, get_integrated_weight, weight_fudge_factor = cb_obj$cb_model_para$weight_fudge_factor)
-    names(int_weight) <- names(cos_weights) <- colocset_names
-    vcp <- as.vector(1 - apply(1 - do.call(cbind, int_weight), 1, prod))
-    names(vcp) <- data_info$variables
-
-    # - resummary results
-    cos_re_idx <- lapply(int_weight, function(w) {
-      unlist(get_in_cos(w, coverage = cb_obj$cb_model_para$coverage))
-    })
-    cos_re_var <- lapply(cos_re_idx, function(idx) {
-      data_info$variables[idx]
-    })
-    coloc_csets <- list("cos_index" = cos_re_idx, "cos_variables" = cos_re_var)
-
-    # - hits variables in each csets
-    coloc_hits <- coloc_hits_variablenames <- coloc_hits_names <- c()
-    for (i in 1:length(int_weight)) {
-      inw <- int_weight[[i]]
-      pp <- which(inw == max(inw))
-      coloc_hits <- c(coloc_hits, pp)
-      coloc_hits_variablenames <- c(coloc_hits_variablenames, data_info$variables[pp])
-      if (length(pp) == 1) {
-        coloc_hits_names <- c(coloc_hits_names, names(int_weight)[i])
-      } else {
-        coloc_hits_names <- c(coloc_hits_names, paste0(names(int_weight)[i], ".", 1:length(pp)))
-      }
-    }
-    coloc_hits <- data.frame("top_index" = coloc_hits, "top_variables" = coloc_hits_variablenames)
-    rownames(coloc_hits) <- coloc_hits_names
-
-    # - purity
-    ncos <- length(coloc_csets$cos_index)
-    if (ncos >= 2) {
-      empty_matrix <- matrix(NA, ncos, ncos)
-      colnames(empty_matrix) <- rownames(empty_matrix) <- colocset_names
-      csets_purity <- lapply(1:3, function(ii) {
-        diag(empty_matrix) <- coloc_out$purity[, ii]
-        return(empty_matrix)
-      })
-      for (i in 1:(ncos - 1)) {
-        for (j in (i + 1):ncos) {
-          cset1 <- coloc_csets$cos_index[[i]]
-          cset2 <- coloc_csets$cos_index[[j]]
-          y.i <- coloc_outcomes$outcome_index[[i]]
-          y.j <- coloc_outcomes$outcome_index[[j]]
-          yy <- unique(c(y.i, y.j))
-          res <- list()
-          flag <- 1
-          for (ii in yy) {
-            X_dict <- cb_obj$cb_data$dict[ii]
-            res[[flag]] <- get_between_purity(cset1, cset2,
-              X = cb_obj$cb_data$data[[X_dict]]$X,
-              Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
-              miss_idx = cb_obj$cb_data$data[[ii]]$variable_miss,
-              P = cb_obj$cb_model_para$P
-            )
-            flag <- flag + 1
-          }
-          res <- Reduce(pmax, res)
-          csets_purity <- lapply(1:3, function(ii) {
-            csets_purity[[ii]][i, j] <- csets_purity[[ii]][j, i] <- res[ii]
-            return(csets_purity[[ii]])
-          })
-        }
-      }
-      names(csets_purity) <- c("min_abs_cor", "max_abs_cor", "median_abs_cor")
-    } else {
-      csets_purity <- lapply(1:length(coloc_out$purity), function(i) {
-        tmp <- as.matrix(coloc_out$purity[i])
-        rownames(tmp) <- colnames(tmp) <- colocset_names
-        tmp
-      })
-      names(csets_purity) <- c("min_abs_cor", "max_abs_cor", "median_abs_cor")
-    }
-
-    # - save coloc_results
-    coloc_results <- list(
-      "cos" = coloc_csets,
-      "cos_outcomes" = coloc_outcomes,
-      "cos_vcp" = int_weight,
-      "cos_outcomes_npc" = normalization_evidence,
-      "cos_npc" = npc,
-      "cos_min_npc_outcome" = cos_min_npc_outcome,
-      "cos_purity" = csets_purity,
-      "cos_top_variables" = coloc_hits,
-      "cos_weights" = cos_weights
-    )
-
-
-    # - missing variable and warning message
-    missing_variables_idx <- Reduce(union, lapply(cb_obj$cb_data$data, function(cb) cb$variable_miss))
-    missing_variables <- cb_obj$cb_model_para$variables[missing_variables_idx]
-    cos_missing_variables_idx <- lapply(coloc_csets_original$cos_variables, function(variable) {
-      missing <- intersect(variable, missing_variables)
-      if (length(missing) != 0) {
-        match(missing, data_info$variables)
-      } else {
-        NULL
-      }
-    })
-    cos_missing_variables <- lapply(cos_missing_variables_idx, function(variable) {
-      if (!is.null(variable)) {
-        data_info$variables[variable]
-      } else {
-        NULL
-      }
-    })
-    warning_needed <- any(!sapply(cos_missing_variables, is.null))
-    if (warning_needed) {
-      is_missing <- which(!sapply(cos_missing_variables, is.null))
-      cos_missing_variables_idx <- cos_missing_variables_idx[is_missing]
-      cos_missing_variables <- cos_missing_variables[is_missing]
-      cos_missing_vcp <- lapply(cos_missing_variables_idx, function(idx) {
-        vcp[idx]
-      })
-      warning_message <- paste(
-        "CoS", paste(names(cos_missing_variables_idx), collapse = ","),
-        "contains missing variables in at least one outcome.",
-        "The missing variables will cause the ~0 VCP scores."
-      )
-      cos_warnings <- list(
-        "cos_missing_info" = list(
-          "index" = cos_missing_variables_idx,
-          "variables" = cos_missing_variables,
-          "vcp" = cos_missing_vcp
-        ),
-        "warning_message" = warning_message
-      )
-      coloc_results$cos_warnings <- cos_warnings
-    }
-  } else {
-    coloc_results <- NULL
-    vcp <- NULL
-  }
-  return(list("cos_results" = coloc_results, "vcp" = vcp))
-}
-
-#' Get formatted \code{model_info} in ColocBoost output
-#' @noRd
-#' @keywords cb_reorganization
-get_model_info <- function(cb_obj, outcome_names = NULL) {
-  if (is.null(outcome_names)) {
-    data_info <- get_data_info(cb_obj)
-    outcome_names <- data_info$outcome_info$outcome_names
-  }
-
-  profile_loglik <- cb_obj$cb_model_para$profile_loglike
-  n_updates <- cb_obj$cb_model_para$num_updates
-  n_updates_outcome <- cb_obj$cb_model_para$num_updates_outcome
-  model_coveraged <- cb_obj$cb_model_para$coveraged
-  model_coveraged_outcome <- cb_obj$cb_model_para$coveraged_outcome
-  jk_update <- cb_obj$cb_model_para$real_update_jk
-  if (!is.null(jk_update)){
-    rownames(jk_update) <- paste0("jk_star_", 1:nrow(jk_update))
-    colnames(jk_update) <- outcome_names
-  }
-  outcome_proximity_obj <- lapply(cb_obj$cb_model, function(cb) cb$obj_path)
-  outcome_coupled_best_update_obj <- lapply(cb_obj$cb_model, function(cb) cb$obj_single)
-  outcome_profile_loglik <- lapply(cb_obj$cb_model, function(cb) cb$profile_loglike_each)
-  names(outcome_proximity_obj) <- names(outcome_coupled_best_update_obj) <-
-    names(outcome_profile_loglik) <- names(n_updates_outcome) <- 
-    names(model_coveraged_outcome) <- outcome_names
-  ll <- list(
-    "model_coveraged" = model_coveraged,
-    "n_updates" = n_updates,
-    "profile_loglik" = profile_loglik,
-    "outcome_profile_loglik" = outcome_profile_loglik,
-    "outcome_proximity_obj" = outcome_proximity_obj,
-    "outcome_coupled_best_update_obj" = outcome_coupled_best_update_obj,
-    "outcome_model_coveraged" = model_coveraged_outcome,
-    "outcome_n_updates" = n_updates_outcome,
-    "jk_star" = jk_update
-  )
-  return(ll)
-}
-
-#' Get formatted additional information in ColocBoost output when \code{output_level!=1}
-#' @noRd
-#' @keywords cb_reorganization
-get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output = NULL, weaker_ucos = FALSE) {
-  cb_model <- cb_obj$cb_model
-  cb_model_para <- cb_obj$cb_model_para
-
-  ## - obtain the order of variables based on the variables names if it has position information
-  if (!is.null(variables)) {
-    ordered <- 1:length(cb_obj$cb_model_para$variables)
-  } else {
-    ordered <- match(variables, cb_obj$cb_model_para$variables)
-  }
-
-  ## - reorder all output
-  # - cb_model
-  tmp <- lapply(cb_model, function(cb) {
-    cb$beta <- cb$beta[ordered]
-    cb$weights_path <- cb$weights_path[, ordered]
-    cb$change_loglike <- cb$change_loglike[ordered]
-    cb$correlation <- as.numeric(cb$correlation[ordered])
-    cb$z <- as.numeric(cb$z[ordered])
-    cb$ld_jk <- cb$ld_jk[, ordered]
-    cb$z_univariate <- as.numeric(cb$z_univariate[ordered])
-    cb$beta_hat <- as.numeric(cb$beta_hat[ordered])
-    cb$multi_correction <- as.numeric(cb$multi_correction[ordered])
-    cb$multi_correction_univariate <- as.numeric(cb$multi_correction_univariate[ordered])
-    return(cb)
-  })
-  cb_model <- tmp
-
-  # - sets
-  if (!is.null(past_out)) {
-    out_ucos <- past_out$ucos
-    # - single sets
-    if (!is.null(out_ucos$ucos_each)) {
-      out_ucos$ucos_each <- lapply(out_ucos$ucos_each, function(cs) {
-        match(cb_model_para$variables[cs], variables)
-      })
-      out_ucos$avW_ucos_each <- out_ucos$avW_ucos_each[ordered, , drop = FALSE]
-
-      # - re-orginize specific results
-      analysis_outcome <- cb_obj$cb_model_para$outcome_names
-      specific_outcome_index <- specific_outcome <- list()
-      specific_cs_names <- c()
-      for (i in 1:length(out_ucos$ucos_each)) {
-        cc <- out_ucos$avW_ucos_each[, i, drop = FALSE]
-        tmp_names <- colnames(cc)
-        specific_outcome_index[[i]] <- as.numeric(gsub(".*Y([0-9]+).*", "\\1", tmp_names))
-        specific_outcome[[i]] <- analysis_outcome[specific_outcome_index[[i]]]
-        specific_cs_names[i] <- paste0("ucos", i, ":y", specific_outcome_index[[i]])
-      }
-      names(specific_outcome) <- names(specific_outcome_index) <- specific_cs_names
-      specific_outcomes <- list("outcome_index" = specific_outcome_index, "outcome_name" = specific_outcome)
-
-      # - specific sets for variables
-      specific_cs_variableidx <- out_ucos$ucos_each
-      specific_cs_variablenames <- lapply(specific_cs_variableidx, function(specific_tmp) {
-        cb_obj$cb_model_para$variables[specific_tmp]
-      })
-      specific_cs_variableidx <- lapply(specific_cs_variablenames, function(variable) match(variable, variables))
-      names(specific_cs_variableidx) <- names(specific_cs_variablenames) <- specific_cs_names
-      specific_css <- list("ucos_index" = specific_cs_variableidx, "ucos_variables" = specific_cs_variablenames)
-
-      # - specific set cs_change
-      cs_change <- out_ucos$change_obj_each
-      rownames(cs_change) <- specific_cs_names
-      colnames(cs_change) <- analysis_outcome
-      index_change <- as.data.frame(which(cs_change != 0, arr.ind = TRUE))
-      change_outcomes <- analysis_outcome[index_change$col]
-      change_values <- diag(as.matrix(cs_change[index_change$row, index_change$col]))
-      cs_change <- data.frame("ucos_outcome" = change_outcomes, "ucos_delta" = change_values)
-
-      # - filter weak ucos
-      check_null_max <- sapply(cb_model, function(cb) cb$check_null_max)
-      remove_weak <- sapply(1:nrow(cs_change), function(ic) {
-        outcome_tmp <- cs_change$ucos_outcome[ic]
-        delta_tmp <- cs_change$ucos_delta[ic]
-        pp <- which(cb_obj$cb_model_para$outcome_names == outcome_tmp)
-        check_tmp <- check_null_max[pp]
-        delta_tmp >= check_tmp
-      })
-      keep_ucos <- which(remove_weak)
-      if (length(keep_ucos) == 0) {
-        specific_results <- NULL
-      } else {
-        specific_outcomes$outcome_index <- specific_outcomes$outcome_index[keep_ucos]
-        specific_outcomes$outcome_name <- specific_outcomes$outcome_name[keep_ucos]
-        specific_css$ucos_index <- specific_css$ucos_index[keep_ucos]
-        specific_css$ucos_variables <- specific_css$ucos_variables[keep_ucos]
-        cs_change <- cs_change[keep_ucos, , drop = FALSE]
-        out_ucos$avW_ucos_each <- out_ucos$avW_ucos_each[, keep_ucos, drop = FALSE]
-        specific_cs_names <- specific_cs_names[keep_ucos]
-        out_ucos$purity_each <- out_ucos$purity_each[keep_ucos, , drop = FALSE]
-
-        # - ucos_weight
-        specific_w <- lapply(1:ncol(out_ucos$avW_ucos_each), function(ii) out_ucos$avW_ucos_each[, ii, drop = FALSE])
-        names(specific_w) <- specific_cs_names
-
-        # - hits variables in each csets
-        cs_hits <- sapply(1:length(specific_w), function(jj) {
-          inw <- specific_w[[jj]]
-          sample(which(inw == max(inw)), 1)
-        })
-        cs_hits_variablenames <- sapply(cs_hits, function(ch) variables[ch])
-        specific_cs_hits <- data.frame("top_index" = cs_hits, "top_variables" = cs_hits_variablenames) # save
-        rownames(specific_cs_hits) <- specific_cs_names
-
-        # - purity
-        nucos <- length(specific_css$ucos_index)
-        if (nucos >= 2) {
-          empty_matrix <- matrix(NA, nucos, nucos)
-          colnames(empty_matrix) <- rownames(empty_matrix) <- specific_cs_names
-          specific_cs_purity <- lapply(1:3, function(ii) {
-            diag(empty_matrix) <- out_ucos$purity_each[, ii]
-            return(empty_matrix)
-          })
-          for (i in 1:(nucos - 1)) {
-            for (j in (i + 1):nucos) {
-              cset1 <- specific_css$ucos_index[[i]]
-              cset2 <- specific_css$ucos_index[[j]]
-              y.i <- specific_outcomes$outcome_index[[i]]
-              y.j <- specific_outcomes$outcome_index[[j]]
-              yy <- unique(c(y.i, y.j))
-              res <- list()
-              flag <- 1
-              for (ii in yy) {
-                X_dict <- cb_obj$cb_data$dict[ii]
-                res[[flag]] <- get_between_purity(cset1, cset2,
-                  X = cb_obj$cb_data$data[[X_dict]]$X,
-                  Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
-                  miss_idx = cb_obj$cb_data$data[[ii]]$variable_miss,
-                  P = cb_obj$cb_model_para$P
-                )
-                flag <- flag + 1
-              }
-              res <- Reduce(pmax, res)
-              specific_cs_purity <- lapply(1:3, function(ii) {
-                specific_cs_purity[[ii]][i, j] <- specific_cs_purity[[ii]][j, i] <- res[ii]
-                return(specific_cs_purity[[ii]])
-              })
-            }
-          }
-          names(specific_cs_purity) <- c("min_abs_cor", "max_abs_cor", "median_abs_cor")
-        } else {
-          specific_cs_purity <- out_ucos$purity_each
-          rownames(specific_cs_purity) <- specific_cs_names
-        }
-
-        # - cos&ucos purity
-        cos <- cb_output$cos_details$cos$cos_index
-        ncos <- length(cos)
-        if (ncos != 0) {
-          empty_matrix <- matrix(NA, ncos, nucos)
-          colnames(empty_matrix) <- specific_cs_names
-          rownames(empty_matrix) <- names(cos)
-          cos_ucos_purity <- lapply(1:3, function(ii) empty_matrix)
-          for (i in 1:ncos) {
-            for (j in 1:nucos) {
-              cset1 <- cos[[i]]
-              cset2 <- specific_css$ucos_index[[j]]
-              y.i <- cb_output$cos_details$cos_outcomes$outcome_index[[i]]
-              y.j <- specific_outcomes$outcome_index[[j]]
-              yy <- unique(c(y.i, y.j))
-              res <- list()
-              flag <- 1
-              for (ii in yy) {
-                X_dict <- cb_obj$cb_data$dict[ii]
-                res[[flag]] <- get_between_purity(cset1, cset2,
-                  X = cb_obj$cb_data$data[[X_dict]]$X,
-                  Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
-                  miss_idx = cb_obj$cb_data$data[[ii]]$variable_miss,
-                  P = cb_obj$cb_model_para$P
-                )
-                flag <- flag + 1
-              }
-              res <- Reduce(pmax, res)
-              cos_ucos_purity <- lapply(1:3, function(ii) {
-                cos_ucos_purity[[ii]][i, j] <- res[ii]
-                return(cos_ucos_purity[[ii]])
-              })
-            }
-          }
-          names(cos_ucos_purity) <- c("min_abs_cor", "max_abs_cor", "median_abs_cor")
-        } else {
-          cos_ucos_purity <- NULL
-        }
-
-
-        # - save coloc_results
-        specific_results <- list(
-          "ucos" = specific_css,
-          "ucos_outcomes" = specific_outcomes,
-          "ucos_weight" = specific_w,
-          "ucos_top_variables" = specific_cs_hits,
-          "ucos_purity" = specific_cs_purity,
-          "cos_ucos_purity" = cos_ucos_purity,
-          "ucos_outcomes_delta" = cs_change
-        )
-      }
-    } else {
-      specific_results <- NULL
-    }
-
-    # - cb_model_para
-    cb_model_para$N <- as.numeric(unlist(cb_model_para$N))
-    cb_model_para$variables <- variables
-
-    ll <- list(
-      "ucos_details" = specific_results,
-      "cb_model" = cb_model,
-      "cb_model_para" = cb_model_para
-    )
-  } else {
-    # - cb_model_para
-    cb_model_para$N <- as.numeric(unlist(cb_model_para$N))
-    cb_model_para$variables <- variables
-    ll <- list(
-      "ucos_detials" = NULL,
-      "cb_model" = cb_model,
-      "cb_model_para" = cb_model_para
-    )
-  }
-
-  return(ll)
-}

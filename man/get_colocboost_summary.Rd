@@ -10,63 +10,73 @@ See detailed instructions in our tutorial portal:
 \usage{
 get_colocboost_summary(
   cb_output,
+  summary_level = 1,
   outcome_names = NULL,
   interest_outcome = NULL,
   region_name = NULL,
-  min_abs_corr = 0.5,
-  median_cos_abs_corr = 0.8
+  min_abs_corr_between_ucos = 0.5,
+  median_abs_corr_between_ucos = 0.8,
+  tol = 1e-09
 )
 }
 \arguments{
 \item{cb_output}{Output object from \code{colocboost} analysis}
+
+\item{summary_level}{When \code{summary_level = 1}, return basic sumamry table for colocalization results. See details in \code{get_ucos_summary} function when \code{summary_level = 2}.}
 
 \item{outcome_names}{Optional vector of names of outcomes, which has the same order as Y in the original analysis.}
 
 \item{interest_outcome}{Optional vector specifying a subset of outcomes from \code{outcome_names} to focus on. When provided, only colocalization events that include at least one of these outcomes will be returned.}
 
 \item{region_name}{Optional character string. When provided, adds a column with this gene name to the output table for easier filtering in downstream analyses.}
+
+\item{min_abs_corr_between_ucos}{Minimum absolute correlation for variants across two trait-specific (uncolocalized) effects to be considered colocalized. The default is 0.5.}
+
+\item{median_abs_corr_between_ucos}{Median absolute correlation for variants across two trait-specific (uncolocalized) effects to be considered colocalized. The default is 0.8.}
+
+\item{tol}{A small, non-negative number specifying the convergence tolerance for checking the overlap of the variables in different sets.}
 }
 \value{
-A list of all summary tables for colocalization events and trait-specific associations if exists.
-
-\item{cos_summary}{A summary table for colocalization events with the following columns:
+A list containing results from the ColocBoost analysis:
 \itemize{
-\item{focal_outcome}{The focal outcome being analyzed if exists. Otherwise, it is \code{FALSE}.}
-\item{colocalized_outcomes}{Colocalized outcomes for colocalization confidence set (CoS)}
-\item{cos_id}{Unique identifier for colocalization confidence set (CoS)}
-\item{purity}{Minimum absolute correlation of variables with in colocalization confidence set (CoS)}
-\item{top_variable}{The variable with highest variant colocalization probability (VCP)}
-\item{top_variable_vcp}{Variant colocalization probability for the top variable}
-\item{cos_npc}{Normalized probability of colocalization}
-\item{min_npc_outcome}{Minimum normalized probability of colocalized traits}
-\item{n_variables}{Number of variables in colocalization confidence set (CoS)}
-\item{colocalized_index}{Indices of colocalized variables}
-\item{colocalized_variables}{List of colocalized variables}
-\item{colocalized_variables_vcp}{Variant colocalization probabilities for all colocalized variables}
+\item When \code{summary_level = 1} (default):
+\itemize{
+\item \code{cos_summary}: A summary table for colocalization events with the following columns:
+\itemize{
+\item \code{focal_outcome}: The focal outcome being analyzed if exists. Otherwise, it is \code{FALSE}.
+\item \code{colocalized_outcomes}: Colocalized outcomes for colocalization confidence set (CoS)
+\item \code{cos_id}: Unique identifier for colocalization confidence set (CoS)
+\item \code{purity}: Minimum absolute correlation of variables within colocalization confidence set (CoS)
+\item \code{top_variable}: The variable with highest variant colocalization probability (VCP)
+\item \code{top_variable_vcp}: Variant colocalization probability for the top variable
+\item \code{cos_npc}: Normalized probability of colocalization
+\item \code{min_npc_outcome}: Minimum normalized probability of colocalized traits
+\item \code{n_variables}: Number of variables in colocalization confidence set (CoS)
+\item \code{colocalized_index}: Indices of colocalized variables
+\item \code{colocalized_variables}: List of colocalized variables
+\item \code{colocalized_variables_vcp}: Variant colocalization probabilities for all colocalized variables
 }
 }
-
-\item{ambigouse_cos_summary}{Colocalized outcomes for colocalization confidence set (CoS) }
-
-\item{ucos_summary}{A summary table for trait-specific, uncolocalized associations with the following columns:
+\item When \code{summary_level = 2}:
 \itemize{
-\item{outcomes}{Outcome being analyzed}
-\item{ucos_id}{Unique identifier for trait-specific confidence sets}
-\item{purity}{Minimum absolute correlation of variables within trait-specific confidence sets}
-\item{top_variable}{The variable with highest variant-level probability of association (VPA)}
-\item{top_variable_vpa}{Variant-level probability of association (VPA) for the top variable}
-\item{ucos_npc}{Normalized probability of causal association for the trait-specific confidence set}
-\item{n_variables}{Number of variables in trait-specific confidence set}
-\item{ucos_index}{Indices of variables in the trait-specific confidence set}
-\item{ucos_variables}{List of variables in the trait-specific confidence set}
-\item{ucos_variables_vpa}{Variant-level probability of association (VPA) for all variables in the confidence set}
-\item{region_name}{Region name if provided through the region_name parameter}
+\item \code{cos_summary}: As described above
+\item \code{ucos_summary}: A summary table for trait-specific (uncolocalized) effects
+}
+\item When \code{summary_level = 3}:
+\itemize{
+\item \code{cos_summary}: As described above
+\item \code{ucos_summary}: A summary table for trait-specific (uncolocalized) effects
+\item \code{ambiguous_ucos_summary}: A summary table for ambiguous colocalization events from trait-specific effects
 }
 }
 }
 \description{
 \code{get_colocboost_summary} get colocalization and trait-specific summary table
 with or without the outcomes of interest.
+}
+\details{
+When \code{summary_level = 2} or \code{summary_level = 3}, additional details for trait-specific effects and ambiguous
+colocalization events are included. See \code{\link{get_ucos_summary}} for details on these tables.
 }
 \examples{
 # colocboost example
@@ -88,14 +98,12 @@ for (l in 1:L) {
   Y[, l] <- X \%*\% true_beta[, l] + rnorm(N, 0, 1)
 }
 res <- colocboost(X = X, Y = Y)
-get_cos_summary(res)
+get_colocboost_summary(res)
 
 }
 \seealso{
 Other colocboost_inference: 
 \code{\link{get_ambiguous_colocalization}()},
-\code{\link{get_cos_summary}()},
-\code{\link{get_robust_colocalization}()},
-\code{\link{get_ucos_summary}()}
+\code{\link{get_robust_colocalization}()}
 }
 \concept{colocboost_inference}

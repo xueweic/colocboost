@@ -8,7 +8,14 @@ See detailed instructions in our tutorial portal:
 \url{https://statfungen.github.io/colocboost/articles/Interpret_ColocBoost_Output.html}
 }
 \usage{
-get_ucos_summary(cb_output, outcome_names = NULL, region_name = NULL)
+get_ucos_summary(
+  cb_output,
+  outcome_names = NULL,
+  region_name = NULL,
+  ambiguous_ucos = FALSE,
+  min_abs_corr_between_ucos = 0.5,
+  median_abs_corr_between_ucos = 0.8
+)
 }
 \arguments{
 \item{cb_output}{Output object from \code{colocboost} analysis}
@@ -18,18 +25,37 @@ get_ucos_summary(cb_output, outcome_names = NULL, region_name = NULL)
 \item{region_name}{Optional character string. When provided, adds a column with this gene name to the output table for easier filtering in downstream analyses.}
 }
 \value{
-A summary table for trait-specific, uncolocalized associations with the following columns:
-\item{outcomes}{Outcome being analyzed}
-\item{ucos_id}{Unique identifier for trait-specific confidence sets}
-\item{purity}{Minimum absolute correlation of variables within trait-specific confidence sets}
-\item{top_variable}{The variable with highest variant-level probability of association (VPA)}
-\item{top_variable_vpa}{Variant-level probability of association (VPA) for the top variable}
-\item{ucos_npc}{Normalized probability of causal association for the trait-specific confidence set}
-\item{n_variables}{Number of variables in trait-specific confidence set}
-\item{ucos_index}{Indices of variables in the trait-specific confidence set}
-\item{ucos_variables}{List of variables in the trait-specific confidence set}
-\item{ucos_variables_vpa}{Variant-level probability of association (VPA) for all variables in the confidence set}
-\item{region_name}{Region name if provided through the region_name parameter}
+A list containing:
+\itemize{
+\item \code{ucos_summary}: A summary table for trait-specific, uncolocalized associations with the following columns:
+\itemize{
+\item \code{outcomes}: Outcome being analyzed
+\item \code{ucos_id}: Unique identifier for trait-specific confidence sets
+\item \code{purity}: Minimum absolute correlation of variables within trait-specific confidence sets
+\item \code{top_variable}: The variable with highest variant-level probability of association (VPA)
+\item \code{top_variable_vpa}: Variant-level probability of association (VPA) for the top variable
+\item \code{ucos_npc}: Normalized probability of causal association for the trait-specific confidence set
+\item \code{n_variables}: Number of variables in trait-specific confidence set
+\item \code{ucos_index}: Indices of variables in the trait-specific confidence set
+\item \code{ucos_variables}: List of variables in the trait-specific confidence set
+\item \code{ucos_variables_vpa}: Variant-level probability of association (VPA) for all variables in the confidence set
+\item \code{region_name}: Region name if provided through the region_name parameter
+}
+\item \code{ambiguous_ucos_summary}: A summary table for ambiguous colocalization events with the following columns:
+\itemize{
+\item \code{outcomes}: Outcome in the ambiguous colocalization event
+\item \code{ucos_id}: Unique identifiers for the ambiguous event
+\item \code{min_between_purity}: Minimum absolute correlation between variables across trait-specific sets in the ambiguous event
+\item \code{median_between_purity}: Median absolute correlation between variables across trait-specific sets in the ambiguous event
+\item \code{overlap_idx}: Indices of variables that overlap between ambiguous trait-specific sets
+\item \code{overlap_variables}: Names of variables that overlap between ambiguous trait-specific sets
+\item \code{n_recalibrated_variables}: Number of variables in the recalibrated colocalization set from an ambiguous event
+\item \code{recalibrated_index}: Indices of variables in the recalibrated colocalization set from an ambiguous event
+\item \code{recalibrated_variables}: Names of variables in the recalibrated colocalization set from an ambiguous event
+\item \code{recalibrated_variables_vcp}: Variant colocalization probabilities for recalibrated variables from an ambiguous event
+\item \code{region_name}: Region name if provided through the region_name parameter
+}
+}
 }
 \description{
 \code{get_ucos_summary} produces a trait-specific summary table for uncolocalized (single-trait)
@@ -56,10 +82,12 @@ get_ucos_summary(res)
 
 }
 \seealso{
-Other colocboost_inference: 
-\code{\link{get_ambiguous_colocalization}()},
-\code{\link{get_colocboost_summary}()},
+Other colocboost_utilities: 
+\code{\link{get_cormat}()},
+\code{\link{get_cos}()},
+\code{\link{get_cos_purity}()},
 \code{\link{get_cos_summary}()},
-\code{\link{get_robust_colocalization}()}
+\code{\link{get_hierarchical_clusters}()}
 }
-\concept{colocboost_inference}
+\concept{colocboost_utilities}
+\keyword{colocboost_inference}

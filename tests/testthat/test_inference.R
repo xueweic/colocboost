@@ -1,7 +1,7 @@
 library(testthat)
 
 # Utility function to generate a simple colocboost results 
-generate_test_result <- function(n = 100, p = 20, L = 2, seed = 42) {
+generate_test_result <- function(n = 100, p = 50, L = 2, seed = 42) {
   set.seed(seed)
   
   # Generate X with LD structure
@@ -20,12 +20,12 @@ generate_test_result <- function(n = 100, p = 20, L = 2, seed = 42) {
   if (L == 1) {
     # Single trait case
     true_beta[5, 1] <- 0.7  # SNP5 affects the trait
-    true_beta[10, 1] <- 0.6 # SNP10 also affects the trait
+    true_beta[40, 1] <- 0.6 # SNP10 also affects the trait
   } else {
     # Multi-trait case
     true_beta[5, 1] <- 0.7  # SNP5 affects trait 1
     true_beta[5, 2] <- 0.6  # SNP5 also affects trait 2 (colocalized)
-    true_beta[10, 2] <- 0.5 # SNP10 only affects trait 2
+    true_beta[40, 2] <- 0.8 # SNP10 only affects trait 2
   }
   
   # Generate Y with some noise
@@ -186,28 +186,65 @@ test_that("get_hierarchical_clusters functions correctly", {
   expect_equal(result_all_high$n_cluster, 1)
 })
 
-# Test get_ucos_summary function
-test_that("get_ucos_summary handles different parameters", {
+
+# Test get_robust_colocalization function
+test_that("get_ambiguous_colocalization identifies ambiguous colocalizations correctly", {
+  # The function expects a specialized test dataset that has ambiguous colocalizations
+  # There's a reference in the example to a dataset named "Ambiguous_Colocalization"
+  data(Ambiguous_Colocalization)
+  test_colocboost_results <- Ambiguous_Colocalization$ColocBoost_Results
   
-  # Generate a test colocboost results
-  cb_res <- generate_test_result()
+  # Basic call with default parameters
+  result <- get_ambiguous_colocalization(test_colocboost_results)
   
-  # Basic summary call
-  expect_error(get_ucos_summary(cb_res), NA)
+  # Check that the returned object is of class "colocboost"
+  expect_s3_class(result, "colocboost")
   
-  # With custom outcome names
-  expect_error(get_ucos_summary(cb_res, outcome_names = c("Trait1", "Trait2", "Trait3")), NA)
+  # Check that the ambiguous_ucos field exists in the result
+  expect_true("ambigous_ucos" %in% names(result))
   
-  # With region name
-  summary_with_region <- get_ucos_summary(cb_res, region_name = "TestGene")
-  
-  # If summary is not NULL, check for region column
-  if (!is.null(summary_with_region)) {
-    expect_true("region_name" %in% colnames(summary_with_region))
-    expect_equal(summary_with_region$region_name[1], "TestGene")
+  # If ambiguous colocalizations were found, test their structure
+  if (length(result$ambigous_ucos) > 0) {
+    # There should be fields for the ambiguous UCOs details
+    expect_true("ambigouse_ucos" %in% names(result$ambigous_ucos[[1]]))
+    expect_true("ambigouse_ucos_outcomes" %in% names(result$ambigous_ucos[[1]]))
+    expect_true("ambigous_ucos_weight" %in% names(result$ambigous_ucos[[1]]))
+    expect_true("ambigous_ucos_puriry" %in% names(result$ambigous_ucos[[1]]))
+    expect_true("ambigouse_ucos_unoin" %in% names(result$ambigous_ucos[[1]]))
+    expect_true("ambigouse_ucos_overlap" %in% names(result$ambigous_ucos[[1]]))
   }
   
-  # Test with single trait analysis result
-  cb_single <- generate_test_result(L=1)
-  single_summary <- get_ucos_summary(cb_single, outcome_names = "SingleTrait")
+  # Test with custom correlation thresholds
+  result_custom <- get_ambiguous_colocalization(
+    test_colocboost_results,
+    min_abs_corr_between_ucos = 0.7,
+    median_abs_corr_between_ucos = 0.9
+  )
+  
+  # The result should still be a colocboost object
+  expect_s3_class(result_custom, "colocboost")
+  
+  # Test with input that has no ucos_details
+  # Create a modified object without ucos_details
+  test_no_ucos <- test_colocboost_results
+  test_no_ucos$ucos_details <- NULL
+  
+  # Should show a warning but not error
+  expect_warning(get_ambiguous_colocalization(test_no_ucos))
+  
+  # Test with input that has only one trait-specific effect
+  cb_res <- generate_test_result(n=500)
+  
+  expect_message(
+    result <- get_ambiguous_colocalization(cb_res),
+    "Only one trait-specific \\(uncolocalized\\) effect in this region!"
+  )
+  
+  # The result should be unchanged from the input
+  expect_equal(result, cb_res)
+  
+  # There should be no ambiguous_ucos field added
+  expect_false("ambigous_ucos" %in% names(result))
+
 })
+
