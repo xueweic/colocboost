@@ -294,7 +294,7 @@ colocboost_init_para <- function(cb_data, cb_model, tau = 0.01,
     "variables" = cb_data$variable.names,
     "focal_outcome_idx" = focal_outcome_idx,
     "coveraged" = TRUE,
-    "num_updates" = 1,
+    "num_updates" = 0,
     "coveraged_outcome" = coveraged_outcome,
     "num_updates_outcome" = num_updates_outcome
   )

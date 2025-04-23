@@ -67,7 +67,7 @@ colocboost_one_iteration <- function(cb_model, cb_model_para, cb_data) {
     }
   }
   # -- remove redundant parameters
-  cb_model_para$num_updates <- 0
+  cb_model_para$num_updates <- 1
   rm_elements <- c("update_temp", "update_y")
   if (!is.null(cb_model_para$need_more)) {
     rm_elements <- c(rm_elements, "need_more")
@@ -295,7 +295,7 @@ colocboost_diagLD <- function(cb_model, cb_model_para, cb_data) {
     }
   }
   # -- remove redundant parameters
-  cb_model_para$num_updates <- 0
+  cb_model_para$num_updates <- 1
   rm_elements <- c("update_temp", "update_y")
   if (!is.null(cb_model_para$need_more)) {
     rm_elements <- c(rm_elements, "need_more")

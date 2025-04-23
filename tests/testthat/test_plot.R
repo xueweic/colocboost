@@ -75,11 +75,11 @@ generate_test_result <- function(n = 500, p = 60, L = 4, seed = 42, output_level
   return(result)
 }
 
+# Generate a test colocboost result
+cb_res <- generate_test_result()
+
 # Test colocboost_plot function with basic options
 test_that("colocboost_plot basic functionality works", {
-  
-  # Generate a test colocboost result
-  cb_res <- generate_test_result()
   
   # Basic plot call
   expect_error(suppressWarnings(colocboost_plot(cb_res)), NA)
@@ -91,9 +91,6 @@ test_that("colocboost_plot basic functionality works", {
 
 # Test colocboost_plot with different y-axis options
 test_that("colocboost_plot handles different y-axis options", {
-  
-  # Generate a test colocboost result
-  cb_res <- generate_test_result()
   
   # Test with different y-axis values
   expect_error(suppressWarnings(colocboost_plot(cb_res, y = "log10p")), NA)
@@ -109,9 +106,6 @@ test_that("colocboost_plot handles different y-axis options", {
 
 # Test colocboost_plot with plot filtering options
 test_that("colocboost_plot handles filtering options", {
-  
-  # Generate a test colocboost result
-  cb_res <- generate_test_result()
   
   # Test with outcome index filtering
   expect_error(suppressWarnings(colocboost_plot(cb_res, outcome_idx = 1)), NA)
@@ -140,9 +134,6 @@ test_that("colocboost_plot handles filtering options", {
 # Test colocboost_plot with visual customization options
 test_that("colocboost_plot handles visual customization options", {
   
-  # Generate a test colocboost result
-  cb_res <- generate_test_result()
-  
   # Test with custom colors
   expect_error(suppressWarnings(colocboost_plot(cb_res, points_color = "red")), NA)
   expect_error(suppressWarnings(colocboost_plot(cb_res, cos_color = c("blue", "green", "orange"))), NA)
@@ -165,9 +156,6 @@ test_that("colocboost_plot handles visual customization options", {
 # Test colocboost_plot with layout options
 test_that("colocboost_plot handles layout options", {
   
-  # Generate a test colocboost result
-  cb_res <- generate_test_result()
-  
   # Test with different plot_cols values
   expect_error(suppressWarnings(colocboost_plot(cb_res, plot_cols = 1)), NA)
   expect_error(suppressWarnings(colocboost_plot(cb_res, plot_cols = 3)), NA)
@@ -187,9 +175,6 @@ test_that("colocboost_plot handles layout options", {
 # Test colocboost_plot with additional visualization options
 test_that("colocboost_plot handles additional visualization options", {
   
-  # Generate a test colocboost result
-  cb_res <- generate_test_result()
-  
   # Test with vertical line options
   expect_error(suppressWarnings(colocboost_plot(cb_res, add_vertical = TRUE, add_vertical_idx = c(5, 10))), NA)
   
@@ -200,6 +185,51 @@ test_that("colocboost_plot handles additional visualization options", {
   # Test with show_variable option
   expect_error(suppressWarnings(colocboost_plot(cb_res, show_variable = TRUE)), NA)
 })
+
+# Test colocboost_plot with custom outcome names
+test_that("colocboost_plot handles custom outcome names", {
+  
+  # Test with custom outcome names
+  expect_error(suppressWarnings(colocboost_plot(cb_res, outcome_names = c("Trait1", "Trait2"))), NA)
+})
+
+# Test colocboost_plot with a specific range
+test_that("colocboost_plot handles zoom-in with grange", {
+  
+  # Test with grange option to zoom in
+  expect_error(suppressWarnings(colocboost_plot(cb_res, grange = 5:15)), NA)
+})
+
+# Test colocboost_plot with focal outcome in L=4 case
+test_that("colocboost_plot handles focal outcome in complex cases", {
+  
+  # Generate a test colocboost result with 4 traits and focal outcome set
+  cb_res_focal <- generate_test_result(L = 4, output_level = 3)
+  
+  # Basic plot call with focal outcome
+  expect_error(suppressWarnings(colocboost_plot(cb_res_focal)), NA)
+  
+  # Test plot_focal_only option
+  expect_error(suppressWarnings(colocboost_plot(cb_res_focal, plot_focal_only = TRUE)), NA)
+  
+  # Test plot_focal_cos_outcome_only option
+  expect_error(suppressWarnings(colocboost_plot(cb_res_focal, plot_focal_cos_outcome_only = TRUE)), NA)
+  
+  # Combine focal outcome filtering with other options
+  expect_error(suppressWarnings(colocboost_plot(cb_res_focal, 
+                                               plot_focal_only = TRUE,
+                                               y = "cos_vcp")), NA)
+  
+  expect_error(suppressWarnings(colocboost_plot(cb_res_focal, 
+                                               plot_focal_cos_outcome_only = TRUE,
+                                               plot_ucos = TRUE)), NA)
+  
+  # Test focusing only on outcomes colocalized with focal outcome
+  expect_error(suppressWarnings(colocboost_plot(cb_res_focal, 
+                                               plot_focal_cos_outcome_only = TRUE,
+                                               outcome_idx = 1:3)), NA)
+})
+
 
 # Test colocboost_plot with single trait (finemapping) results
 test_that("colocboost_plot handles single trait results", {
@@ -213,25 +243,6 @@ test_that("colocboost_plot handles single trait results", {
   # Test custom options with single trait
   expect_error(suppressWarnings(colocboost_plot(cb_res_single, y = "vcp")), NA)
   expect_error(suppressWarnings(colocboost_plot(cb_res_single, plot_cols = 1)), NA)
-})
-
-# Test colocboost_plot with uncolocalized visualization options
-test_that("colocboost_plot handles uncolocalized visualization options", {
-  
-  # Generate a test colocboost result with high output level to include ucos details
-  cb_res <- generate_test_result(output_level = 3)
-  
-  # Test with plot_ucos options
-  expect_error(suppressWarnings(colocboost_plot(cb_res, plot_ucos = TRUE)), NA)
-  
-  # Test with show_cos_to_uncoloc options
-  expect_error(suppressWarnings(colocboost_plot(cb_res, show_cos_to_uncoloc = TRUE)), NA)
-  
-  # Generate a different colocboost result to test the warning for plot_ucos
-  cb_res_low <- generate_test_result(output_level = 1)
-  # This should give a warning but not an error
-  expect_warning(colocboost_plot(cb_res_low, plot_ucos = TRUE),
-                 "Since you want to plot trait-specific \\(uncolocalized\\) sets with plot_ucos = TRUE")
 })
 
 # Test colocboost_plot with L=4 case for complex colocalization and trait-specific effects
@@ -273,54 +284,25 @@ test_that("colocboost_plot handles L=4 case with complex colocalization patterns
                                                show_cos_to_uncoloc = TRUE)), NA)
 })
 
-# Test colocboost_plot with custom outcome names
-test_that("colocboost_plot handles custom outcome names", {
-  
-  # Generate a test colocboost result
-  cb_res <- generate_test_result()
-  
-  # Test with custom outcome names
-  expect_error(suppressWarnings(colocboost_plot(cb_res, outcome_names = c("Trait1", "Trait2"))), NA)
-})
 
-# Test colocboost_plot with a specific range
-test_that("colocboost_plot handles zoom-in with grange", {
-  
-  # Generate a test colocboost result
-  cb_res <- generate_test_result()
-  
-  # Test with grange option to zoom in
-  expect_error(suppressWarnings(colocboost_plot(cb_res, grange = 5:15)), NA)
-})
+# Generate a test colocboost result with high output level to include ucos details
+cb_res <- generate_test_result(output_level = 3)
 
-# Test colocboost_plot with focal outcome in L=4 case
-test_that("colocboost_plot handles focal outcome in complex cases", {
+# Test colocboost_plot with uncolocalized visualization options
+test_that("colocboost_plot handles uncolocalized visualization options", {
   
-  # Generate a test colocboost result with 4 traits and focal outcome set
-  cb_res_focal <- generate_test_result(L = 4, output_level = 3)
   
-  # Basic plot call with focal outcome
-  expect_error(suppressWarnings(colocboost_plot(cb_res_focal)), NA)
+  # Test with plot_ucos options
+  expect_error(suppressWarnings(colocboost_plot(cb_res, plot_ucos = TRUE)), NA)
   
-  # Test plot_focal_only option
-  expect_error(suppressWarnings(colocboost_plot(cb_res_focal, plot_focal_only = TRUE)), NA)
+  # Test with show_cos_to_uncoloc options
+  expect_error(suppressWarnings(colocboost_plot(cb_res, show_cos_to_uncoloc = TRUE)), NA)
   
-  # Test plot_focal_cos_outcome_only option
-  expect_error(suppressWarnings(colocboost_plot(cb_res_focal, plot_focal_cos_outcome_only = TRUE)), NA)
-  
-  # Combine focal outcome filtering with other options
-  expect_error(suppressWarnings(colocboost_plot(cb_res_focal, 
-                                               plot_focal_only = TRUE,
-                                               y = "cos_vcp")), NA)
-  
-  expect_error(suppressWarnings(colocboost_plot(cb_res_focal, 
-                                               plot_focal_cos_outcome_only = TRUE,
-                                               plot_ucos = TRUE)), NA)
-  
-  # Test focusing only on outcomes colocalized with focal outcome
-  expect_error(suppressWarnings(colocboost_plot(cb_res_focal, 
-                                               plot_focal_cos_outcome_only = TRUE,
-                                               outcome_idx = 1:3)), NA)
+  # Generate a different colocboost result to test the warning for plot_ucos
+  cb_res_low <- generate_test_result(output_level = 1)
+  # This should give a warning but not an error
+  expect_warning(colocboost_plot(cb_res_low, plot_ucos = TRUE),
+                 "Since you want to plot trait-specific \\(uncolocalized\\) sets with plot_ucos = TRUE")
 })
 
 # Test colocboost_plot with varying cutoff settings from get_robust_colocalization
@@ -370,3 +352,5 @@ test_that("colocboost_plot handles varying cutoff settings", {
                                                   y = "cos_vcp")), NA)
   }
 })
+
+

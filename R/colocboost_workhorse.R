@@ -102,7 +102,6 @@ colocboost_workhorse <- function(cb_data,
   }
 
   if (sum(cb_model_para$update_y == 1) == 0) {
-    cb_model_para$num_updates <- 1
     cb_obj <- list("cb_data" = cb_data, "cb_model" = cb_model, "cb_model_para" = cb_model_para)
     class(cb_obj) <- "colocboost"
     return(cb_obj)
