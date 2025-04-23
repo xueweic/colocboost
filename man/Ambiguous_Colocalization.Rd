@@ -9,8 +9,9 @@
 
 A list with 2 elements
 \describe{
-\item{ColocBoost_Results}{A \code{colocboost} output objective}
-\item{SuSiE_Results}{Two \code{susie} output objective for eQTL and GWAS}
+\item{ColocBoost_Results}{A \code{colocboost} output object}
+\item{SuSiE_Results}{Two \code{susie} output object for eQTL and GWAS}
+\item{COLOC_V5_Results}{A \code{coloc} output object}
 }
 }
 }

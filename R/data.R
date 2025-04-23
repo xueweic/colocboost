@@ -100,8 +100,9 @@
 #' @format ## `Ambiguous_Colocalization`
 #' A list with 2 elements
 #' \describe{
-#'   \item{ColocBoost_Results}{A `colocboost` output objective}
-#'   \item{SuSiE_Results}{Two `susie` output objective for eQTL and GWAS}
+#'   \item{ColocBoost_Results}{A `colocboost` output object}
+#'   \item{SuSiE_Results}{Two `susie` output object for eQTL and GWAS}
+#'   \item{COLOC_V5_Results}{A `coloc` output object}
 #' }
 #' @source The Ambiguous_Colocalization dataset contains a real data example from one of our real data applications,
 #' which shows an ambiguous colocalization between eQTL and GWAS.
