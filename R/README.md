@@ -19,10 +19,12 @@ and post assemble and inference. Implementation-wise,
   
 3. `colocboost_assemble.R` implements the core interface of post assemble and inference SEC learners from 2.
     - `colocboost_assemble_cos.R`: The function to create 95% CoS of different colocalization events.
-    - `colocboost_assemble_ucos.R`: The function to create 95% CS of trait-specific effects.
+    - `colocboost_assemble_ucos.R`: The function to create 95% uCoS of trait-specific effects.
     - `colocboost_inference.R`: Post inference functions includes modularity hierarchical clustering method, remove spurious signals, definitation of colocalization evidence, et al.
-    - `colocboost_utils.R`: Utility functions includes refining colocalization confidence sets from different SEC and other utilities.
-    - `colocboost_output.R`: Format and export analysis results
+    - `colocboost_utils.R`: Utility functions includes refining colocalization confidence sets from different SEC and other utilities, like formating the output objects.
+    - `colocboost_output.R`: Utility functions to export analysis results
   
 4. `colocboost_plot.R` implements various visualization options for visualize colocboost results.
+
+See details implementation in [ColocBoost manuscript](https://www.medrxiv.org/content/10.1101/2025.04.17.25326042v1) and our [tutorial portal](https://statfungen.github.io/colocboost/articles/index.html).
 
