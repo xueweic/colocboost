@@ -36,6 +36,7 @@ articles:
     desc: "Advanced topics and special cases in colocalization and fine-mapping analysis."
     contents:
     - Partial_Overlap_Variants
+    - ColocBoost_Update
     - ColocBoost_Wrapper_Pipeline
     - LD_Free_Colocalization
     - Ambiguous_Colocalization
