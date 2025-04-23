@@ -174,9 +174,9 @@ res$cos_details$cos$cos_index
 ```
 
 
-## 3.4. Hyprcoloc compatible format: effect size and standard error matrices
+## 3.4. HyPrColoc compatible format: effect size and standard error matrices
 
-ColocBoost also provides a flexibility to use Hyprcoloc compatible format for summary statistics with and without LD matrix.
+ColocBoost also provides a flexibility to use HyPrColoc compatible format for summary statistics with and without LD matrix.
 
 ```{r hyprcoloc-compatible}
 # Loading the Dataset
@@ -184,7 +184,7 @@ data(Ind_5traits)
 X <- Ind_5traits$X
 Y <- Ind_5traits$Y
 
-# Coverting to Hyprcoloc compatible format
+# Coverting to HyPrColoc compatible format
 effect_est <- effect_se <- effect_n <- c()
 for (i in 1:length(X)){
   x <- X[[i]]

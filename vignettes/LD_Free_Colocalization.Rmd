@@ -117,7 +117,7 @@ While this method is computationally efficient, it has limitations due to the st
 Users should interpret the results with caution, especially in regions with complex LD structures or multiple causal variants.
 
 
-ColocBoost also provides a flexibility to use Hyprcoloc compatible format for summary statistics without LD matrix.
+ColocBoost also provides a flexibility to use HyPrColoc compatible format for summary statistics without LD matrix.
 
 ```{r hyprcoloc-compatible}
 # Loading the Dataset
@@ -125,7 +125,7 @@ data(Ind_5traits)
 X <- Ind_5traits$X
 Y <- Ind_5traits$Y
 
-# Coverting to Hyprcoloc compatible format
+# Coverting to HyPrColoc compatible format
 effect_est <- effect_se <- effect_n <- c()
 for (i in 1:length(X)){
   x <- X[[i]]

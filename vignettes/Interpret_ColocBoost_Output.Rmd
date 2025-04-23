@@ -298,12 +298,12 @@ res$ucos_details$cos_ucos_purity
 
 #### 3.5.4. Other components
 
-- **`ucos_weight`**: Integrative weights for each trait-specific (uncolocalized) trait, used to recalibrate UCoS when traits are filtered out.
+- **`ucos_weight`**: Integrative weights for each trait-specific (uncolocalized) trait, used to recalibrate uCoS when traits are filtered out.
 - **`ucos_top_variables`**: Indices and names of the top variable for each uCoS, which is the variable with the highest VCP.
 - **`ucos_purity`**: Includes three lists, each containing an $uS \times uS$ matrix, where $uS$ is the number of uCoS:
-  - `min_abs_cor`: Minimum absolute correlation of variables within (diagonal) UCoS or between (off-diagonal) different uCoS.
-  - `median_abs_cor`: Median absolute correlation of variables within or between UCoS.
-  - `max_abs_cor`: Maximum absolute correlation of variables within or between UCoS.
+  - `min_abs_cor`: Minimum absolute correlation of variables within (diagonal) uCoS or between (off-diagonal) different uCoS.
+  - `median_abs_cor`: Median absolute correlation of variables within or between uCoS.
+  - `max_abs_cor`: Maximum absolute correlation of variables within or between uCoS.
 
 By analyzing these components, you can gain a deeper understanding of trait-specific (uncolocalized) effects that are not colocalized, 
 providing additional insights into the data.

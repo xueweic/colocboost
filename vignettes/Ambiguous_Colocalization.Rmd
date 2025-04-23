@@ -16,7 +16,7 @@ knitr::opts_chunk$set(
 
 This vignette demonstrates an example of ambiguous colocalization from trait-specific effects using the `colocboost`. 
 Specifically, we will use the `Ambiguous_Colocalization`, which is output from `colocboost` analyzing GTEx release v8 and UK Biobank summary statistics
-(see more details of the original data source in Acknowledgement section).
+(see more details of the original data source in Acknowledgment section).
 
 ```{r setup}
 library(colocboost)
@@ -160,12 +160,12 @@ names(res$ambiguous_cos[[1]])
 
 **Explanation of results** For each ambiguous colocalization, the following information is provided:
 
-- `ambiguous_cos`: Contains variants indices and names of the original trait-specific uCoS used to construct this ambiguouse colocalization.
-- `ambiguous_cos_overlap`: Contains the overlapping variants information across the uCoS  used to construct this ambiguouse colocalization.
-- `ambiguous_cos_union`: Contains the union of variants information across the uCoS used to construct this ambiguouse colocalization.
-- `ambiguous_cos_outcomes`: Contains the outcomes indices and names for uCoS used to construct this ambiguouse colocalization.
-- `ambiguous_cos_weight`: Contains the trait-specific weights of the uCoS used to construct this ambiguouse colocalization.
-- `ambiguous_cos_puriry`: Contains the purity of across uCoS used to construct this ambiguouse colocalization.
+- `ambiguous_cos`: Contains variants indices and names of the original trait-specific uCoS used to construct this ambiguous colocalization.
+- `ambiguous_cos_overlap`: Contains the overlapping variants information across the uCoS  used to construct this ambiguous colocalization.
+- `ambiguous_cos_union`: Contains the union of variants information across the uCoS used to construct this ambiguous colocalization.
+- `ambiguous_cos_outcomes`: Contains the outcomes indices and names for uCoS used to construct this ambiguous colocalization.
+- `ambiguous_cos_weight`: Contains the trait-specific weights of the uCoS used to construct this ambiguous colocalization.
+- `ambiguous_cos_puriry`: Contains the purity of across uCoS used to construct this ambiguous colocalization.
 - `recalibrated_cos_vcp`: Contains the recalibrated integrative weight to analogous to variant colocalization probability (VCP) from the ambiguous colocalization results.
 - `recalibrated_cos`: Contains the recalibrated 95% colocalization confidence set (CoS) from the ambiguous colocalization results.
 
@@ -206,7 +206,7 @@ if researcher decides to investigate these ambiguous colocalization events.
     - While we provide recalibrated weights as a suggested approach for interpreting ambiguous results, users can still choose between recalibrated weights and trait-specific weights based on their research context. 
     - The `colocboost_plot` function will not consider it as colocalized but still showing them as uncolocalized events, with overlapping variants color labeled.
 
-# Acknowledgement
+# Acknowledgment
 
 - The eQTL data used for the analyses described in this example results were obtained from GTEx release v8 from [GTEx Portal](https://gtexportal.org/home/downloads/adult-gtex/qtl).
 - The GWAS summary statistics used for the analyses described in this example results were obtained from UK Biobank (UKBB) 

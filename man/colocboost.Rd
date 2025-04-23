@@ -211,7 +211,7 @@ In brief, this function fits a multiple linear regression model \eqn{Y = XB + E}
 ColocBoost can be generally used in multi-task variable selection regression problem.
 }
 \details{
-The function \code{colocboost} implements the proximity smoothed gradient boosting method from Cao et al (2025).
+The function \code{colocboost} implements the proximity smoothed gradient boosting method from Cao etc (2025).
 There is an additional step to help merge the confidence sets with small \code{between_putiry}
 (default is 0.8) but within the same locus. This step addresses potential instabilities in linkage disequilibrium (LD) estimation
 that may arise from small sample sizes or discrepancies in minor allele frequencies (MAF) across different confidence sets.
