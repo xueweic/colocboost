@@ -1,15 +1,15 @@
 Package: colocboost
 Type: Package
-Date: 2025-04-13
+Date: 2025-04-22
 Title: Multi-Context Colocalization Analysis for QTL and GWAS Studies
-Version: 0.1.0
+Version: 0.5.0
 Authors@R: c(
   person(given = "Xuewei", family = "Cao", email = "xc2270@cumc.columbia.edu", role = c("cre", "aut", "cph")),
-  person(given = "Haochen", family = "Sun", email = "hs3393@cumc.columbia.edu", role = "aut"),
-  person(given = "Ru", family = "Feng", email = "rf2872@cumc.columbia.edu", role = "aut"),
-  person(given = "Daniel", family = "Nachun", role = "aut"),
-  person(given = "Kushal", family = "Dey", email = "deyk@mskcc.org", role = c("aut")),
-  person(given = "Gao", family = "Wang", email = "gw2411@cumc.columbia.edu", role = c("aut"))
+  person(given = "Haochen", family = "Sun", email = "hs3393@cumc.columbia.edu", role = c("aut", "cph")),
+  person(given = "Ru", family = "Feng", email = "rf2872@cumc.columbia.edu", role = c("aut", "cph")),
+  person(given = "Daniel", family = "Nachun", role = c("aut", "cph")),
+  person(given = "Kushal", family = "Dey", email = "deyk@mskcc.org", role = c("aut", "cph")),
+  person(given = "Gao", family = "Wang", email = "wang.gao@columbia.edu", role = c("aut", "cph"))
   )
 Maintainer: Xuewei Cao <xc2270@cumc.columbia.edu>
 Description: A multi-task learning approach to variable selection regression with highly correlated predictors and sparse effects, based on frequentist statistical inference. It provides statistical evidence to identify which subsets of predictors have non-zero effects on which subsets of response variables, motivated and designed for colocalization analysis of multiple genetic association studies.
