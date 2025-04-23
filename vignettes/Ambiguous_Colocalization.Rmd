@@ -120,6 +120,10 @@ We also show the colocalization results from COLOC method. For this ambiguous co
 - A high posterior probability of colocalization (PP.H4) of 0.85.
 - Two hits are corresponding to variants with highest PIP in SuSiE for eQTL and GWAS, separately.
 
+Note that SuSiE-based COLOC has a relatively high confidence of this as a colocalization event because each of SuSiE 95% CS as shown above cover substantially larger region 
+(containing more variants) compared to the trait-specific effects identified by ColocBoost, although at a lower purity (SuSiE purity = 0.56 and 0.64, ColocBoost uCoS purity = 0.67 and 0.70). 
+With larger overlap between the SuSiE 95% CS across traits, the high probability of colocalization is expected. But for this particular data application without knowing the ground truth, 
+it is difficult to determine which method is more precise.
 
 ```{r coloc-results}
 # To run COLOC, please use the following command:
