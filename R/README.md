@@ -26,5 +26,5 @@ and post assemble and inference. Implementation-wise,
   
 4. `colocboost_plot.R` implements various visualization options for visualize colocboost results.
 
-See details implementation in our [tutorial portal](https://statfungen.github.io/colocboost/articles/index.html).
+See details implementation in [ColocBoost manuscript](https://www.medrxiv.org/content/10.1101/2025.04.17.25326042v1) and our [tutorial portal](https://statfungen.github.io/colocboost/articles/index.html).
 
