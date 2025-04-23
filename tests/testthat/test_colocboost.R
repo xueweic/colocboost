@@ -295,3 +295,5 @@ test_that("colocboost handles missing/invalid inputs appropriately", {
     "Please provide the sample index of X and Y, since they do not have the same samples!"
   )
 })
+
+

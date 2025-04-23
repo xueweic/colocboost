@@ -47,7 +47,7 @@ colocboost_assemble <- function(cb_obj,
   if (data_info$n_outcomes == 1 & output_level == 1) {
     output_level <- 2
   }
-  if (cb_obj$cb_model_para$num_updates == 1) {
+  if (cb_obj$cb_model_para$num_updates == 0) {
     cb_output <- list(
       "cos_summary" = NULL,
       "vcp" = NULL,
@@ -59,10 +59,10 @@ colocboost_assemble <- function(cb_obj,
     if (output_level != 1) {
       tmp <- get_full_output(cb_obj = cb_obj, past_out = NULL, variables = NULL)
       if (output_level == 2) {
-        cb_output$ucos_details <- tmp$ucos_detials
+        cb_output <- c(cb_output, list("ucos_details" = tmp$ucos_detials))
         cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "model_info", "ucos_details")]
       } else {
-        cb_output$ucos_details <- tmp$ucos_detials
+        cb_output <- c(cb_output, list("ucos_details" = tmp$ucos_detials))
         cb_output$diagnostic_details <- tmp[-1]
         cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "model_info", "ucos_details", "diagnostic_details")]
       }
