@@ -63,7 +63,7 @@ A list containing results from the ColocBoost analysis:
 \itemize{
 \item \code{cos_summary}: As described above
 \item \code{ucos_summary}: A summary table for trait-specific (uncolocalized) effects
-\item \code{ambiguous_ucos_summary}: A summary table for ambiguous colocalization events from trait-specific effects
+\item \code{ambiguous_cos_summary}: A summary table for ambiguous colocalization events from trait-specific effects
 }
 }
 }
@@ -72,6 +72,7 @@ A list containing results from the ColocBoost analysis:
 with or without the outcomes of interest.
 }
 \details{
+When \code{summary_level = 1}, additional details and examples are introduced in \code{\link{get_cos_summary}}.
 When \code{summary_level = 2} or \code{summary_level = 3}, additional details for trait-specific effects and ambiguous
 colocalization events are included. See \code{\link{get_ucos_summary}} for details on these tables.
 }
