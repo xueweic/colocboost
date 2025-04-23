@@ -176,12 +176,13 @@ In this vignette, we have demonstrated how post-processing of ColocBoost results
 where trait-specific effects share highly correlated and overlapping variants.
 
 - Through simulation studies, we have found that the minimum absolute correlation cutoff of 0.5 and median absolute correlation cutoff of 0.8 produce reasonable results 
-when merging two uCoS. We recommend users not to lower these thresholds further without strong justification. 
-- While we provide recalibrated weights as a suggested approach for interpreting ambiguous results, 
-users can still choose between recalibrated weights and trait-specific weights based on their research context. 
+when merging two uCoS, which in this example will furnish a colocalization event. Still, we mark such colocalization events as `ambigous_cos`. 
+We recommend users not to lower these thresholds further without strong justification. 
 - We suggest treating this scenario with caution and distinct such merged CoS from typical colocalization events as a result of coupled updates between traits, 
-if researcher decides to investigate these ambigous colocalization events. As such, the `colocboost_plot` function will not consider it as colocalized but still showing them as uncolocalized events,
-with overlapping variants color labelled.  
+if researcher decides to investigate these ambigous colocalization events. 
+- As such,
+    - While we provide recalibrated weights as a suggested approach for interpreting ambiguous results, users can still choose between recalibrated weights and trait-specific weights based on their research context. 
+    - The `colocboost_plot` function will not consider it as colocalized but still showing them as uncolocalized events, with overlapping variants color labelled.
 
 # Acknowledgements
 
