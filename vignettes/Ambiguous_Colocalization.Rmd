@@ -16,9 +16,8 @@ knitr::opts_chunk$set(
 
 
 This vignette demonstrates an example of ambiguous colocalization from trait-specific effects using the `colocboost`. 
-Specifically, we will use the `Ambiguous_Colocalization`, which is an example result from one of our real data applications, 
-showing an ambiguous colocalization between eQTL and GWAS.
-
+Specifically, we will use the `Ambiguous_Colocalization`, which is an example result from GTEx relsease v8 and UK Biobank summary statistics
+(see more details of data license in Acknowledgement section).
 
 ```{r setup}
 library(colocboost)
@@ -117,6 +116,8 @@ susieR::susie_plot(susie_GWAS, y = "PIP")
 
 ColocBoost provides a function to get the ambiguous colocalization results and summary from trait-specifc effects, by considering the correlation of variants between the two uCoS.
 
+## 3.1. Get the ambiguous colocalization results
+
 The `get_ambiguous_colocalization` function will return the ambiguous results in `ambigous_ucos` object, if the following conditions are met:
 
 - The two uCoS should have at least one overlapping variant.
@@ -126,10 +127,29 @@ The `get_ambiguous_colocalization` function will return the ambiguous results in
 
 ```{r ambiguous-results}
 colocboost_results <- Ambiguous_Colocalization$ColocBoost_Results
-res <- get_ambiguous_colocalization(colocboost_results, min_abs_corr_between_ucos = 0.5, median_abs_corr_between_ucos = 0.8)
+res <- get_ambiguous_colocalization(
+  colocboost_results, 
+  min_abs_corr_between_ucos = 0.5, 
+  median_abs_corr_between_ucos = 0.8
+)
 names(res)
-names(res$ambigous_ucos)
+names(res$ambiguous_cos)
+names(res$ambiguous_cos[[1]])
 ```
+
+**Explanation of results** For each ambiguous colocalization, the following information is provided:
+
+- `ambigous_cos`: Contains variants indices and names of the original trait-specific uCoS used to constuct this ambiguouse colocalization.
+- `ambigouse_cos_overlap`: Contains the overlapping variants information across the uCoS  used to constuct this ambiguouse colocalization.
+- `ambigouse_cos_union`: Contains the union of variants information across the uCoS used to constuct this ambiguouse colocalization.
+- `ambigouse_cos_outcomes`: Contains the outcomes indicies and names for uCoS used to constuct this ambiguouse colocalization.
+- `ambigous_cos_weight`: Contains the trait-specific weights of the uCoS used to constuct this ambiguouse colocalization.
+- `ambigous_cos_puriry`: Contains the purity of across uCoS used to constuct this ambiguouse colocalization.
+- `recalibrated_cos_vcp`: Contains the recalibrated integrative weight to analogous to variant colocalization probability (VCP) from the ambiguous colocalization results.
+- `recalibrated_cos`: Contains the recalibrated 95% colocalization confidence set (CoS) from the ambiguous colocalization results.
+
+
+## 3.2. Get the summary of ambiguous colocalization results
 
 To get the summary of ambiguous colocalization results, we can use the `get_colocboost_summary` function.
 
@@ -143,11 +163,33 @@ full_summary <- get_colocboost_summary(colocboost_results, summary_level = 3)
 names(full_summary)
 
 # Get the summary of ambiguous colocalization results
-summary_ambiguous <- full_summary$ambiguous_ucos_summary
+summary_ambiguous <- full_summary$ambiguous_cos_summary
 colnames(summary_ambiguous)
 ```
-
 
 - `recalibrated_*`: giving the recalibrated weigths and recalibrated 95% colocalization confidece sets (CoS) from the trait-specific effects.
 
 See details of function usage in the [Functions](https://statfungen.github.io/colocboost/reference/index.html).
+
+
+
+# 4. Take home message
+
+In this vignette, we have demonstrated how the post-processing of ColocBoost results to handle ambiguous colocalization scenarios 
+where trait-specific effects share overlapping variants with high correlation. 
+
+- Through empirical studies, we have found that the minimum absolute correlation cutoff of 0.5 and median absolute correlation cutoff of 0.8 produce reasonable results 
+when merging two uCoS. We recommend users not to lower these thresholds further without strong justification. 
+- While we provide recalibrated weights as a suggested approach for interpreting ambiguous results, 
+users can still choose between recalibrated weights and trait-specific weights based on their research context. 
+- This ambiguity typically arises when some trait-specific boosting learners are updating very similar sets of variants, 
+leading to substantial correlation between what initially appear to be separate signals. 
+
+By properly identifying and quantifying this ambiguity, users can gain a more nuanced understanding of the underlying genetic architecture of the traits they are studying.
+
+
+# Acknowledgements
+
+- The eQTL data used for the analyses described in this example results were obtained from GTEx release v8 from [GTEx Portal](https://gtexportal.org/home/downloads/adult-gtex/qtl).
+- The GWAS summary statistics used for the analyses described in this example results were obtained from UK Biobank (UKBB) 
+from [UK Biobank](https://www.ukbiobank.ac.uk/) and downloaded from [Nealelab](https://www.nealelab.is/uk-biobank).

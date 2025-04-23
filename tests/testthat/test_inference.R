@@ -200,18 +200,18 @@ test_that("get_ambiguous_colocalization identifies ambiguous colocalizations cor
   # Check that the returned object is of class "colocboost"
   expect_s3_class(result, "colocboost")
   
-  # Check that the ambiguous_ucos field exists in the result
-  expect_true("ambigous_ucos" %in% names(result))
+  # Check that the ambiguous_cos field exists in the result
+  expect_true("ambiguous_cos" %in% names(result))
   
   # If ambiguous colocalizations were found, test their structure
-  if (length(result$ambigous_ucos) > 0) {
+  if (length(result$ambigous_cos) > 0) {
     # There should be fields for the ambiguous UCOs details
-    expect_true("ambigouse_ucos" %in% names(result$ambigous_ucos[[1]]))
-    expect_true("ambigouse_ucos_outcomes" %in% names(result$ambigous_ucos[[1]]))
-    expect_true("ambigous_ucos_weight" %in% names(result$ambigous_ucos[[1]]))
-    expect_true("ambigous_ucos_puriry" %in% names(result$ambigous_ucos[[1]]))
-    expect_true("ambigouse_ucos_union" %in% names(result$ambigous_ucos[[1]]))
-    expect_true("ambigouse_ucos_overlap" %in% names(result$ambigous_ucos[[1]]))
+    expect_true("ambiguous_cos" %in% names(result$ambigous_ucos[[1]]))
+    expect_true("ambiguous_cos_overlap" %in% names(result$ambigous_ucos[[1]]))
+    expect_true("ambiguous_cos_union" %in% names(result$ambigous_ucos[[1]]))
+    expect_true("ambiguous_cos_outcomes" %in% names(result$ambigous_ucos[[1]]))
+    expect_true("ambigous_cos_weight" %in% names(result$ambigous_ucos[[1]]))
+    expect_true("ambigous_cos_purity" %in% names(result$ambigous_ucos[[1]]))
     expect_true("recalibrated_cos_vcp" %in% names(result$ambigous_ucos[[1]]))
     expect_true("recalibrated_cos" %in% names(result$ambigous_ucos[[1]]))
   }
@@ -245,8 +245,8 @@ test_that("get_ambiguous_colocalization identifies ambiguous colocalizations cor
   # The result should be unchanged from the input
   expect_equal(result, cb_res)
   
-  # There should be no ambiguous_ucos field added
-  expect_false("ambigous_ucos" %in% names(result))
+  # There should be no ambiguous_cos field added
+  expect_false("ambigous_cos" %in% names(result))
 
 })
 
@@ -276,8 +276,8 @@ test_that("get_ucos_summary funtionality", {
   }
 
   # Basic call with default parameters
-  summary_ambiguous <- get_ucos_summary(test_colocboost_results, ambiguous_ucos = TRUE)
-  expect_true(all.equal(names(summary_ambiguous), c("ucos_summary", "ambiguous_ucos_summary")))
+  summary_ambiguous <- get_ucos_summary(test_colocboost_results, ambiguous_cos = TRUE)
+  expect_true(all.equal(names(summary_ambiguous), c("ucos_summary", "ambiguous_cos_summary")))
     
   # Check expected columns exist
   expected_cols <- c(
@@ -286,7 +286,7 @@ test_that("get_ucos_summary funtionality", {
     "recalibrated_index", "recalibrated_variables", "recalibrated_variables_vcp"
   )
   for (col in expected_cols) {
-    expect_true(col %in% colnames(summary_ambiguous$ambiguous_ucos_summary))
+    expect_true(col %in% colnames(summary_ambiguous$ambiguous_cos_summary))
   }
 
 })
@@ -355,7 +355,7 @@ test_that("get_colocboost_summary works correctly", {
                                     summary_level = 3, 
                                     min_abs_corr_between_ucos = 0.4,
                                     median_abs_corr_between_ucos = 0.7)
-  expect_named(summary3, c("cos_summary", "ucos_summary", "ambiguous_ucos_summary"))
+  expect_named(summary3, c("cos_summary", "ucos_summary", "ambiguous_cos_summary"))
   expect_s3_class(summary3$ucos_summary, "data.frame")
   
   # Test with interest_outcome

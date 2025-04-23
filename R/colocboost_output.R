@@ -42,10 +42,11 @@
 #'   \itemize{
 #'     \item \code{cos_summary}: As described above
 #'     \item \code{ucos_summary}: A summary table for trait-specific (uncolocalized) effects
-#'     \item \code{ambiguous_ucos_summary}: A summary table for ambiguous colocalization events from trait-specific effects
+#'     \item \code{ambiguous_cos_summary}: A summary table for ambiguous colocalization events from trait-specific effects
 #'   }
 #' }
-#' @details When \code{summary_level = 2} or \code{summary_level = 3}, additional details for trait-specific effects and ambiguous 
+#' @details When \code{summary_level = 1}, additional details and examples are introduced in \code{\link{get_cos_summary}}. 
+#' When \code{summary_level = 2} or \code{summary_level = 3}, additional details for trait-specific effects and ambiguous 
 #' colocalization events are included. See \code{\link{get_ucos_summary}} for details on these tables.
 #' 
 #' @examples
@@ -101,13 +102,13 @@ get_colocboost_summary <- function(cb_output,
     if (summary_level == 3){
       ucos_summary <- get_ucos_summary(
         cb_output, outcome_names, region_name,
-         ambiguous_ucos = TRUE,
+         ambiguous_cos = TRUE,
          min_abs_corr_between_ucos = min_abs_corr_between_ucos,
          median_abs_corr_between_ucos = median_abs_corr_between_ucos
       )
       return(list("cos_summary" = cos_summary, 
                   "ucos_summary" = ucos_summary$ucos_summary,
-                  "ambiguous_ucos_summary" = ucos_summary$ambiguous_ucos_summary))
+                  "ambiguous_cos_summary" = ucos_summary$ambiguous_cos_summary))
     }
                   
 }
@@ -408,13 +409,13 @@ get_robust_colocalization <- function(cb_output,
 #' @param tol A small, non-negative number specifying the convergence tolerance for checking the overlap of the variables in different sets.
 #'
 #' @return A \code{"colocboost"} object of colocboost output with additional elements:
-#' \item{ambiguous_ucos}{If exists, a list of ambiguous trait-specific (uncolocalized) effects.}
+#' \item{ambiguous_cos}{If exists, a list of ambiguous trait-specific (uncolocalized) effects.}
 #'
 #' @examples
 #' data(Ambiguous_Colocalization)
 #' test_colocboost_results <- Ambiguous_Colocalization$ColocBoost_Results
 #' res <- get_ambiguous_colocalization(test_colocboost_results)
-#' names(res$ambigous_ucos)
+#' names(res$ambiguous_cos)
 #' 
 #' @source See detailed instructions in our tutorial portal: 
 #' \url{https://statfungen.github.io/colocboost/articles/Interpret_ColocBoost_Output.html}
@@ -503,50 +504,50 @@ get_ambiguous_colocalization <- function(cb_output,
     potential_merged <- lapply(temp, function(x) as.numeric(unlist(strsplit(x, ";"))))
     potential_merged <- potential_merged[which(sapply(potential_merged, length) >= 2)]
 
-    ambigous_events <- list()
-    ambigouse_ucos_names <- c()
+   ambiguous_events <- list()
+    ambiguous_ucos_names <- c()
     for (i in 1:length(potential_merged)) {
       idx <- potential_merged[[i]]
       test_outcome <- unique(unlist(ucos_details$ucos_outcomes$outcome_index[idx]))
       if (length(test_outcome) == 1) next
-      ambigouse_ucos_names[i] <- paste0(names(ucos_details$ucos$ucos_index)[idx], collapse = ";")
+      ambiguous_ucos_names[i] <- paste0(names(ucos_details$ucos$ucos_index)[idx], collapse = ";")
       tmp <- list(
-        ambigouse_ucos = list(
+        ambiguous_cos = list(
           ucos_index = ucos_details$ucos$ucos_index[idx],
           ucos_variables = ucos_details$ucos$ucos_variables[idx]
         ),
-        ambigouse_ucos_overlap = list(
+        ambiguous_cos_overlap = list(
           ucos_index = Reduce(intersect, ucos_details$ucos$ucos_index[idx]),
           ucos_variables = Reduce(intersect, ucos_details$ucos$ucos_variables[idx])
         ),
-        ambigouse_ucos_union = list(
+        ambiguous_cos_union = list(
           ucos_index = Reduce(union, ucos_details$ucos$ucos_index[idx]),
           ucos_variables = Reduce(union, ucos_details$ucos$ucos_variables[idx])
         ),
-        ambigouse_ucos_outcomes = list(
+        ambiguous_cos_outcomes = list(
           outcome_idx = unique(unlist(ucos_details$ucos_outcomes$outcome_index[idx])),
           outcome_name = unique(unlist(ucos_details$ucos_outcomes$outcome_name[idx]))
         ),
-        ambigous_ucos_weight = ucos_details$ucos_weight[idx],
-        ambigous_ucos_puriry = list(
+        ambigous_cos_weight = ucos_details$ucos_weight[idx],     
+        ambigous_cos_purity = list(            
           min_abs_cor = min_abs_cor[idx, idx],
           median_abs_cor = median_abs_cor[idx, idx],
           max_abs_cor = max_abs_cor[idx, idx]
         )
       )
-      w <- tmp$ambigous_ucos_weight
+      w <- tmp$ambigous_cos_weight
       w <- do.call(cbind, w)
       tmp$recalibrated_cos_vcp <- get_integrated_weight(w)
       tmp$recalibrated_cos <- list(
         "cos_index" = unlist(get_in_cos(tmp$recalibrated_cos_vcp)),
         "cos_variables" = lapply(unlist(get_in_cos(tmp$recalibrated_cos_vcp)), function(idx) cb_output$data_info$variables[idx])
       )
-      ambigous_events[[i]] <- tmp
+      ambiguous_events[[i]] <- tmp
     }
-    names(ambigous_events) <- ambigouse_ucos_names
-    message(paste("There are", length(ambigous_events), "ambiguous trait-specific effects."))
+    names(ambiguous_events) <- ambiguous_ucos_names
+    message(paste("There are", length(ambiguous_events), "ambiguous trait-specific effects."))
 
-    cb_output$ambigous_ucos <- ambigous_events
+    cb_output$ambiguous_cos <- ambiguous_events
     return(cb_output)
           
 }
@@ -700,7 +701,7 @@ get_cos_summary <- function(cb_output,
 #' @param cb_output Output object from `colocboost` analysis
 #' @param outcome_names Optional vector of names of outcomes, which has the same order as Y in the original analysis.
 #' @param region_name Optional character string. When provided, adds a column with this gene name to the output table for easier filtering in downstream analyses.
-#' @param ambiguous_ucos Logical indicating whether to include ambiguous colocalization events. The default is FALSE.
+#' @param ambiguous_cos Logical indicating whether to include ambiguous colocalization events. The default is FALSE.
 #' @param min_abs_corr_between_ucos Minimum absolute correlation for variants across two trait-specific (uncolocalized) effects to be considered colocalized. The default is 0.5.
 #' @param median_abs_corr_between_ucos Median absolute correlation for variants across two trait-specific (uncolocalized) effects to be considered colocalized. The default is 0.8.
 #' 
@@ -720,7 +721,7 @@ get_cos_summary <- function(cb_output,
 #'     \item \code{ucos_variables_vpa}: Variant-level probability of association (VPA) for all variables in the confidence set
 #'     \item \code{region_name}: Region name if provided through the region_name parameter
 #'   }
-#'   \item \code{ambiguous_ucos_summary}: A summary table for ambiguous colocalization events with the following columns:
+#'   \item \code{ambiguous_cos_summary}: A summary table for ambiguous colocalization events with the following columns:
 #'   \itemize{
 #'     \item \code{outcomes}: Outcome in the ambiguous colocalization event
 #'     \item \code{ucos_id}: Unique identifiers for the ambiguous event 
@@ -761,7 +762,7 @@ get_cos_summary <- function(cb_output,
 #' @family colocboost_utilities
 #' @export
 get_ucos_summary <- function(cb_output, outcome_names = NULL, region_name = NULL, 
-                             ambiguous_ucos = FALSE,
+                             ambiguous_cos = FALSE,
                              min_abs_corr_between_ucos = 0.5, 
                              median_abs_corr_between_ucos = 0.8) {
 
@@ -815,22 +816,22 @@ get_ucos_summary <- function(cb_output, outcome_names = NULL, region_name = NULL
     summary_table$region_name <- region_name
   }
   summary_table <- as.data.frame(summary_table)
-  if (!ambiguous_ucos) return(summary_table)
+  if (!ambiguous_cos) return(summary_table)
 
 
   # advanced summary for ambiguous colocalization at post-processing
   output_summary <- list(
     ucos_summary = summary_table,
-    ambiguous_ucos_summary = NULL
+    ambiguous_cos_summary = NULL
   )
   test <- get_ambiguous_colocalization(
     cb_output,
     min_abs_corr_between_ucos = min_abs_corr_between_ucos,
     median_abs_corr_between_ucos = median_abs_corr_between_ucos
   )
-  if (length(test$ambigous_ucos) == 0) return(output_summary)
+  if (length(test$ambiguous_cos) == 0) return(output_summary)
 
-  ambiguous_results <- test$ambigous_ucos
+  ambiguous_results <- test$ambiguous_cos
   ambiguous_summary <- matrix(NA, nrow = length(ambiguous_results), ncol = 10)
   colnames(ambiguous_summary) <- c(
     "outcomes", "ucos_id", "min_between_purity", "median_between_purity",
@@ -838,12 +839,12 @@ get_ucos_summary <- function(cb_output, outcome_names = NULL, region_name = NULL
     "recalibrated_index", "recalibrated_variables", "recalibrated_variables_vcp"
   )
 
-  ambiguous_summary[, 1] <- unlist(sapply(ambiguous_results, function(tmp) paste0(tmp$ambigouse_ucos_outcomes$outcome_name, collapse = "; ")))
+  ambiguous_summary[, 1] <- unlist(sapply(ambiguous_results, function(tmp) paste0(tmp$ambiguous_cos_outcomes$outcome_name, collapse = "; ")))
   ambiguous_summary[, 2] <- names(ambiguous_results)
-  ambiguous_summary[, 3] <- sapply(ambiguous_results, function(tmp) max(tmp$ambigous_ucos_puriry$min_abs_cor[lower.tri(tmp$ambigous_ucos_puriry$min_abs_cor)]) )
-  ambiguous_summary[, 4] <- sapply(ambiguous_results, function(tmp) max(tmp$ambigous_ucos_puriry$median_abs_cor[lower.tri(tmp$ambigous_ucos_puriry$median_abs_cor)]) )
-  ambiguous_summary[, 5] <- unlist(sapply(ambiguous_results, function(tmp) paste0(tmp$ambigouse_ucos_overlap$ucos_index, collapse = "; ")))
-  ambiguous_summary[, 6] <- unlist(sapply(ambiguous_results, function(tmp) paste0(tmp$ambigouse_ucos_overlap$ucos_variables, collapse = "; ")))
+  ambiguous_summary[, 3] <- sapply(ambiguous_results, function(tmp) max(tmp$ambigous_cos_purity$min_abs_cor[lower.tri(tmp$ambigous_cos_purity$min_abs_cor)]) )
+  ambiguous_summary[, 4] <- sapply(ambiguous_results, function(tmp) max(tmp$ambigous_cos_purity$median_abs_cor[lower.tri(tmp$ambigous_cos_purity$median_abs_cor)]) )
+  ambiguous_summary[, 5] <- unlist(sapply(ambiguous_results, function(tmp) paste0(tmp$ambiguous_cos_overlap$ucos_index, collapse = "; ")))
+  ambiguous_summary[, 6] <- unlist(sapply(ambiguous_results, function(tmp) paste0(tmp$ambiguous_cos_overlap$ucos_variables, collapse = "; ")))
   ambiguous_summary[, 7] <- as.numeric(sapply(ambiguous_results, function(tmp) length(tmp$recalibrated_cos$cos_index)))
   ambiguous_summary[, 8] <- unlist(sapply(ambiguous_results, function(tmp) paste0(tmp$recalibrated_cos$cos_index, collapse = "; ")))
   ambiguous_summary[, 9] <- unlist(sapply(ambiguous_results, function(tmp) paste0(tmp$recalibrated_cos$cos_variables, collapse = "; ")))
@@ -851,7 +852,7 @@ get_ucos_summary <- function(cb_output, outcome_names = NULL, region_name = NULL
   if (!is.null(region_name)) {
     ambiguous_summary$region_name <- region_name
   }
-  output_summary$ambiguous_ucos_summary <- as.data.frame(ambiguous_summary)
+  output_summary$ambiguous_cos_summary <- as.data.frame(ambiguous_summary)
 
   return(output_summary)
 }

@@ -12,7 +12,7 @@ get_ucos_summary(
   cb_output,
   outcome_names = NULL,
   region_name = NULL,
-  ambiguous_ucos = FALSE,
+  ambiguous_cos = FALSE,
   min_abs_corr_between_ucos = 0.5,
   median_abs_corr_between_ucos = 0.8
 )
@@ -24,7 +24,7 @@ get_ucos_summary(
 
 \item{region_name}{Optional character string. When provided, adds a column with this gene name to the output table for easier filtering in downstream analyses.}
 
-\item{ambiguous_ucos}{Logical indicating whether to include ambiguous colocalization events. The default is FALSE.}
+\item{ambiguous_cos}{Logical indicating whether to include ambiguous colocalization events. The default is FALSE.}
 
 \item{min_abs_corr_between_ucos}{Minimum absolute correlation for variants across two trait-specific (uncolocalized) effects to be considered colocalized. The default is 0.5.}
 
@@ -47,7 +47,7 @@ A list containing:
 \item \code{ucos_variables_vpa}: Variant-level probability of association (VPA) for all variables in the confidence set
 \item \code{region_name}: Region name if provided through the region_name parameter
 }
-\item \code{ambiguous_ucos_summary}: A summary table for ambiguous colocalization events with the following columns:
+\item \code{ambiguous_cos_summary}: A summary table for ambiguous colocalization events with the following columns:
 \itemize{
 \item \code{outcomes}: Outcome in the ambiguous colocalization event
 \item \code{ucos_id}: Unique identifiers for the ambiguous event

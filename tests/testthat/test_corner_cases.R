@@ -359,9 +359,9 @@ test_that("get_ambiguous_colocalization handles edge cases with correlation thre
   
   # Compare number of ambiguous events found with different thresholds
   # Generally expect: n_high_thresh <= n_default <= n_low_thresh
-  n_high <- length(result_high_thresh$ambigous_ucos)
-  n_default <- length(get_ambiguous_colocalization(test_colocboost_results)$ambigous_ucos)
-  n_low <- length(result_low_thresh$ambigous_ucos)
+  n_high <- length(result_high_thresh$ambiguous_cos)
+  n_default <- length(get_ambiguous_colocalization(test_colocboost_results)$ambiguous_cos)
+  n_low <- length(result_low_thresh$ambiguous_cos)
   
   # Higher thresholds should find equal or fewer ambiguities than default
   expect_true(n_high <= n_default)
@@ -385,7 +385,7 @@ test_that("get_ambiguous_colocalization handles edge cases with correlation thre
     min_abs_corr_between_ucos = 0.0,
     median_abs_corr_between_ucos = 0.0
   )
-  expect_true(length(result_zero$ambigous_ucos) >= n_low)
+  expect_true(length(result_zero$ambiguous_cos) >= n_low)
   
   
 })

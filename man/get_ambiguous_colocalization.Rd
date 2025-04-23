@@ -26,7 +26,7 @@ get_ambiguous_colocalization(
 }
 \value{
 A \code{"colocboost"} object of colocboost output with additional elements:
-\item{ambiguous_ucos}{If exists, a list of ambiguous trait-specific (uncolocalized) effects.}
+\item{ambiguous_cos}{If exists, a list of ambiguous trait-specific (uncolocalized) effects.}
 }
 \description{
 \code{get_ambiguous_colocalization} get the colocalization by discarding the weaker colocalization events or colocalized outcomes
@@ -35,7 +35,7 @@ A \code{"colocboost"} object of colocboost output with additional elements:
 data(Ambiguous_Colocalization)
 test_colocboost_results <- Ambiguous_Colocalization$ColocBoost_Results
 res <- get_ambiguous_colocalization(test_colocboost_results)
-names(res$ambigous_ucos)
+names(res$ambiguous_cos)
 
 }
 \seealso{
