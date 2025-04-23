@@ -219,6 +219,7 @@ colocboost_init_para <- function(cb_data, cb_model, tau = 0.01,
                                  lambda_focal_outcome = 1,
                                  learning_rate_decay = 1,
                                  multi_test_thresh = 1,
+                                 multi_test_max = 1,
                                  func_multi_test = "lfdr",
                                  LD_free = FALSE,
                                  outcome_names = NULL,
@@ -296,7 +297,10 @@ colocboost_init_para <- function(cb_data, cb_model, tau = 0.01,
     "coveraged" = TRUE,
     "num_updates" = 0,
     "coveraged_outcome" = coveraged_outcome,
-    "num_updates_outcome" = num_updates_outcome
+    "num_updates_outcome" = num_updates_outcome,
+    "func_multi_test" = func_multi_test,
+    "multi_test_thresh" = multi_test_thresh,
+    "multi_test_max" = multi_test_max
   )
   class(cb_model_para) <- "colocboost"
 
@@ -599,7 +603,7 @@ process_sumstat <- function(Z, N, Var_y, SeBhat, ld_matrices, variant_lists, dic
         # var_y, shat (and bhat) are provided, so the effects are on the
         # *original scale*.
         adj <- 1 / (Z_extend^2 + current_n - 2)
-        if (!is.null(LD_tmp)) {
+        if (!is.null(ld_submatrix)) {
           XtXdiag <- Var_y[[i]] * adj / (SeBhat[[i]]^2)
           xtx <- t(ld_submatrix * sqrt(XtXdiag)) * sqrt(XtXdiag)
           tmp$XtX <- (xtx + t(xtx)) / 2

@@ -192,7 +192,7 @@ res$cos_details$cos_purity
 ```
 
 
-- **`cos_top_variables`**: indicies and names of the top variant for each CoS, which is the variant with the highest VCP.
+- **`cos_top_variables`**: indices and names of the top variant for each CoS, which is the variant with the highest VCP.
 - Note that there may exist multiple variants in perfect LD with the same highest VCP.
 
 ```{r cos-top}
@@ -321,7 +321,7 @@ Y <- Ind_5traits$Y
 res <- colocboost(X = X, Y = Y, output_level = 3)
 ```
 
-- **`cb_model`**: trait-specific proximity gradient boosting model, including proximity weight at each iteration, residual after gradient boosting, et al.
+- **`cb_model`**: trait-specific proximity gradient boosting model, including proximity weight at each iteration, residual after gradient boosting, etc.
 - **`weights_paths`**: individual trait-specific weights for each iteration.
 
 ```{r cb-model}

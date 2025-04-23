@@ -14,4 +14,4 @@ vignette: >
 
 ## Software updates
 
-- `v1.0.0` Initial public release. Pre-release versions `0.1.*` for reproducing our earlier work, including the first version of manuscript on biorxiv, are still available on [GitHub](https://github.com/StatFunGen/colocboost/tags).
+- `v1.0.0` Initial public release. Pre-release versions `0.1.*` for reproducing our earlier work, including the first version of manuscript on medRxiv, are still available on [GitHub](https://github.com/StatFunGen/colocboost/tags).

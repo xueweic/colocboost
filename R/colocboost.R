@@ -3,7 +3,7 @@
 #' @title ColocBoost: A gradient boosting informed multi-omics xQTL colocalization method
 #'
 #' @description `colocboost` implements a proximity adaptive smoothing gradient boosting approach for multi-trait colocalization at gene loci,
-#'              accommodating multiple causal variants. This method, introduced by Cao et al. (2025), is particularly suited for scaling
+#'              accommodating multiple causal variants. This method, introduced by Cao etc. (2025), is particularly suited for scaling
 #'              to large datasets involving numerous molecular quantitative traits and disease traits.
 #'              In brief, this function fits a multiple linear regression model \eqn{Y = XB + E} in matrix form.
 #'              ColocBoost can be generally used in multi-task variable selection regression problem.
@@ -17,12 +17,12 @@
 #'          Each matrix should have column names, if sample sizes and variables possibly differing across matrices.
 #' @param Y A list of vectors of outcomes or an N by L matrix if it is considered for the same X and multiple outcomes.
 #' @param sumstat A list of data.frames of summary statistics.
-#'                  The coloumns of data.frame should include either \code{z} or \code{beta}/\code{sebeta}.
+#'                  The columns of data.frame should include either \code{z} or \code{beta}/\code{sebeta}.
 #'                  \code{n} is the sample size for the summary statistics, it is highly recommendation to provide.
 #'                  \code{variant} is required if sumstat for different outcomes do not have the same number of variables.
-#'                  \code{var_y} is the variance of phenotype (default is 1 meaning that the Y is in the \dQuote{standarized} scale).
+#'                  \code{var_y} is the variance of phenotype (default is 1 meaning that the Y is in the \dQuote{standardized} scale).
 #' @param LD A list of correlation matrix indicating the LD matrix for each genotype. It also could be a single matrix if all sumstats were
-#'           obtained from the same gentoypes.
+#'           obtained from the same genotypes.
 #' @param dict_YX A L by 2 matrix of dictionary for \code{X} and \code{Y} if there exist subsets of outcomes corresponding to the same X matrix.
 #'                  The first column should be 1:L for L outcomes. The second column should be the index of \code{X} corresponding to the outcome.
 #'                  The innovation: do not provide the same matrix in \code{X} to reduce the computational burden.
@@ -51,14 +51,14 @@
 #' @param jk_equiv_corr The LD cutoff between overall best update jk-star and marginal best update jk-l for lth outcome
 #' @param jk_equiv_loglik The change of loglikelihood cutoff between overall best update jk-star and marginal best update jk-l for lth outcome
 #' @param coloc_thresh The cutoff of checking if the best update jk-star is the potential causal variable for outcome l if jk-l is not similar to jk-star (used in Delayed SEC).
-#' @param lambda The ratio \[0,1\] for z^2 and z in fun_prior simplex, defult is 0.5
+#' @param lambda The ratio \[0,1\] for z^2 and z in fun_prior simplex, default is 0.5
 #' @param lambda_focal_outcome The ratio for z^2 and z in fun_prior simplex for the focal outcome, default is 1
 #' @param func_simplex The data-driven local association simplex \eqn{\delta} for smoothing the weights. Default is "LD_z2z" is the elastic net for z-score and also weighted by LD.
 #' @param func_multi_test The alternative method to check the stop criteria. When \code{func_multi_test = "lfdr"}, boosting iterations will be stopped
 #'                      if the local FDR for all variables are greater than \code{lfsr_max}.
 #' @param stop_null The cutoff of nominal p-value when \code{func_multi_test = "Z"}.
-#' @param multi_test_max The cutoff of the smallest FDR for pre-filtering the outcomes when \code{func_multi_test = "lfdr"} or \code{func_multi_test = "lfsr"}.
-#' @param multi_test_thresh The cutoff of the smallest FDR for stop criteria when \code{func_multi_test = "lfdr"} or \code{func_multi_test = "lfsr"}.
+#' @param multi_test_max The cutoff of the smallest FDR for stop criteria when \code{func_multi_test = "lfdr"} or \code{func_multi_test = "lfsr"}.
+#' @param multi_test_thresh The cutoff of the smallest FDR for pre-filtering the outcomes when \code{func_multi_test = "lfdr"} or \code{func_multi_test = "lfsr"}.
 #' @param ash_prior The prior distribution for calculating lfsr when \code{func_multi_test = "lfsr"}.
 #' @param p.adjust.methods The adjusted pvalue method in stats:p.adj  when \code{func_multi_test = "fdr"}
 #' @param residual_correlation The residual correlation based on the sample overlap, it is diagonal if it is NULL.
@@ -79,7 +79,7 @@
 #' @param tol A small, non-negative number specifying the convergence tolerance for checking the overlap of the variables in different sets.
 #' @param merge_cos When \code{merge_cos = TRUE}, the sets for only one outcome will be merged if passed the \code{median_cos_abs_corr}.
 #' @param sec_coverage_thresh A number between 0 and 1 specifying the weight in each SEC (default is 0.8).
-#' @param weight_fudge_factor The strenght to integrate weight from differnt outcomes, default is 1.5
+#' @param weight_fudge_factor The strength to integrate weight from different outcomes, default is 1.5
 #' @param check_null The cut off value for change conditional objective function. Default is 0.1.
 #' @param check_null_method The metric to check the null sets. Default is "profile"
 #' @param check_null_max The smallest value of change of profile loglikelihood for each outcome.
@@ -502,7 +502,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
         z <- summstat_tmp[, "z"]
       }
       if (anyNA(z)) {
-        warning(paste("summary statistic dataset", i.sumstat, "contains NA values that are replaced with 0"))
+        warning(paste("summary statistic dataset", i.summstat, "contains NA values that are replaced with 0"))
         z[is.na(z)] <- 0
       }
 

@@ -11,14 +11,14 @@ A list with 3 elements
 \describe{
 \item{X}{List of genotype matrices}
 \item{Y}{List of traits}
-\item{variant}{Incides of two causal variants}
+\item{variant}{indices of two causal variants}
 }
 }
 }
 \source{
 The Heterogeneous_Effect dataset contains 2 simulated phenotypes alongside corresponding genotype matrices.
 There are two causal variants, both of which have heterogeneous effects on two traits.
-See Figure 2b in Cao et. al. 2025 for details.
+See Figure 2b in Cao etc. 2025 for details.
 }
 \usage{
 Heterogeneous_Effect

@@ -24,9 +24,9 @@ get_robust_colocalization(
 
 \item{npc_outcome_cutoff}{Minimum threshold of normalized probability of colocalized traits in each CoS.}
 
-\item{pvalue_cutoff}{Maximum threshold of margianl p-values of colocalized variants on colocalized traits in each CoS.}
+\item{pvalue_cutoff}{Maximum threshold of marginal p-values of colocalized variants on colocalized traits in each CoS.}
 
-\item{weight_fudge_factor}{The strenght to integrate weight from differnt outcomes, default is 1.5}
+\item{weight_fudge_factor}{The strength to integrate weight from different outcomes, default is 1.5}
 
 \item{coverage}{A number between 0 and 1 specifying the \dQuote{coverage} of the estimated colocalization confidence sets (CoS) (default is 0.95).}
 }

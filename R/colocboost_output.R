@@ -6,7 +6,7 @@
 #' with or without the outcomes of interest.
 #'
 #' @param cb_output Output object from `colocboost` analysis
-#' @param summary_level When \code{summary_level = 1}, return basic sumamry table for colocalization results. See details in `get_ucos_summary` function when \code{summary_level = 2}.
+#' @param summary_level When \code{summary_level = 1}, return basic summary table for colocalization results. See details in `get_ucos_summary` function when \code{summary_level = 2}.
 #' @param outcome_names Optional vector of names of outcomes, which has the same order as Y in the original analysis.
 #' @param interest_outcome Optional vector specifying a subset of outcomes from \code{outcome_names} to focus on. When provided, only colocalization events that include at least one of these outcomes will be returned.
 #' @param region_name Optional character string. When provided, adds a column with this gene name to the output table for easier filtering in downstream analyses.
@@ -123,8 +123,8 @@ get_colocboost_summary <- function(cb_output,
 #' @param cb_output Output object from `colocboost` analysis
 #' @param cos_npc_cutoff Minimum threshold of normalized probability of colocalization (NPC) for CoS.
 #' @param npc_outcome_cutoff Minimum threshold of normalized probability of colocalized traits in each CoS.
-#' @param pvalue_cutoff Maximum threshold of margianl p-values of colocalized variants on colocalized traits in each CoS.
-#' @param weight_fudge_factor The strenght to integrate weight from differnt outcomes, default is 1.5
+#' @param pvalue_cutoff Maximum threshold of marginal p-values of colocalized variants on colocalized traits in each CoS.
+#' @param weight_fudge_factor The strength to integrate weight from different outcomes, default is 1.5
 #' @param coverage A number between 0 and 1 specifying the \dQuote{coverage} of the estimated colocalization confidence sets (CoS) (default is 0.95).
 #'
 #' @return A \code{"colocboost"} object with some or all of the following elements:
@@ -625,7 +625,7 @@ get_cos_summary <- function(cb_output,
     coloc_outcome <- lapply(cb_output$cos_details$cos_outcomes$outcome_index, function(idx) analysis_outcome[idx])
     coloc_sets <- cb_output$cos_details$cos$cos_index
     if (!is.null(cb_output$cos_warnings)) {
-      cos_warnings
+      message(cb_output$cos_warnings$warning_message)
     }
     vcp <- as.numeric(cb_output$vcp)
 
@@ -857,7 +857,7 @@ get_ucos_summary <- function(cb_output, outcome_names = NULL, region_name = NULL
   return(output_summary)
 }
 
-#' Extract CoS at different coverages
+#' Extract CoS at different coverage
 #' 
 #' @description `get_cos` extracts colocalization confidence sets (CoS) at different coverage levels 
 #' from ColocBoost results. When genotype data (X) or correlation matrix (Xcorr) is provided, it 

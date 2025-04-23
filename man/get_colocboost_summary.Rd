@@ -21,7 +21,7 @@ get_colocboost_summary(
 \arguments{
 \item{cb_output}{Output object from \code{colocboost} analysis}
 
-\item{summary_level}{When \code{summary_level = 1}, return basic sumamry table for colocalization results. See details in \code{get_ucos_summary} function when \code{summary_level = 2}.}
+\item{summary_level}{When \code{summary_level = 1}, return basic summary table for colocalization results. See details in \code{get_ucos_summary} function when \code{summary_level = 2}.}
 
 \item{outcome_names}{Optional vector of names of outcomes, which has the same order as Y in the original analysis.}
 

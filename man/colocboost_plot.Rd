@@ -105,7 +105,7 @@ colocboost_plot(
 \item{...}{Additional parameters passed to \code{plot} functions}
 }
 \value{
-Visualization plot for each colcoalization event.
+Visualization plot for each colocalization event.
 }
 \description{
 \code{colocboost_plot} generates visualization plots for colocalization events from a ColocBoost analysis.

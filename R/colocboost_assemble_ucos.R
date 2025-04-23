@@ -29,7 +29,7 @@ colocboost_assemble_ucos <- function(cb_obj_single,
       "evidence_strength" = NULL,
       "requested_coverage" = coverage
     )
-    pip_av <- rep(0, cc$P)
+    pip_av <- rep(0, cb_model_para$P)
   } else if (ncol(temp) == 1 | nrow(temp) == 1) {
     weights <- as.vector(weights)
     avWeight <- weights

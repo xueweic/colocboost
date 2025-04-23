@@ -58,6 +58,7 @@ colocboost_workhorse <- function(cb_data,
     lambda_focal_outcome = lambda_focal_outcome,
     learning_rate_decay = learning_rate_decay,
     multi_test_thresh = multi_test_thresh,
+    multi_test_max = multi_test_max,
     func_multi_test = func_multi_test,
     LD_free = LD_free,
     outcome_names = outcome_names,
@@ -194,9 +195,7 @@ colocboost_workhorse <- function(cb_data,
             cb_model_para$update_y <- cb_model_para$update_y
           } else {
             pos_stop <- which(stop) # which outcome reach the stop criterion
-            ttmp <- boost_check_stop(cb_model, cb_model_para, pos_stop, stop_no_coverage,
-              multi_test_max = multi_test_max
-            )
+            ttmp <- boost_check_stop(cb_model, cb_model_para, pos_stop, stop_no_coverage)
             cb_model_para <- ttmp$cb_model_para
             cb_model <- ttmp$cb_model
             # - if there is some outcomes need stop

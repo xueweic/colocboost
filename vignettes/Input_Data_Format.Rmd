@@ -69,11 +69,11 @@ refer to [Summary Statistics Colocalization](https://statfungen.github.io/colocb
 
 
 
-# 3. Optional: mapping between arbitary input $X$ and $Y$
+# 3. Optional: mapping between arbitrary input $X$ and $Y$
 
-For analysis when including multiple genotype matrices `X` with unmatched arbitary phenotype vectors `Y`, 
+For analysis when including multiple genotype matrices `X` with unmatched arbitrary phenotype vectors `Y`, 
 a mapping dictionary `dict_YX` is required to indicate the relationship between `X` and `Y`.
-Similiarly, when multiple LD matrices with unmatched arbitrary multiple summary statistics `sumstat` are used,
+Similarly, when multiple LD matrices with unmatched arbitrary multiple summary statistics `sumstat` are used,
 a mapping dictionary `dict_sumstatLD` is required to indicate the relationship between `sumstat` and `LD`.
 
 For example, considering three genotype matrices `X = list(X1, X2, X3)` and 6 phenotype vectors `Y = list(Y1, Y2, Y3, Y4, Y5, Y6)`, where
@@ -95,10 +95,10 @@ dict_YX
 ```
 
 
-# 4. Hyprcoloc compatible format: effect size and standard error matrices
+# 4. HyPrColoc compatible format: effect size and standard error matrices
 
-ColocBoost also provides a flexibility to use Hyprcoloc compatible format for summary statistics with and without LD matrix.
-For example, when anaylze $L$ traits for the same $P$ variants with the specified effect size and standard error matrices:
+ColocBoost also provides a flexibility to use HyPrColoc compatible format for summary statistics with and without LD matrix.
+For example, when analyze $L$ traits for the same $P$ variants with the specified effect size and standard error matrices:
 
 - `effect_est` (required) is $P \times L$ matrix of variable regression coefficients (i.e. regression beta values) in the genomic region.
 - `effect_se` (required) is $P \times L$ matrix of standard errors for the regression coefficients.
@@ -106,7 +106,7 @@ For example, when anaylze $L$ traits for the same $P$ variants with the specifie
 - `LD` (optional) is LD matrix for the $P$ variants. If it is not provided, it will apply LD-free ColocBoost.
 
 
-See more details about Hyprcoloc compatible format in [Summary Statistics Colocalization](https://statfungen.github.io/colocboost/articles/Summary_Level_Colocalization.html)).
+See more details about HyPrColoc compatible format in [Summary Statistics Colocalization](https://statfungen.github.io/colocboost/articles/Summary_Level_Colocalization.html)).
 
-See more details about data format to implement LD-free ColocBoost and LD-mistmatch diagnosis in [LD mismatch and LD-free Colocalization](https://statfungen.github.io/colocboost/articles/LD_Free_Colocalization.html)).
+See more details about data format to implement LD-free ColocBoost and LD-mismatch diagnosis in [LD mismatch and LD-free Colocalization](https://statfungen.github.io/colocboost/articles/LD_Free_Colocalization.html)).
 
