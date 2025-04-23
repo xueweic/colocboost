@@ -175,13 +175,12 @@ boost_KL_delta <- function(z, ld_feature, adj_dep,
 }
 
 
-boost_check_stop <- function(cb_model, cb_model_para, pos_stop, stop_no_coverage,
-                             multi_test_max = 1) {
+boost_check_stop <- function(cb_model, cb_model_para, pos_stop, stop_no_coverage) {
   # - check the iteration for the stop outcome (pos_stop has the same jk with original data)
   iter_each <- sapply(pos_stop, function(i) {
     length(cb_model[[i]]$obj_path) - 1
   })
-  lfsr_each <- sapply(pos_stop, function(i) cb_model[[i]]$stop_null < multi_test_max)
+  lfsr_each <- sapply(pos_stop, function(i) cb_model[[i]]$stop_null < cb_model_para$multi_test_max)
   pos_need_more <- which(iter_each <= 10 & lfsr_each)
 
   # pos_need_more <- which(iter_each <= 10)
@@ -197,9 +196,9 @@ boost_check_stop <- function(cb_model, cb_model_para, pos_stop, stop_no_coverage
     cb_model_para$need_more <- update_need_more
     for (i in update_need_more) {
       cb_model[[i]]$stop_thresh <- cb_model[[i]]$stop_thresh * 0.5
-      if (stop_method == "Z") {
+      if (cb_model_para$func_multi_test == "Z") {
         cb_model[[i]]$stop_null <- cb_model[[i]]$stop_null - 0.1
-      } else if (stop_method == "lfsr" | stop_method == "lfdr") {
+      } else if (cb_model_para$func_multi_test == "lfsr" | cb_model_para$func_multi_test == "lfdr") {
         cb_model[[i]]$stop_null <- cb_model[[i]]$stop_null + 0.05
       }
       cb_model[[i]]$learning_rate_init <- cb_model[[i]]$learning_rate_init * 0.5

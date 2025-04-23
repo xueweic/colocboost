@@ -139,9 +139,9 @@ if the local FDR for all variables are greater than \code{lfsr_max}.}
 
 \item{stop_null}{The cutoff of nominal p-value when \code{func_multi_test = "Z"}.}
 
-\item{multi_test_max}{The cutoff of the smallest FDR for pre-filtering the outcomes when \code{func_multi_test = "lfdr"} or \code{func_multi_test = "lfsr"}.}
+\item{multi_test_max}{The cutoff of the smallest FDR for stop criteria when \code{func_multi_test = "lfdr"} or \code{func_multi_test = "lfsr"}.}
 
-\item{multi_test_thresh}{The cutoff of the smallest FDR for stop criteria when \code{func_multi_test = "lfdr"} or \code{func_multi_test = "lfsr"}.}
+\item{multi_test_thresh}{The cutoff of the smallest FDR for pre-filtering the outcomes when \code{func_multi_test = "lfdr"} or \code{func_multi_test = "lfsr"}.}
 
 \item{ash_prior}{The prior distribution for calculating lfsr when \code{func_multi_test = "lfsr"}.}
 

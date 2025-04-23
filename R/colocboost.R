@@ -57,8 +57,8 @@
 #' @param func_multi_test The alternative method to check the stop criteria. When \code{func_multi_test = "lfdr"}, boosting iterations will be stopped
 #'                      if the local FDR for all variables are greater than \code{lfsr_max}.
 #' @param stop_null The cutoff of nominal p-value when \code{func_multi_test = "Z"}.
-#' @param multi_test_max The cutoff of the smallest FDR for pre-filtering the outcomes when \code{func_multi_test = "lfdr"} or \code{func_multi_test = "lfsr"}.
-#' @param multi_test_thresh The cutoff of the smallest FDR for stop criteria when \code{func_multi_test = "lfdr"} or \code{func_multi_test = "lfsr"}.
+#' @param multi_test_max The cutoff of the smallest FDR for stop criteria when \code{func_multi_test = "lfdr"} or \code{func_multi_test = "lfsr"}.
+#' @param multi_test_thresh The cutoff of the smallest FDR for pre-filtering the outcomes when \code{func_multi_test = "lfdr"} or \code{func_multi_test = "lfsr"}.
 #' @param ash_prior The prior distribution for calculating lfsr when \code{func_multi_test = "lfsr"}.
 #' @param p.adjust.methods The adjusted pvalue method in stats:p.adj  when \code{func_multi_test = "fdr"}
 #' @param residual_correlation The residual correlation based on the sample overlap, it is diagonal if it is NULL.
@@ -502,7 +502,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
         z <- summstat_tmp[, "z"]
       }
       if (anyNA(z)) {
-        warning(paste("summary statistic dataset", i.sumstat, "contains NA values that are replaced with 0"))
+        warning(paste("summary statistic dataset", i.summstat, "contains NA values that are replaced with 0"))
         z[is.na(z)] <- 0
       }
 

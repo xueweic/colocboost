@@ -625,7 +625,7 @@ get_cos_summary <- function(cb_output,
     coloc_outcome <- lapply(cb_output$cos_details$cos_outcomes$outcome_index, function(idx) analysis_outcome[idx])
     coloc_sets <- cb_output$cos_details$cos$cos_index
     if (!is.null(cb_output$cos_warnings)) {
-      cos_warnings
+      message(cb_output$cos_warnings$warning_message)
     }
     vcp <- as.numeric(cb_output$vcp)
 
