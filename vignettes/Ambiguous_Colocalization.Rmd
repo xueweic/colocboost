@@ -107,8 +107,8 @@ intersect(susie_eQTL$sets$cs$L1, susie_GWAS$sets$cs$L1)
 To visulize the fine-mapping results,
 
 ```{r plot-susie}
-susieR::susie_plot(susie_eQTL, y = "PIP")
-susieR::susie_plot(susie_GWAS, y = "PIP")
+susieR::susie_plot(susie_eQTL, y = "PIP", pos = 2000:n_variables)
+susieR::susie_plot(susie_GWAS, y = "PIP", pos = 2000:n_variables)
 ```
 
 
