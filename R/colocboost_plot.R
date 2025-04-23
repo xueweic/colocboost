@@ -482,7 +482,6 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
       ucos <- ucos_details$ucos$ucos_index
       ucos_outcome_index <- ucos_details$ucos_outcomes$outcome_index
       ucos_hits <- lapply(ucos, function(x) x[[1]])
-      weights <- ucos_details$ucos_weight
       # check inclusion of other options
       select_ucos <- 1:length(ucos)
       if (!is.null(plot_ucos_idx)) {
@@ -505,11 +504,16 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
       plot_input$coloc_index <- c(plot_input$coloc_index, ucos_outcome_index[select_ucos])
       plot_input$select_cos <- c(plot_input$select_cos, ncos + select_ucos)
       # add the recalibrated cos and ucos weights
+      weights <- ucos_details$ucos_weight
       ucos_weights <- lapply(1:cb_output$data_info$n_outcomes, function(l){
         pp <- which(sapply(ucos_outcome_index, function(oo) oo == l))
-        w <- weights[pp]
-        w <- do.call(cbind, w)
-        1 - apply(1-w, 1, prod)
+        if (length(pp) == 0){
+          return(rep(0, length(weights[[1]])))
+        } else {
+          w <- weights[pp]
+          w <- do.call(cbind, w)
+          return(1 - apply(1-w, 1, prod))
+        }
       })
       cos_vcp <- plot_input$cos_vcp
       combined <- lapply(1:cb_output$data_info$n_outcomes, function(l){
@@ -663,7 +667,7 @@ plot_initial <- function(cb_plot_input, y = "log10p",
   } else if (y == "cos_vcp") {
     if (plot_ucos){
       plot_data <- cb_plot_input$ucos_cos_int_weights
-      ylab <- "Analogous integrated VPA from CoS and uCoS"
+      ylab <- "Integrated VPA from CoS and uCoS"
     } else {
       plot_data <- cb_plot_input$cos_vcp
       ylab <- "CoS-specific VCP"
