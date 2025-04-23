@@ -4,7 +4,7 @@ Date: 2025-04-13
 Title: Multi-Context Colocalization Analysis for QTL and GWAS Studies
 Version: 0.1.0
 Authors@R: c(
-  person(given = "Xuewei", family = "Cao", email = "xc2270@cumc.columbia.edu", role = c("cre", "aut")),
+  person(given = "Xuewei", family = "Cao", email = "xc2270@cumc.columbia.edu", role = c("cre", "aut", "cph")),
   person(given = "Haochen", family = "Sun", email = "hs3393@cumc.columbia.edu", role = "aut"),
   person(given = "Ru", family = "Feng", email = "rf2872@cumc.columbia.edu", role = "aut"),
   person(given = "Daniel", family = "Nachun", role = "aut"),
