@@ -120,9 +120,6 @@ We also show the colocalization results from COLOC method. For this ambiguous co
 - A high posterior probability of colocalization (PP.H4) of 0.85.
 - Two hits are corresponding to variants with highest PIP in SuSiE for eQTL and GWAS, separately.
 
-Note that the COLOC results are directly from two `susie` output objects (code provided below), 
-not restricting the analysis to only the overlapping variants between GWAS and eQTL. 
-
 
 ```{r coloc-results}
 # To run COLOC, please use the following command:
