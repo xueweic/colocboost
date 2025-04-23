@@ -120,7 +120,7 @@ colocboost_plot <- function(cb_output, y = "log10p",
     y = y, points_color = points_color, cos_color = cos_color,
     ylim_each = ylim_each, title_specific = title_specific,
     outcome_legend_pos = outcome_legend_pos, outcome_legend_size = outcome_legend_size,
-    cos_legend_pos = cos_legend_pos,
+    cos_legend_pos = cos_legend_pos, plot_ucos = plot_ucos,
     show_variable = show_variable, lab_style = lab_style, axis_style = axis_style,
     title_style = title_style, ...
   )
@@ -467,6 +467,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
     "Zscores" = Z,
     "vcp" = vcp,
     "cos_vcp" = cos_vcp,
+    "ucos_cos_int_weights" = cos_vcp,
     "coef" = coef,
     "cos" = coloc_cos,
     "cos_hits" = coloc_hits,
@@ -502,6 +503,26 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
       plot_input$cos_hits <- c(plot_input$cos_hits, ucos_hits[select_ucos])
       plot_input$coloc_index <- c(plot_input$coloc_index, ucos_outcome_index[select_ucos])
       plot_input$select_cos <- c(plot_input$select_cos, ncos + select_ucos)
+      # add the recalibrated cos and ucos weights
+      weights <- ucos_details$ucos_weight
+      ucos_weights <- lapply(1:cb_output$data_info$n_outcomes, function(l){
+        pp <- which(sapply(ucos_outcome_index, function(oo) oo == l))
+        if (length(pp) == 0){
+          return(rep(0, length(weights[[1]])))
+        } else {
+          w <- weights[pp]
+          w <- do.call(cbind, w)
+          return(1 - apply(1-w, 1, prod))
+        }
+      })
+      cos_vcp <- plot_input$cos_vcp
+      combined <- lapply(1:cb_output$data_info$n_outcomes, function(l){
+        ucos_w <- ucos_weights[[l]]
+        cos_w <- cos_vcp[[l]]
+        1 - (1-ucos_w)*(1-cos_w)
+      })
+      names(combined) <- names(plot_input$cos_vcp)
+      plot_input$ucos_cos_int_weights <- combined
     }
   }
 
@@ -602,6 +623,7 @@ plot_initial <- function(cb_plot_input, y = "log10p",
                          outcome_legend_size = 1.5,
                          outcome_legend_pos = "right",
                          cos_legend_pos = "bottomleft",
+                         plot_ucos = FALSE,
                          show_variable = FALSE,
                          lab_style = c(2, 1),
                          axis_style = c(1, 1),
@@ -643,8 +665,13 @@ plot_initial <- function(cb_plot_input, y = "log10p",
     plot_data <- cb_plot_input$Zscores
     ylab <- "Z score"
   } else if (y == "cos_vcp") {
-    plot_data <- cb_plot_input$cos_vcp
-    ylab <- "CoS-specific VCP"
+    if (plot_ucos){
+      plot_data <- cb_plot_input$ucos_cos_int_weights
+      ylab <- "Integrated VPA from CoS and uCoS"
+    } else {
+      plot_data <- cb_plot_input$cos_vcp
+      ylab <- "CoS-specific VCP"
+    }
     args$ylim <- c(0, 1)
   } else if (y == "vcp") {
     plot_data <- cb_plot_input$vcp
