@@ -39,6 +39,8 @@ This dataset is structured as a list with two main components:
 
 2. `SuSiE_Results`: Contains fine-mapping results from the SuSiE algorithm for both eQTL and GWAS data separately.
 
+3. `COLOC_V5_Results`: Contains colocalization results from COLOC, which is directly from two `susie` output objects.
+
 
 # 2. ColocBoost results
 
@@ -110,6 +112,26 @@ To visulize the fine-mapping results,
 susieR::susie_plot(susie_eQTL, y = "PIP", pos = 2000:n_variables)
 susieR::susie_plot(susie_GWAS, y = "PIP", pos = 2000:n_variables)
 ```
+
+
+
+We also show the colocalization results from COLOC method. For this ambiguous colocalization, COLOC shows 
+
+- A high posterior probability of colocalization (PP.H4) of 0.85.
+- Two hits are corresponding to variants with highest PIP in SuSiE for eQTL and GWAS, separately.
+
+Note that SuSiE-based COLOC has a relatively high confidence of this as a colocalization event because each of SuSiE 95% CS as shown above cover substantially larger region 
+(containing more variants) compared to the trait-specific effects identified by ColocBoost, although at a lower purity (SuSiE purity = 0.56 and 0.64, ColocBoost uCoS purity = 0.67 and 0.70). 
+With larger overlap between the SuSiE 95% CS across traits, the high probability of colocalization is expected. But for this particular data application without knowing the ground truth, 
+it is difficult to determine which method is more precise.
+
+```{r coloc-results}
+# To run COLOC, please use the following command:
+# res <- coloc::coloc.susie(susie_eQTL, susie_GWAS)
+res <- Ambiguous_Colocalization$COLOC_V5_Results
+res$summary
+```
+
 
 # 3. Get the ambiguous colocalization results and summary
 
