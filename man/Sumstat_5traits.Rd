@@ -18,7 +18,7 @@ A list with 2 elements
 The Sumstat_5traits dataset contains 5 simulated summary statistics,
 where it is directly derived from the Ind_5traits dataset using marginal association.
 The dataset is specifically designed for evaluating and demonstrating the capabilities of ColocBoost
-in multi-trait colocalization analysis with summary association data. See Cao et. al. 2025 for details.
+in multi-trait colocalization analysis with summary association data. See Cao etc. 2025 for details.
 }
 \usage{
 Sumstat_5traits

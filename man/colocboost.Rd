@@ -71,13 +71,13 @@ Each matrix should have column names, if sample sizes and variables possibly dif
 \item{Y}{A list of vectors of outcomes or an N by L matrix if it is considered for the same X and multiple outcomes.}
 
 \item{sumstat}{A list of data.frames of summary statistics.
-The coloumns of data.frame should include either \code{z} or \code{beta}/\code{sebeta}.
+The columns of data.frame should include either \code{z} or \code{beta}/\code{sebeta}.
 \code{n} is the sample size for the summary statistics, it is highly recommendation to provide.
 \code{variant} is required if sumstat for different outcomes do not have the same number of variables.
-\code{var_y} is the variance of phenotype (default is 1 meaning that the Y is in the \dQuote{standarized} scale).}
+\code{var_y} is the variance of phenotype (default is 1 meaning that the Y is in the \dQuote{standardized} scale).}
 
 \item{LD}{A list of correlation matrix indicating the LD matrix for each genotype. It also could be a single matrix if all sumstats were
-obtained from the same gentoypes.}
+obtained from the same genotypes.}
 
 \item{dict_YX}{A L by 2 matrix of dictionary for \code{X} and \code{Y} if there exist subsets of outcomes corresponding to the same X matrix.
 The first column should be 1:L for L outcomes. The second column should be the index of \code{X} corresponding to the outcome.
@@ -128,7 +128,7 @@ we need to have the higher learning rate to improve the computational efficiency
 
 \item{coloc_thresh}{The cutoff of checking if the best update jk-star is the potential causal variable for outcome l if jk-l is not similar to jk-star (used in Delayed SEC).}
 
-\item{lambda}{The ratio [0,1] for z^2 and z in fun_prior simplex, defult is 0.5}
+\item{lambda}{The ratio [0,1] for z^2 and z in fun_prior simplex, default is 0.5}
 
 \item{lambda_focal_outcome}{The ratio for z^2 and z in fun_prior simplex for the focal outcome, default is 1}
 
@@ -176,7 +176,7 @@ to merge colocalized sets, which may resulting in a huge set.}
 
 \item{sec_coverage_thresh}{A number between 0 and 1 specifying the weight in each SEC (default is 0.8).}
 
-\item{weight_fudge_factor}{The strenght to integrate weight from differnt outcomes, default is 1.5}
+\item{weight_fudge_factor}{The strength to integrate weight from different outcomes, default is 1.5}
 
 \item{check_null}{The cut off value for change conditional objective function. Default is 0.1.}
 
@@ -205,7 +205,7 @@ A \code{"colocboost"} object with some or all of the following elements:
 }
 \description{
 \code{colocboost} implements a proximity adaptive smoothing gradient boosting approach for multi-trait colocalization at gene loci,
-accommodating multiple causal variants. This method, introduced by Cao et al. (2025), is particularly suited for scaling
+accommodating multiple causal variants. This method, introduced by Cao etc. (2025), is particularly suited for scaling
 to large datasets involving numerous molecular quantitative traits and disease traits.
 In brief, this function fits a multiple linear regression model \eqn{Y = XB + E} in matrix form.
 ColocBoost can be generally used in multi-task variable selection regression problem.

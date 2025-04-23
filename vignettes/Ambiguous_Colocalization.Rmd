@@ -15,7 +15,7 @@ knitr::opts_chunk$set(
 ```
 
 This vignette demonstrates an example of ambiguous colocalization from trait-specific effects using the `colocboost`. 
-Specifically, we will use the `Ambiguous_Colocalization`, which is output from `colocboost` analyzing GTEx relsease v8 and UK Biobank summary statistics
+Specifically, we will use the `Ambiguous_Colocalization`, which is output from `colocboost` analyzing GTEx release v8 and UK Biobank summary statistics
 (see more details of the original data source in Acknowledgement section).
 
 ```{r setup}
@@ -44,7 +44,7 @@ This dataset is structured as a list with two main components:
 
 # 2. ColocBoost results
 
-In this example, there are two trait-specifc effects for the eQTL and GWAS signals, respectively. But two uCoS have overlapping variants, 
+In this example, there are two trait-specific effects for the eQTL and GWAS signals, respectively. But two uCoS have overlapping variants, 
 which indicates that the two uCoS are not independent. ColocBoost identifies two uCoS:
 
 - `ucos1:y1`: eQTL trait-specific effect has 6 variants.
@@ -106,7 +106,7 @@ susie_GWAS$sets$cs$L1
 intersect(susie_eQTL$sets$cs$L1, susie_GWAS$sets$cs$L1)
 ```
 
-To visulize the fine-mapping results,
+To visualize the fine-mapping results,
 
 ```{r plot-susie}
 susieR::susie_plot(susie_eQTL, y = "PIP", pos = 2000:n_variables)
@@ -135,7 +135,7 @@ res$summary
 
 # 3. Get the ambiguous colocalization results and summary
 
-ColocBoost provides a function to get the ambiguous colocalization results and summary from trait-specifc effects, by considering the correlation of variants between the two uCoS.
+ColocBoost provides a function to get the ambiguous colocalization results and summary from trait-specific effects, by considering the correlation of variants between the two uCoS.
 
 ## 3.1. Get the ambiguous colocalization results
 
@@ -160,12 +160,12 @@ names(res$ambiguous_cos[[1]])
 
 **Explanation of results** For each ambiguous colocalization, the following information is provided:
 
-- `ambigous_cos`: Contains variants indices and names of the original trait-specific uCoS used to constuct this ambiguouse colocalization.
-- `ambigouse_cos_overlap`: Contains the overlapping variants information across the uCoS  used to constuct this ambiguouse colocalization.
-- `ambigouse_cos_union`: Contains the union of variants information across the uCoS used to constuct this ambiguouse colocalization.
-- `ambigouse_cos_outcomes`: Contains the outcomes indicies and names for uCoS used to constuct this ambiguouse colocalization.
-- `ambigous_cos_weight`: Contains the trait-specific weights of the uCoS used to constuct this ambiguouse colocalization.
-- `ambigous_cos_puriry`: Contains the purity of across uCoS used to constuct this ambiguouse colocalization.
+- `ambiguous_cos`: Contains variants indices and names of the original trait-specific uCoS used to construct this ambiguouse colocalization.
+- `ambiguous_cos_overlap`: Contains the overlapping variants information across the uCoS  used to construct this ambiguouse colocalization.
+- `ambiguous_cos_union`: Contains the union of variants information across the uCoS used to construct this ambiguouse colocalization.
+- `ambiguous_cos_outcomes`: Contains the outcomes indices and names for uCoS used to construct this ambiguouse colocalization.
+- `ambiguous_cos_weight`: Contains the trait-specific weights of the uCoS used to construct this ambiguouse colocalization.
+- `ambiguous_cos_puriry`: Contains the purity of across uCoS used to construct this ambiguouse colocalization.
 - `recalibrated_cos_vcp`: Contains the recalibrated integrative weight to analogous to variant colocalization probability (VCP) from the ambiguous colocalization results.
 - `recalibrated_cos`: Contains the recalibrated 95% colocalization confidence set (CoS) from the ambiguous colocalization results.
 
@@ -188,7 +188,7 @@ summary_ambiguous <- full_summary$ambiguous_cos_summary
 colnames(summary_ambiguous)
 ```
 
-- `recalibrated_*`: giving the recalibrated weigths and recalibrated 95% colocalization confidece sets (CoS) from the trait-specific effects.
+- `recalibrated_*`: giving the recalibrated weights and recalibrated 95% colocalization confidence sets (CoS) from the trait-specific effects.
 
 See details of function usage in the [Functions](https://statfungen.github.io/colocboost/reference/index.html).
 
@@ -201,12 +201,12 @@ where trait-specific effects share highly correlated and overlapping variants.
 when merging two uCoS, which in this example will furnish a colocalization event. Still, we mark such colocalization events as `ambigous_cos`. 
 We recommend users not to lower these thresholds further without strong justification. 
 - We suggest treating this scenario with caution and distinct such merged CoS from typical colocalization events as a result of coupled updates between traits, 
-if researcher decides to investigate these ambigous colocalization events. 
+if researcher decides to investigate these ambiguous colocalization events. 
 - As such,
     - While we provide recalibrated weights as a suggested approach for interpreting ambiguous results, users can still choose between recalibrated weights and trait-specific weights based on their research context. 
-    - The `colocboost_plot` function will not consider it as colocalized but still showing them as uncolocalized events, with overlapping variants color labelled.
+    - The `colocboost_plot` function will not consider it as colocalized but still showing them as uncolocalized events, with overlapping variants color labeled.
 
-# Acknowledgements
+# Acknowledgement
 
 - The eQTL data used for the analyses described in this example results were obtained from GTEx release v8 from [GTEx Portal](https://gtexportal.org/home/downloads/adult-gtex/qtl).
 - The GWAS summary statistics used for the analyses described in this example results were obtained from UK Biobank (UKBB) 

@@ -81,7 +81,8 @@ imiss_cutoff = 0.9
 
 - **`sumstat_path_list`**: A vector of file paths to the summary statistics.
 - **`column_file_path_list`**: A vector of file paths to the column mapping files.
-- **`LD_meta_file_path_list`**: A vector of paths to LD metadata files. LD metadata is a data frame specifying LD blocks with columns "chrom", "start", "end", and "path". "start" and "end" denote the positions of LD blocks, and "path" is the path of each LD block, optionally including bim file paths.
+- **`LD_meta_file_path_list`**: A vector of paths to LD metadata files. LD metadata is a data frame specifying LD blocks with columns "chrom", "start", "end", and "path". 
+"start" and "end" denote the positions of LD blocks, and "path" is the path of each LD block, optionally including `bim` file paths.
 - **`match_LD_sumstat`**: Logical indicating whether to match LD blocks with summary statistics.
 - **`conditions_list_sumstat`**: A vector of strings representing different sumstats.
 - **`n_samples`**: User-specified sample size. If unknown, set as 0 to retrieve from the sumstat file.

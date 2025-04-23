@@ -36,7 +36,7 @@
 #' @param title_style Vector of two numbers for title style (size, boldness), default is c(2.5, 2)
 #' @param ... Additional parameters passed to `plot` functions
 #'
-#' @return Visualization plot for each colcoalization event.
+#' @return Visualization plot for each colocalization event.
 #'
 #' @examples
 #' # colocboost example
@@ -434,9 +434,9 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
     coloc_hits <- coloc_hits[select_cs]
   } else {
     if (cb_output$data_info$n_outcomes == 1) {
-      warnings("No fine-mapped causal effects in this region!")
+      warning("No fine-mapped causal effects in this region!")
     } else {
-      warnings("No colocalized effects in this region!")
+      warning("No colocalized effects in this region!")
     }
     ncos <- 0
     coloc_index <- select_cs <- NULL
@@ -536,12 +536,12 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
       cos_to_uncoloc <- coloc_cos
       cos_idx_to_uncoloc <- 1:length(coloc_index)
       if (is.null(show_cos_to_uncoloc_outcome)) {
-        warning("Show all CoSs to uncolocalized outcomes.")
+        message("Show all CoSs to uncolocalized outcomes.")
         outcome_to_uncoloc <- lapply(coloc_index, function(cidx) {
           setdiff(1:length(analysis_outcome), cidx)
         })
       } else {
-        warning("Show all CoSs to uncolocalized outcomes ", paste(show_cos_to_uncoloc_outcome, collapse = ","))
+        message("Show all CoSs to uncolocalized outcomes ", paste(show_cos_to_uncoloc_outcome, collapse = ","))
         outcome_to_uncoloc <- lapply(coloc_index, function(cidx) {
           setdiff(show_cos_to_uncoloc_outcome, cidx)
         })
@@ -558,7 +558,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
         cos_idx_to_uncoloc <- show_cos_to_uncoloc_idx
         cos_to_uncoloc <- coloc_cos[show_cos_to_uncoloc_idx]
         if (is.null(show_cos_to_uncoloc_outcome)) {
-          warning(
+          message(
             "Show the ordered ", paste(cos_idx_to_uncoloc, collapse = ","),
             " CoS for all uncolocalized outcomes."
           )
@@ -568,7 +568,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
             return(l)
           })
         } else {
-          warning(
+          message(
             "Show the ordered ", paste(cos_idx_to_uncoloc, collapse = ","),
             " CoS for outcomes ", paste(show_cos_to_uncoloc_outcome, collapse = ",")
           )

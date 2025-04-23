@@ -18,7 +18,7 @@ A list with 3 elements
 \source{
 The Ind_5traits dataset contains 5 simulated phenotypes alongside corresponding genotype matrices.
 The dataset is specifically designed for evaluating and demonstrating the capabilities of ColocBoost in multi-trait colocalization analysis
-with individual-level data. See Cao et. al. 2025 for details.
+with individual-level data. See Cao etc. 2025 for details.
 }
 \usage{
 Ind_5traits
