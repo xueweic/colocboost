@@ -45,7 +45,7 @@ ColocBoost provides diagnostic warnings for assessing the consistency of the sum
 - Estimated residual variance of the model is negative or greater than phenotypic variance (`rtr < 0` or `rtr > var_y`; 
 see details in Supplementary Note S3.5.2). 
 - Change in trait-specific profile log-likelihood according to a CoS is negative (see details in Supplementary Note S3.5.3).
-- The trait-specific griadient boosting model fails to converge.
+- The trait-specific gradient boosting model fails to converge.
 
 
 ### Example of including LD mismatch
