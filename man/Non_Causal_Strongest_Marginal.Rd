@@ -18,7 +18,7 @@ A list with 3 elements
 \source{
 The Non_Causal_Strongest_Marginal dataset contains 2 simulated phenotypes alongside corresponding genotype matrices.
 There are two causal variants, but the strongest marginal association is not a causal variant.
-See Figure 2b in Cao etc. 2025 for details.
+This is a subset of simulated data to generate Figure 2b in Cao etc. 2025, see paper repo for details.
 }
 \usage{
 Non_Causal_Strongest_Marginal

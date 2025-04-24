@@ -24,8 +24,8 @@ library(colocboost)
 
 The dataset features two causal variants with indices 644 and 2289.
 
-- Causal variant 644 is associated with traits 1, 2, 3, and 4.
-- Causal variant 2289 is associated with traits 2, 3, and 5.
+- Causal variant 194 is associated with traits 1, 2, 3, and 4.
+- Causal variant 589 is associated with traits 2, 3, and 5.
 
 ```{r run-colocboost}
 # Loading the Dataset
@@ -124,7 +124,7 @@ data(Ind_5traits)
 data(Heterogeneous_Effect)
 X <- Ind_5traits$X[1:3]
 Y <- Ind_5traits$Y[1:3]
-X1 <- Heterogeneous_Effect$X[,1:3000]
+X1 <- Heterogeneous_Effect$X
 Y1 <- Heterogeneous_Effect$Y[,1,drop=F]
 
 # Run colocboost

@@ -18,7 +18,7 @@ A list with 3 elements
 \source{
 The Weaker_GWAS_Effect dataset contains 2 simulated phenotypes alongside corresponding genotype matrices.
 There are two causal variants, one of which has a weaker effect on the focal trait compared to the other trait.
-See Figure 2b in Cao etc. 2025 for details.
+This is a subset of simulated data to generate Figure 2b in Cao etc. 2025, see paper repo for details.
 }
 \usage{
 Weaker_GWAS_Effect
