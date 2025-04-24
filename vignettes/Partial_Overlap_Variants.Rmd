@@ -21,7 +21,7 @@ This vignette demonstrates how ColocBoost handles partial overlapping variants a
 library(colocboost)
 ```
 
-![](../man/figures/missing_representation.png)
+![](../man/figures/missing_representation.jpg)
 
 
 
