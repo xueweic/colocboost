@@ -258,7 +258,7 @@ data(Ind_5traits)
 data(Heterogeneous_Effect)
 X <- Ind_5traits$X[1:3]
 Y <- Ind_5traits$Y[1:3]
-X1 <- Heterogeneous_Effect$X[,1:3000]
+X1 <- Heterogeneous_Effect$X
 Y1 <- Heterogeneous_Effect$Y[,1,drop=F]
 res <- colocboost(X = c(X, list(X1)), Y = c(Y, list(Y1)), output_level = 2)
 names(res$ucos_details)

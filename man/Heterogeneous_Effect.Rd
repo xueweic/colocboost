@@ -18,7 +18,8 @@ A list with 3 elements
 \source{
 The Heterogeneous_Effect dataset contains 2 simulated phenotypes alongside corresponding genotype matrices.
 There are two causal variants, both of which have heterogeneous effects on two traits.
-This is a subset of simulated data to generate Figure 2b in Cao etc. 2025, see paper repo for details.
+Due to the file size limitation of CRAN release, this is a subset of simulated data to generate Figure 2b in Cao etc. 2025.
+See full dataset in colocboost paper repo \url{https://github.com/StatFunGen/colocboost-paper}.
 }
 \usage{
 Heterogeneous_Effect

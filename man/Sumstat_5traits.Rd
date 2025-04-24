@@ -19,6 +19,8 @@ The Sumstat_5traits dataset contains 5 simulated summary statistics,
 where it is directly derived from the Ind_5traits dataset using marginal association.
 The dataset is specifically designed for evaluating and demonstrating the capabilities of ColocBoost
 in multi-trait colocalization analysis with summary association data. See Cao etc. 2025 for details.
+Due to the file size limitation of CRAN release, this is a subset of simulated data.
+See full dataset in colocboost paper repo \url{https://github.com/StatFunGen/colocboost-paper}.
 }
 \usage{
 Sumstat_5traits
