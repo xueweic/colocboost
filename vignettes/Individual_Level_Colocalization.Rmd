@@ -10,7 +10,8 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  dpi = 80
 )
 ```
 
@@ -38,10 +39,10 @@ The dataset is specifically designed to evaluate and demonstrate the capabilitie
 - `true_effect_variants`: True effect variants indices for each trait.
 
 ### Causal variant structure
-The dataset features two causal variants with indices 644 and 2289.
+The dataset features two causal variants with indices 194 and 589.
 
-- Causal variant 644 is associated with traits 1, 2, 3, and 4.
-- Causal variant 2289 is associated with traits 2, 3, and 5.
+- Causal variant 194 is associated with traits 1, 2, 3, and 4.
+- Causal variant 589 is associated with traits 2, 3, and 5.
 
 This structure creates a realistic scenario where multiple traits are influenced by different but overlapping sets of genetic variants.
 
@@ -53,6 +54,7 @@ names(Ind_5traits)
 Ind_5traits$true_effect_variants
 ```
 
+Due to the file size limitation of CRAN release, this is a subset of simulated data. See full dataset in [colocboost paper repo](https://github.com/StatFunGen/colocboost-paper).
 
 # 2. Matched individual level input $X$ and $Y$
 

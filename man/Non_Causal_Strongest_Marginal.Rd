@@ -18,7 +18,8 @@ A list with 3 elements
 \source{
 The Non_Causal_Strongest_Marginal dataset contains 2 simulated phenotypes alongside corresponding genotype matrices.
 There are two causal variants, but the strongest marginal association is not a causal variant.
-See Figure 2b in Cao etc. 2025 for details.
+Due to the file size limitation of CRAN release, this is a subset of simulated data to generate Figure 2b in Cao etc. 2025.
+See full dataset in colocboost paper repo \url{https://github.com/StatFunGen/colocboost-paper}.
 }
 \usage{
 Non_Causal_Strongest_Marginal

@@ -10,7 +10,8 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  dpi = 80
 )
 ```
 
@@ -45,6 +46,7 @@ ColocBoost provides diagnostic warnings for assessing the consistency of the sum
 - Estimated residual variance of the model is negative or greater than phenotypic variance (`rtr < 0` or `rtr > var_y`; 
 see details in Supplementary Note S3.5.2). 
 - Change in trait-specific profile log-likelihood according to a CoS is negative (see details in Supplementary Note S3.5.3).
+- The trait-specific gradient boosting model fails to converge.
 
 
 ### Example of including LD mismatch
@@ -58,8 +60,8 @@ data("Ind_5traits")
 LD <- get_cormat(Ind_5traits$X[[1]])
 
 # Change sign of Z-score for 1% of variants for each trait by including mismatched LD
-set.seed(1)
-miss_prop <- 0.01 
+set.seed(123)
+miss_prop <- 0.005 
 sumstat <- lapply(Sumstat_5traits$sumstat, function(ss){
   p <- nrow(ss)
   pos_miss <- sample(1:p, ceiling(miss_prop * p))
