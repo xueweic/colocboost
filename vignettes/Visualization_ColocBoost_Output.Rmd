@@ -22,7 +22,7 @@ library(colocboost)
 
 **Causal variants (simulated)**
 
-The dataset features two causal variants with indices 644 and 2289.
+The dataset features two causal variants with indices 194 and 589.
 
 - Causal variant 194 is associated with traits 1, 2, 3, and 4.
 - Causal variant 589 is associated with traits 2, 3, and 5.
@@ -68,7 +68,7 @@ There are several advanced options available for customizing the plot by deepeni
 You can specify a zoom-in region by providing a `grange` argument, which is a vector indicating the indices of the region to be zoomed in.
 
 ```{r zoomin-plot}
-colocboost_plot(res, grange = c(1:1000))
+colocboost_plot(res, grange = c(1:400))
 ```
 
 

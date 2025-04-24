@@ -33,7 +33,7 @@ To get started, load both `Ind_5traits` and `Sumstat_5traits` datasets into your
 - Note that `LD` could be calculated from the `X` data in the `Ind_5traits` dataset, but it is not included in the `Sumstat_5traits` dataset.
 
 ### Causal variant structure
-The dataset features two causal variants with indices 644 and 2289.
+The dataset features two causal variants with indices 194 and 589.
 
 - Causal variant 194 is associated with traits 1, 2, 3, and 4.
 - Causal variant 589 is associated with traits 2, 3, and 5 (summary level data).
@@ -53,6 +53,8 @@ LD <- get_cormat(Ind_5traits$X[[1]])
 For analyze a specific one type of data, you can refer to the following 
 tutorials [Individual Level Data Colocalization](https://statfungen.github.io/colocboost/articles/Individual_Level_Colocalization.html) and 
 [Summary Level Data Colocalization](https://statfungen.github.io/colocboost/articles/Summary_Level_Colocalization.html).
+
+Due to the file size limitation of CRAN release, this is a subset of simulated data. See full dataset in [colocboost paper repo](https://github.com/StatFunGen/colocboost-paper).
 
 
 # 2. ColocBoost in disease-agnostic mode

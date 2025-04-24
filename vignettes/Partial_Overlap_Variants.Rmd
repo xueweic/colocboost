@@ -41,7 +41,7 @@ X <- Ind_5traits$X
 Y <- Ind_5traits$Y
 
 # Create causal variants with potentially LD proxies
-causal_1 <- c(100:250)
+causal_1 <- c(100:350)
 causal_2 <- c(450:650)
 
 # Create missing data

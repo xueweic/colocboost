@@ -33,7 +33,7 @@ The dataset is specifically designed to evaluate and demonstrate the capabilitie
 - Note that `LD` could be calculated from the `X` data in the `Ind_5traits` dataset, but it is not included in the `Sumstat_5traits` dataset.
 
 ### Causal variant structure
-The dataset features two causal variants with indices 644 and 2289.
+The dataset features two causal variants with indices 194 and 589.
 
 - Causal variant 194 is associated with traits 1, 2, 3, and 4.
 - Causal variant 589 is associated with traits 2, 3, and 5.
@@ -46,6 +46,8 @@ data("Sumstat_5traits")
 names(Sumstat_5traits)
 Sumstat_5traits$true_effect_variants
 ```
+
+Due to the file size limitation of CRAN release, this is a subset of simulated data. See full dataset in [colocboost paper repo](https://github.com/StatFunGen/colocboost-paper).
 
 ### Important data format for summary data
 `sumstat` must include the following columns:
@@ -135,7 +137,7 @@ It allows for efficient analysis without redundancy.
 ```{r superset-LD}
 # Create sumstat with different number of variants - remove 100 variants in each sumstat
 LD_superset <- LD
-sumstat <- lapply(Sumstat_5traits$sumstat, function(x) x[-sample(1:nrow(x), 100), , drop = FALSE])
+sumstat <- lapply(Sumstat_5traits$sumstat, function(x) x[-sample(1:nrow(x), 20), , drop = FALSE])
 
 # Run colocboost
 res <- colocboost(sumstat = sumstat, LD = LD_superset)
