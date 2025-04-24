@@ -10,7 +10,8 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  dpi = 80
 )
 ```
 
@@ -205,9 +206,6 @@ res <- colocboost(effect_est = effect_est, effect_se = effect_se, effect_n = eff
 
 # Identified CoS
 res$cos_details$cos$cos_index
-
-# Plotting the results
-colocboost_plot(res)
 ```
 
 See more details about data format to implement LD-free ColocBoost and LD-mismatch diagnosis in [LD mismatch and LD-free Colocalization](https://statfungen.github.io/colocboost/articles/LD_Free_Colocalization.html)).
