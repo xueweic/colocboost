@@ -191,7 +191,6 @@ colocboost_init_model <- function(cb_data,
     }
     tmp$multi_correction <- multiple_testing_correction
     tmp$multi_correction_univariate <- multiple_testing_correction
-    if (length(multiple_testing_correction) == 1) print(class(multiple_testing_correction))
     if (all(multiple_testing_correction == 1)) {
       tmp$stop_null <- 1
     } else if (min(multiple_testing_correction) > multi_test_max) {

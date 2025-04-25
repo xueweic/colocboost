@@ -204,6 +204,9 @@ colocboost_plot <- function(cb_output, y = "log10p",
     } else {
       bottom <- 2
     }
+    # - restore users' options
+    oldpar <- par(no.readonly = TRUE) 
+    on.exit(par(oldpar))
     if (!is.null(cb_plot_init$title)) {
       par(mfrow = c(nrow, plot_cols), mar = c(bottom, 5, 2, 1), oma = c(0, 0, 3, 0))
     } else {
