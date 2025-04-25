@@ -1,86 +1,68 @@
-Biobank
-Bioinformatics
-CFB
-COLOC
-CoS
-Codecov
-ColocBoost
-Colocalization
-Colocalized
-Conda
-FineBoost
-GTEx
-GWAS
-HyPrColoc
-INDELs
-Jager
-KK
-LD
-MAF
-Mazumder
-Micromamba
-NPC
-Najar
-Nealelab
-PIPs
-PLINK
-Pre
-Recalibrate
-SEL
-SuSiE
-Sumstat
-UKBB
-VCP
-VPA
-Xcorr
-YI
-al
-bioinformatics
-chrom
-cis
-colocalization
-colocalize
-colocalized
-conda
-de
-decayrate
-doi
-eQTL
-et
-grey
-iteratively
-jk
-ld
-lfsr
-lth
-maf
-medRxiv
-modularity
-nd
-npc
-omics
-phenotypes
-pixi
-pos
-pre
-probabilistically
-pvalue
-qc
-rcond
-recalibrate
-recalibrated
-reconciliate
-repo
-rss
-sQTL
-subsampled
-sumstat
-sumstats
-tabix
-uCoS
-uS
-ucos
-uncolocalized
-vcp
-xQTL
-xQTLs
+# Analysis Tools and Methods
+ColocBoost      # Multiple trait colocalization algorithm we propsed
+Colocalization  # Method to identify shared genetic signals
+Colocalized     # Having undergone colocalization analysis
+COLOC           # A pairwise colocalization method name
+FineBoost       # Single trait fine-mapping algorithm we proposed
+HyPrColoc       # Hypothesis Prioritization in multi-trait Colocalization method name
+SuSiE           # Sum of Single Effects regression model
+
+# Statistical and Genetic Terms
+CoS             # Colocalization confidence set in our proposed ColocBoost method
+eQTL            # Expression Quantitative Trait Loci
+GWAS            # Genome-Wide Association Study
+INDELs          # Insertions and Deletions
+LD              # Linkage Disequilibrium
+MAF             # Minor Allele Frequency
+NPC             # Normalization probability of colocalization in our proposed ColocBoost method
+PIPs            # Posterior Inclusion Probabilities
+pvalue          # Statistical p-value
+sQTL            # Splicing Quantitative Trait Loci
+SEL             # Single-effect learner in our proposed ColocBoost method
+Sumstat         # Summary Statistics
+xQTL            # Any molecular Quantitative Trait Loci
+
+# Software, Platforms and Tools
+Biobank         # Refer to UK Biobank, a large-scale biomedical database and research resource
+Bioinformatics  # Computational biology field
+Codecov         # Code coverage testing tool
+Conda           # Package and environment management system
+GTEx            # Genotype-Tissue Expression project
+Micromamba      # Lightweight Conda implementation
+Nealelab        # Lab developing genetics GWAS summary statistics
+PLINK           # Whole genome association analysis toolset
+tabix           # Tool for indexing genomic data
+UKBB            # UK Biobank dataset
+
+# Researcher Names
+Jager           # Philip L. de Jager
+KK              # Kushal K. Dey
+Mazumder        # Rahul Mazumder
+Najar           # Cristian F. B. Najar
+CFB             # Cristian F. B. Najar
+
+# Technical Terms
+cis             # Referring to nearby location of a regulatory element
+chrom           # Chromosome
+decayrate       # Decay rate, an input parameter in our package
+doi             # Digital Object Identifier
+grey            # One color name in R
+iteratively     # Performed through iterations
+lfsr            # Local False Sign Rate
+lth             # Lower threshold
+modularity      # Property of network structure
+omics           # Collective biological data fields
+phenotypes      # Observable traits
+pos             # Position in genome
+probabilistically # Based on probability theory
+qc              # Quality Control
+rcond           # Reciprocal condition number
+reconciliate    # Process of resolving discrepancies
+repo            # Repository
+rss             # Residual Sum of Squares
+subsampled      # Analyzed using data subsets
+uncolocalized   # Not showing colocalization
+uCoS            # Trait-specific (uncolocalization) confidence set
+VCP             # Variant colocalization probability
+Xcorr           # Cross-correlation matrix
+Recalibrate     # Process of adjusting statistical calibration
