@@ -234,19 +234,25 @@ plot(res$model_info$outcome_profile_loglik[[i]], type="p", col="#CC3333", lwd=2,
 
 
 ```{r objective-proximity}
+# Save to restore default options
+oldpar <- par(no.readonly = TRUE)
 # Plotting trait-specific proximity objective
 par(mfrow=c(2,3), mar=c(4,4,2,1))
 for(i in 1:5){
 plot(res$model_info$outcome_proximity_obj[[i]], type="p", col="#3366CC", lwd=2, xlab="", ylab="Trait-specific Objective", main = paste0("Trait ", i))
 }
+par(oldpar)
 ```
 
 ```{r objective-best}
+# Save to restore default options
+oldpar <- par(no.readonly = TRUE)
 # Plotting trait-specific objective at the best update variant
 par(mfrow=c(2,3), mar=c(4,4,2,1))
 for(i in 1:5){ 
   plot(res$model_info$outcome_coupled_best_update_obj[[i]], type="p", col="#CC3333", lwd=2, xlab="", ylab=paste0("Objective at best update variant"), main = paste0("Trait ", i)) 
 }
+par(oldpar)
 ```
 
 ### 3.5. Trait-specific effects information (**`ucos_details`**)
