@@ -1,30 +1,30 @@
 # Analysis Tools and Methods
 ColocBoost      # Multiple trait colocalization algorithm we propsed
 Colocalization  # Method to identify shared genetic signals
-Colocalized     # Having undergone colocalization analysis
 COLOC           # A pairwise colocalization method name
 FineBoost       # Single trait fine-mapping algorithm we proposed
 HyPrColoc       # Hypothesis Prioritization in multi-trait Colocalization method name
 SuSiE           # Sum of Single Effects regression model
 
 # Statistical and Genetic Terms
-CoS             # Colocalization confidence set in our proposed ColocBoost method
 eQTL            # Expression Quantitative Trait Loci
 GWAS            # Genome-Wide Association Study
 INDELs          # Insertions and Deletions
 LD              # Linkage Disequilibrium
+ld              # Linkage Disequilibrium
 MAF             # Minor Allele Frequency
-NPC             # Normalization probability of colocalization in our proposed ColocBoost method
-PIPs            # Posterior Inclusion Probabilities
+maf             # Minor Allele Frequency
 pvalue          # Statistical p-value
 sQTL            # Splicing Quantitative Trait Loci
-SEL             # Single-effect learner in our proposed ColocBoost method
 Sumstat         # Summary Statistics
+sumstat         # Summary Statistics
+sumstats        # Summary Statistics
 xQTL            # Any molecular Quantitative Trait Loci
 
 # Software, Platforms and Tools
 Biobank         # Refer to UK Biobank, a large-scale biomedical database and research resource
 Bioinformatics  # Computational biology field
+bioinformatics  # Computational biology field
 Codecov         # Code coverage testing tool
 Conda           # Package and environment management system
 GTEx            # Genotype-Tissue Expression project
@@ -33,6 +33,9 @@ Nealelab        # Lab developing genetics GWAS summary statistics
 PLINK           # Whole genome association analysis toolset
 tabix           # Tool for indexing genomic data
 UKBB            # UK Biobank dataset
+medRxiv         # A preprint resource
+pixi            # An environment manager
+conda           # Package and environment management system
 
 # Researcher Names
 Jager           # Philip L. de Jager
@@ -40,6 +43,9 @@ KK              # Kushal K. Dey
 Mazumder        # Rahul Mazumder
 Najar           # Cristian F. B. Najar
 CFB             # Cristian F. B. Najar
+YI              # Yang I. Li
+et              # and more
+al              # and more
 
 # Technical Terms
 cis             # Referring to nearby location of a regulatory element
@@ -63,6 +69,24 @@ rss             # Residual Sum of Squares
 subsampled      # Analyzed using data subsets
 uncolocalized   # Not showing colocalization
 uCoS            # Trait-specific (uncolocalization) confidence set
+ucos            # Trait-specific (uncolocalization) confidence set
 VCP             # Variant colocalization probability
+VPA             # Variant probability of association
+vcp             # Variant colocalization probability
 Xcorr           # Cross-correlation matrix
 Recalibrate     # Process of adjusting statistical calibration
+recalibrate     # Process of adjusting statistical calibration
+recalibrated    # Process of adjusting statistical calibration
+Colocalized     # Having undergone colocalization analysis
+colocalize      # Having undergone colocalization analysis
+colocalized     # Having undergone colocalization analysis
+CoS             # Colocalization confidence set in our proposed ColocBoost method
+NPC             # Normalization probability of colocalization in our proposed ColocBoost method
+PIPs            # Posterior Inclusion Probabilities
+SEL             # Single-effect learner in our proposed ColocBoost method
+uS              # The number of uCoS
+npc             # Normalization probability of colocalization in our proposed ColocBoost method
+Pre             # Before
+pre             # Before
+jk              # Index used in ColocBoost
+nd              # Second
