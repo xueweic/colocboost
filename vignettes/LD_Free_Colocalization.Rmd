@@ -45,8 +45,8 @@ ColocBoost provides diagnostic warnings for assessing the consistency of the sum
 
 - Estimated residual variance of the model is negative or greater than phenotypic variance (`rtr < 0` or `rtr > var_y`; 
 see details in Supplementary Note S3.5.2). 
-- Change in trait-specific profile log-likelihood according to a CoS is negative (see details in Supplementary Note S3.5.3).
 - The trait-specific gradient boosting model fails to converge.
+- Change in trait-specific profile log-likelihood according to a CoS is negative (see details in Supplementary Note S3.5.3).
 
 
 ### Example of including LD mismatch
@@ -79,9 +79,28 @@ However, the results may be less reliable due to the mismatch, and the computati
 
 ```{r LD-mismatch-runcode}
 res <- colocboost(sumstat = sumstat, LD = LD)
+res$cos_details$cos$cos_index
 ```
 
 These warnings serve as diagnostic tools to alert users about potential inconsistencies in the input data.
+
+
+```{r LD-mismatch-mpc_0}
+res$cos_details$cos_outcomes_npc
+```
+
+**Note**: In the above example, the normalized probability of trait 2 is 0, indicating that colocalization with trait 2 may be less reliable due to the LD mismatch. 
+This is a warning, not an error, and the colocalization analysis will still proceed. Therefore, in this case, we suggest treating the colocalization of trait 2 with caution.
+
+Potential solutions include:
+
+- Using a more accurate LD matrix for trait 2.
+- Excluding trait 2 from the analysis or colocalization results.
+- Using the LD-mismatch or LD-free approach for colocalization analysis (below).
+- Check the visualization of colocalization results including trait 2 using `colocboost_plot(res)`. Remove the potential spurious signals when LD mismatch is detected using 
+  - `get_robust_colocalization(res, cos_npc_cutoff = 0.5, npc_outcome_cutoff = 0.2)` to exclude the trait 2 in the above example if the signals are not reasonable.
+  - `get_robust_colocalization(res, pvalue_cutoff = 1e-5, cos_npc_cutoff = 0, npc_outcome_cutoff = 0)` to include all colocalized traits with the larger marginal evidence, 
+  but the mismatch is detected.
 
 
 # 2. LD-free and LD-mismatch colocalization analysis

@@ -537,7 +537,12 @@ get_cos_evidence <- function(cb_obj, coloc_out, data_info) {
 
   get_npuc <- function(npc_outcome) {
     max_idx <- which.max(npc_outcome)
-    npc_outcome[max_idx] * prod(1 - npc_outcome[-max_idx])
+    npc_max <- npc_outcome[max_idx]
+    if (npc_max == 0) {
+      return(0)
+    } else {
+      return(npc_outcome[max_idx] * prod(1 - npc_outcome[-max_idx]))
+    }
   }
 
   avWeight <- coloc_out$avWeight
