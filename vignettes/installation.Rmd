@@ -16,7 +16,7 @@ knitr::opts_chunk$set(
 
 ## Installation
 
-### CRAN (available soon)
+### CRAN (available now)
 Install released versions from CRAN (Linux, macOS and Windows)
 
 ```r
