@@ -16,8 +16,9 @@ knitr::opts_chunk$set(
 
 ## Installation
 
-### CRAN (available now)
-Install released versions from CRAN (Linux, macOS and Windows)
+### CRAN (Stable Release)
+
+Install major and stable releases from CRAN (Linux, macOS and Windows)
 
 ```r
 install.packages("colocboost")
@@ -31,7 +32,7 @@ devtools::install_github("StatFunGen/colocboost")
 ```
 
 ### Conda
-Install major releases using pre-built conda package with a conda-compatible package manager (recommended)
+Install minor releases using pre-built conda package with a conda-compatible package manager (recommended)
 
 Global pixi installation is the easiest way to use the conda package
 ```bash
