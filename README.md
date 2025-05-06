@@ -8,8 +8,9 @@ This R package implements ColocBoost---motivated and designed for colocalization
 
 ## Quick Start
 
-### CRAN Installation (available now)
-Install released versions from CRAN (Linux, macOS and Windows)
+### CRAN Installation (Stable Release)
+
+Install major and stable releases from CRAN (Linux, macOS and Windows)
 
 
 ```r
