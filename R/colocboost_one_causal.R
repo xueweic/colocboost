@@ -17,9 +17,10 @@ colocboost_one_causal <- function(cb_model, cb_model_para, cb_data) {
   
   if (cb_model_para$jk_equiv_corr != 0) {
     cb_obj <- colocboost_one_iteration(cb_model, cb_model_para, cb_data)
-    
+    cb_obj$cb_model_para$model_used <- "one_causal"
   } else {
     cb_obj <- colocboost_diagLD(cb_model, cb_model_para, cb_data)
+    cb_obj$cb_model_para$model_used <- "LD_free"
   }
   return(cb_obj)
 }

@@ -71,9 +71,11 @@ colocboost_assemble <- function(cb_obj,
       }
     }
   } else {
-    if (cb_obj$cb_model_para$M == 1) {
+    if (cb_obj$cb_model_para$model_used == "LD_free") {
       check_null_method <- "obj"
-      check_null <- check_null_max <- 0.1
+      check_null_max <- check_null
+    } else if (cb_obj$cb_model_para$model_used == "one_causal"){
+      check_null_max <- check_null_max * 0.1
     }
     cb_obj <- get_max_profile(cb_obj, check_null_max = check_null_max, check_null_method = check_null_method)
     # --------- about colocalized confidence sets ---------------------------------
@@ -202,10 +204,6 @@ colocboost_assemble <- function(cb_obj,
     # - colocalization results
     cb_obj$cb_model_para$weight_fudge_factor <- weight_fudge_factor
     cb_obj$cb_model_para$coverage <- coverage
-    if (cb_obj$cb_model_para$M == 1) {
-      # fixme for single iteration model
-      cb_obj <- get_max_profile(cb_obj, check_null_max = 0.01, check_null_method = "profile")
-    }
     cos_results <- get_cos_details(cb_obj, coloc_out = past_out$cos$cos, data_info = data_info)
     cb_output <- list(
       "vcp" = cos_results$vcp,

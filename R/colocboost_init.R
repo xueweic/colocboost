@@ -299,7 +299,8 @@ colocboost_init_para <- function(cb_data, cb_model, tau = 0.01,
     "num_updates_outcome" = num_updates_outcome,
     "func_multi_test" = func_multi_test,
     "multi_test_thresh" = multi_test_thresh,
-    "multi_test_max" = multi_test_max
+    "multi_test_max" = multi_test_max,
+    "model_used" = "original"
   )
   class(cb_model_para) <- "colocboost"
 
