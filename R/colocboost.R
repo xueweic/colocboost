@@ -428,6 +428,12 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
       if (is.matrix(LD)) {
         LD <- list(LD)
       }
+      # - check if NA in LD matrix
+      num_na <- sapply(LD, sum)
+      if (any(is.na(num_na))){
+        warning("Error: Input LD must not contain missing values (NA).")
+        return(NULL)
+      }
       if (length(LD) == 1) {
         sumstatLD_dict <- rep(1, length(sumstat))
       } else if (length(LD) == length(sumstat)) {
