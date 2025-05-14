@@ -30,7 +30,7 @@ tests:
 
 about:
   license: MIT
-  license_file: LICENSE.md
+  license_file: LICENSE
   summary: Multi-context colocalization analysis tool for molecular QTL and GWAS studies
   homepage: https://github.com/StatFunGen/colocboost
 
