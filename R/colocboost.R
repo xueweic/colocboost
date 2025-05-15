@@ -398,22 +398,26 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
         "Without LD, only a single iteration will be performed under the assumption of one causal variable per outcome. ",
         "Additionally, the purity of CoS cannot be evaluated!"
       )
-
-      p.sumstat <- sapply(keep_variable_sumstat, length)
-      p.unique <- unique(p.sumstat)
-      if (length(p.unique) == 1) {
-        ld <- diag(1, nrow = p.unique)
-        colnames(ld) <- rownames(ld) <- keep_variable_sumstat[[1]]
-        LD <- list(ld)
-        sumstatLD_dict <- rep(1, length(sumstat))
-      } else {
-        LD <- lapply(keep_variable_sumstat, function(sn) {
-          ld <- diag(1, nrow = length(sn))
-          colnames(ld) <- rownames(ld) <- sn
-          return(ld)
-        })
-        sumstatLD_dict <- 1:length(sumstat)
-      }
+      
+      LD <- 1
+      sumstatLD_dict <- rep(1, length(sumstat))
+      
+# 
+#       p.sumstat <- sapply(keep_variable_sumstat, length)
+#       p.unique <- unique(p.sumstat)
+#       if (length(p.unique) == 1) {
+#         ld <- diag(1, nrow = p.unique)
+#         colnames(ld) <- rownames(ld) <- keep_variable_sumstat[[1]]
+#         LD <- list(ld)
+#         sumstatLD_dict <- rep(1, length(sumstat))
+#       } else {
+#         LD <- lapply(keep_variable_sumstat, function(sn) {
+#           ld <- diag(1, nrow = length(sn))
+#           colnames(ld) <- rownames(ld) <- sn
+#           return(ld)
+#         })
+#         sumstatLD_dict <- 1:length(sumstat)
+#       }
 
       # change some algorithm parameters
       M <- 1 # one iteration

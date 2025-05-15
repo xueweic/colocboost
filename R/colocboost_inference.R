@@ -240,8 +240,11 @@ check_null_post <- function(cb_obj,
       } else {
         xty <- XtY / scaling_factor
       }
-
-      (yty - 2 * sum(cs_beta * xty) + sum((xtx %*% as.matrix(cs_beta)) * cs_beta)) * adj_dep
+      if (sum(xtx) == 1){
+        (yty - 2 * sum(cs_beta * xty) + sum(cs_beta^2)) * adj_dep
+      } else {
+        (yty - 2 * sum(cs_beta * xty) + sum((xtx %*% as.matrix(cs_beta)) * cs_beta)) * adj_dep
+      }
     }
   }
 
@@ -289,10 +292,18 @@ check_null_post <- function(cb_obj,
       if (length(miss_idx) != 0) {
         xty <- XtY[-miss_idx] / scaling.factor
         res.tmp <- rep(0, length(XtY))
-        res.tmp[-miss_idx] <- xty - xtx %*% (cs_beta[-miss_idx] / beta_scaling)
+        if (sum(xtx) == 1){
+          res.tmp[-miss_idx] <- xty - cs_beta[-miss_idx] / beta_scaling
+        } else {
+          res.tmp[-miss_idx] <- xty - xtx %*% (cs_beta[-miss_idx] / beta_scaling)
+        }
       } else {
         xty <- XtY / scaling.factor
-        res.tmp <- xty - xtx %*% (cs_beta / beta_scaling)
+        if (sum(xtx) == 1){
+          res.tmp <- xty - (cs_beta / beta_scaling)
+        } else {
+          res.tmp <- xty - xtx %*% (cs_beta / beta_scaling)
+        }
       }
       return(res.tmp)
     }
@@ -346,11 +357,12 @@ check_null_post <- function(cb_obj,
           YtY = cb_data$data[[X_dict]]$YtY,
           miss_idx = cb_data$data[[j]]$variable_miss
         )
-        last_obj <- min(cb_obj$cb_model[[j]]$obj_path)
-        change <- abs(cs_obj - last_obj)
         if (length(cb_obj$cb_model[[j]]$obj_path) == 1) {
           total_obj <- 1
+          change <- cs_obj
         } else {
+          last_obj <- min(cb_obj$cb_model[[j]]$obj_path)
+          change <- abs(cs_obj - last_obj)
           total_obj <- diff(range(cb_obj$cb_model[[j]]$obj_path))
         }
         check_cs_change[i, j] <- change / total_obj
@@ -488,8 +500,11 @@ get_cos_evidence <- function(cb_obj, coloc_out, data_info) {
       } else {
         xty <- XtY / scaling_factor
       }
-
-      cos_profile <- (yty - 2 * sum(cs_beta * xty) + sum((xtx %*% as.matrix(cs_beta)) * cs_beta)) * adj_dep
+      if (sum(xtx) == 1){
+        cos_profile <- (yty - 2 * sum(cs_beta * xty) + sum(cs_beta^2)) * adj_dep
+      } else {
+        cos_profile <- (yty - 2 * sum(cs_beta * xty) + sum((xtx %*% as.matrix(cs_beta)) * cs_beta)) * adj_dep
+      }
     }
     delta <- yty - cos_profile
     if (delta <= 0) {

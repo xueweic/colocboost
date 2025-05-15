@@ -498,10 +498,13 @@ get_LD_jk1_jk2 <- function(jk1, jk2,
     LD_temp[which(is.na(LD_temp))] <- 0
     LD_temp <- LD_temp[1, 2]
   } else if (!is.null(XtX)) {
-    jk1.remain <- which(remain_jk == jk1)
-    jk2.remain <- which(remain_jk == jk2)
-    # scaling <- if (!is.null(N)) N-1 else 1
-    LD_temp <- XtX[jk1.remain, jk2.remain] # / scaling
+    if (sum(XtX) == 1){
+      LD_temp <- 0
+    } else {
+      jk1.remain <- which(remain_jk == jk1)
+      jk2.remain <- which(remain_jk == jk2)
+      LD_temp <- XtX[jk1.remain, jk2.remain]
+    }
   }
   return(LD_temp)
 }
@@ -595,7 +598,11 @@ estimate_change_profile_res <- function(jk,
     } else {
       xty <- XtY / scaling_factor
     }
-    rtr <- yty - 2 * sum(beta_k * xty) + sum((xtx %*% as.matrix(beta_k)) * beta_k)
+    if (sum(xtx) == 1){
+      rtr <- yty - 2 * sum(beta_k * xty) + sum(beta_k^2)
+    } else {
+      rtr <- yty - 2 * sum(beta_k * xty) + sum((xtx %*% as.matrix(beta_k)) * beta_k)
+    }
   }
   numerator <- xtr^2 / (2 * rtr)
   denominator <- 0.5 * log(2 * pi * rtr) + 0.5

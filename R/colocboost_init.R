@@ -375,7 +375,11 @@ get_correlation <- function(X = NULL, res = NULL, XtY = NULL, N = NULL,
       Xtr <- res / scaling_factor
       XtY <- XtY / scaling_factor
     }
-    var_r <- YtY - 2 * sum(beta_k * XtY) + sum((XtX %*% as.matrix(beta_k)) * beta_k)
+    if (sum(XtX) == 1){
+      var_r <- YtY - 2 * sum(beta_k * XtY) + sum(beta_k^2)
+    } else {
+      var_r <- YtY - 2 * sum(beta_k * XtY) + sum((XtX %*% as.matrix(beta_k)) * beta_k)
+    }
     if (var_r > 1e-6) {
       corr_nomiss <- Xtr / sqrt(var_r)
       if (length(miss_idx) != 0) {
@@ -574,21 +578,24 @@ process_sumstat <- function(Z, N, Var_y, SeBhat, ld_matrices, variant_lists, dic
     Z_extend[pos_target] <- current_z[pos_z]
 
     # Calculate submatrix for each unique entry (not duplicates)
-    ld_submatrix <- NULL
-
-    if (length(common_variants) > 0) {
-      # Only include the submatrix if this entry is unique or is the first occurrence
-      if (i == unified_dict[i]) {
-        # Check if common_variants and rownames have identical order
-        if (identical(common_variants, rownames(current_ld_matrix))) {
-          # If order is identical, use the matrix directly without reordering
-          ld_submatrix <- current_ld_matrix
-        } else {
-          # If order is different, reorder using matched indices
-          matched_indices <- match(common_variants, rownames(current_ld_matrix))
-          ld_submatrix <- current_ld_matrix[matched_indices, matched_indices, drop = FALSE]
-          rownames(ld_submatrix) <- common_variants
-          colnames(ld_submatrix) <- common_variants
+    if (sum(current_ld_matrix) == 1){
+      ld_submatrix <- current_ld_matrix
+    } else {
+      ld_submatrix <- NULL
+      if (length(common_variants) > 0) {
+        # Only include the submatrix if this entry is unique or is the first occurrence
+        if (i == unified_dict[i]) {
+          # Check if common_variants and rownames have identical order
+          if (identical(common_variants, rownames(current_ld_matrix))) {
+            # If order is identical, use the matrix directly without reordering
+            ld_submatrix <- current_ld_matrix
+          } else {
+            # If order is different, reorder using matched indices
+            matched_indices <- match(common_variants, rownames(current_ld_matrix))
+            ld_submatrix <- current_ld_matrix[matched_indices, matched_indices, drop = FALSE]
+            rownames(ld_submatrix) <- common_variants
+            colnames(ld_submatrix) <- common_variants
+          }
         }
       }
     }
