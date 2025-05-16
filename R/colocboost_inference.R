@@ -357,12 +357,11 @@ check_null_post <- function(cb_obj,
           YtY = cb_data$data[[X_dict]]$YtY,
           miss_idx = cb_data$data[[j]]$variable_miss
         )
+        last_obj <- min(cb_obj$cb_model[[j]]$obj_path)
+        change <- abs(cs_obj - last_obj)
         if (length(cb_obj$cb_model[[j]]$obj_path) == 1) {
           total_obj <- 1
-          change <- cs_obj
         } else {
-          last_obj <- min(cb_obj$cb_model[[j]]$obj_path)
-          change <- abs(cs_obj - last_obj)
           total_obj <- diff(range(cb_obj$cb_model[[j]]$obj_path))
         }
         check_cs_change[i, j] <- change / total_obj
@@ -420,8 +419,12 @@ get_purity <- function(pos, X = NULL, Xcorr = NULL, N = NULL, n = 100) {
       corr[which(is.na(corr))] <- 0
       value <- abs(get_upper_tri(corr))
     } else {
-      Xcorr <- Xcorr # if (!is.null(N)) Xcorr/(N-1) else Xcorr
-      value <- abs(get_upper_tri(Xcorr[pos, pos]))
+      if (sum(Xcorr) == 1){
+        value <- 0
+      } else {
+        Xcorr <- Xcorr # if (!is.null(N)) Xcorr/(N-1) else Xcorr
+        value <- abs(get_upper_tri(Xcorr[pos, pos]))
+      }
     }
     return(c(
       min(value),
@@ -455,14 +458,18 @@ get_between_purity <- function(pos1, pos2, X = NULL, Xcorr = NULL, miss_idx = NU
     X_sub2 <- scale(X[, pos2, drop = FALSE], center = T, scale = F)
     value <- abs(get_matrix_mult(X_sub1, X_sub2))
   } else {
-    if (length(miss_idx)!=0){
-      pos1 <- na.omit(match(pos1, setdiff(1:P, miss_idx)))
-      pos2 <- na.omit(match(pos2, setdiff(1:P, miss_idx)))
-    }
-    if (length(pos1) != 0 & length(pos2) != 0) {
-      value <- abs(Xcorr[pos1, pos2])
-    } else {
+    if (sum(Xcorr)==1){
       value <- 0
+    } else {
+      if (length(miss_idx)!=0){
+        pos1 <- na.omit(match(pos1, setdiff(1:P, miss_idx)))
+        pos2 <- na.omit(match(pos2, setdiff(1:P, miss_idx)))
+      }
+      if (length(pos1) != 0 & length(pos2) != 0) {
+        value <- abs(Xcorr[pos1, pos2])
+      } else {
+        value <- 0
+      }
     }
   }
   return(c(min(value), max(value), get_median(value)))
