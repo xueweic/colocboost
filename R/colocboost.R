@@ -642,3 +642,4 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
   class(cb_output) <- "colocboost"
   return(cb_output)
 }
+

@@ -207,6 +207,7 @@ w_purity <- function(weights, X = NULL, Xcorr = NULL, N = NULL, n = 100, coverag
   return(is_pure)
 }
 
+
 #' Function to remove the spurious signals
 #' @importFrom utils head tail
 #' @keywords cb_post_inference
@@ -360,7 +361,7 @@ check_null_post <- function(cb_obj,
         last_obj <- min(cb_obj$cb_model[[j]]$obj_path)
         change <- abs(cs_obj - last_obj)
         if (length(cb_obj$cb_model[[j]]$obj_path) == 1) {
-          total_obj <- 1
+          total_obj <- change
         } else {
           total_obj <- diff(range(cb_obj$cb_model[[j]]$obj_path))
         }
