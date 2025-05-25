@@ -838,7 +838,7 @@ get_ucos_summary <- function(cb_output, outcome_names = NULL, region_name = NULL
     "overlap_idx", "overlap_variables", "n_recalibrated_variables",
     "recalibrated_index", "recalibrated_variables", "recalibrated_variables_vcp"
   )
-
+  ambiguous_summary <- as.data.frame(ambiguous_summary)
   ambiguous_summary[, 1] <- unlist(sapply(ambiguous_results, function(tmp) paste0(tmp$ambiguous_cos_outcomes$outcome_name, collapse = "; ")))
   ambiguous_summary[, 2] <- names(ambiguous_results)
   ambiguous_summary[, 3] <- sapply(ambiguous_results, function(tmp) max(tmp$ambigous_cos_purity$min_abs_cor[lower.tri(tmp$ambigous_cos_purity$min_abs_cor)]) )
