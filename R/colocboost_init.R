@@ -430,15 +430,35 @@ get_lfdr <- function(z, miss_idx = NULL) {
     z <- z[-miss_idx]
     try_run <- 1
     while (try_run == 1 && lambda_max >= 0.05) {
-      result <- try(
+      # result <- try(
+      #   {
+      #     lfdr_nomissing <- qvalue(pchisq(drop(z^2), 1, lower.tail = FALSE), lambda = seq(0.05, lambda_max, 0.05))$lfdr
+      #   },
+      #   silent = TRUE
+      # )
+      # if (inherits(result, "try-error")) {
+      #   lambda_max <- lambda_max - 0.05 # Decrement lambda_max if error occurs
+      # } else {
+      #   try_run <- 0
+      # }
+      result <- tryCatch(
         {
-          lfdr_nomissing <- qvalue(pchisq(drop(z^2), 1, lower.tail = FALSE), lambda = seq(0.05, lambda_max, 0.05))$lfdr
+          lfdr_nomissing <- qvalue(pchisq(drop(z^2), 1, lower.tail = FALSE), 
+                                   lambda = seq(0.05, lambda_max, 0.05))$lfdr
+          list(success = TRUE, value = lfdr_nomissing)
         },
-        silent = TRUE
+        warning = function(w) {
+          list(success = FALSE, message = w$message)
+        },
+        error = function(e) {
+          list(success = FALSE, message = e$message)
+        }
       )
-      if (inherits(result, "try-error")) {
-        lambda_max <- lambda_max - 0.05 # Decrement lambda_max if error occurs
+      
+      if (!result$success) {
+        lambda_max <- lambda_max - 0.05
       } else {
+        lfdr_nomissing <- result$value
         try_run <- 0
       }
     }
