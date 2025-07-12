@@ -39,22 +39,43 @@ colocboost_init_data <- function(X, Y, dict_YX,
   #################  initialization #######################################
   cb_data <- list("data" = list())
   class(cb_data) <- "colocboost"
+  # if (!is.null(dict_YX) & !is.null(dict_sumstatLD)) {
+  #   dict <- c(dict_YX, max(dict_YX) + dict_sumstatLD)
+  #   n_ind_variable <- max(dict_YX)
+  # } else if (!is.null(dict_YX) & is.null(dict_sumstatLD)) {
+  #   dict <- dict_YX
+  # } else if (is.null(dict_YX) & !is.null(dict_sumstatLD)) {
+  #   dict <- dict_sumstatLD
+  #   n_ind_variable <- 0
+  # }
+  
+  # note here and remove later: dict is designed by X and LD, but we need additional dictionary for keep variables.
+  # keep variables for individual level data is based on X - there is no issue.
+  # keep variables for sumstat data is based on sumstat (not LD) - there is a issue to index the focal outcome based on dict later.
   if (!is.null(dict_YX) & !is.null(dict_sumstatLD)) {
     dict <- c(dict_YX, max(dict_YX) + dict_sumstatLD)
     n_ind_variable <- max(dict_YX)
+    dict_keep_variables <- c(dict_YX, 1:length(dict_sumstatLD) + n_ind_variable)
   } else if (!is.null(dict_YX) & is.null(dict_sumstatLD)) {
     dict <- dict_YX
+    dict_keep_variables <- dict_YX
   } else if (is.null(dict_YX) & !is.null(dict_sumstatLD)) {
     dict <- dict_sumstatLD
     n_ind_variable <- 0
+    dict_keep_variables <- 1:length(dict_sumstatLD)
   }
+  
   if (focal_outcome_variables & !is.null(focal_outcome_idx)) {
     if (focal_outcome_idx > length(dict)) {
       stop("Target outcome index is over the total number of outcomes! please check!")
     }
-    keep_variable_names <- keep_variables[[dict[focal_outcome_idx]]]
+    # keep_variable_names <- keep_variables[[dict[focal_outcome_idx]]]
+    keep_variable_names <- keep_variables[[dict_keep_variables[focal_outcome_idx]]]
     if (overlap_variables) {
-      keep_tmp <- lapply(keep_variables[-dict[focal_outcome_idx]], function(tm) {
+      # keep_tmp <- lapply(keep_variables[-dict[focal_outcome_idx]], function(tm) {
+      #   intersect(keep_variable_names, tm)
+      # })
+      keep_tmp <- lapply(keep_variables[-dict_keep_variables[focal_outcome_idx]], function(tm) {
         intersect(keep_variable_names, tm)
       })
       keep_variable_names <- Reduce(union, keep_tmp)
