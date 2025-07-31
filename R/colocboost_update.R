@@ -152,7 +152,7 @@ get_LD_jk <- function(jk1, X = NULL, XtX = NULL, N = NULL, remain_idx = NULL, P 
   } else if (!is.null(XtX)) {
     jk1.remain <- which(remain_idx == jk1)
     corr <- rep(0, P)
-    if (sum(XtX) == 1){
+    if (sum(XtX) == 1 | length(jk1.remain)==0){
       corr[remain_idx] <- 1
     } else {
       corr[remain_idx] <- XtX[, jk1.remain]
