@@ -25,6 +25,7 @@ colocboost_assemble <- function(cb_obj,
                                 check_null = 0.1,
                                 check_null_method = "profile",
                                 check_null_max = 0.025,
+                                check_null_max_ucos = 0.015,
                                 dedup = TRUE,
                                 overlap = TRUE,
                                 n_purity = 100,
@@ -79,7 +80,9 @@ colocboost_assemble <- function(cb_obj,
       # fixme later
       check_null_max <- check_null_max * check_null
     }
-    cb_obj <- get_max_profile(cb_obj, check_null_max = check_null_max, check_null_method = check_null_method)
+    cb_obj <- get_max_profile(cb_obj, check_null_max = check_null_max, 
+                              check_null_max_ucos = check_null_max_ucos, 
+                              check_null_method = check_null_method)
     # --------- about colocalized confidence sets ---------------------------------
     out_cos <- colocboost_assemble_cos(cb_obj,
       coverage = coverage,

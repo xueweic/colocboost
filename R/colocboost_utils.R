@@ -407,14 +407,18 @@ get_avWeigth <- function(cb_model, coloc_outcomes, update, pos.coloc, name_weigh
 }
 
 
-get_max_profile <- function(cb_obj, check_null_max = 0.02, check_null_method = "profile") {
+get_max_profile <- function(cb_obj, check_null_max = 0.025, 
+                            check_null_max_ucos = 0.015,
+                            check_null_method = "profile") {
   for (i in 1:cb_obj$cb_model_para$L) {
     cb <- cb_obj$cb_model[[i]]
     scaling_factor <- if (!is.null(cb_obj$cb_data$data[[i]]$N)) cb_obj$cb_data$data[[i]]$N - 1 else 1
     if (check_null_method == "profile") {
       cb$check_null_max <- 1000 * check_null_max / scaling_factor
+      cb$check_null_max_ucos <- 1000 * check_null_max_ucos / scaling_factor
     } else {
       cb$check_null_max <- check_null_max
+      cb$check_null_max_ucos <- check_null_max_ucos
     }
     cb_obj$cb_model[[i]] <- cb
   }
@@ -879,12 +883,12 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
       cs_change <- data.frame("ucos_outcome" = change_outcomes, "ucos_delta" = change_values)
 
       # - filter weak ucos
-      check_null_max <- sapply(cb_model, function(cb) cb$check_null_max)
+      check_null_max_ucos <- sapply(cb_model, function(cb) cb$check_null_max_ucos)
       remove_weak <- sapply(1:nrow(cs_change), function(ic) {
         outcome_tmp <- cs_change$ucos_outcome[ic]
         delta_tmp <- cs_change$ucos_delta[ic]
         pp <- which(cb_obj$cb_model_para$outcome_names == outcome_tmp)
-        check_tmp <- check_null_max[pp]
+        check_tmp <- check_null_max_ucos[pp]
         delta_tmp >= check_tmp
       })
       keep_ucos <- which(remove_weak)
