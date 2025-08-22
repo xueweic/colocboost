@@ -29,7 +29,7 @@
 #' @param ylim_each Logical, if TRUE uses separate y-axis limits for each plot, default is TRUE
 #' @param outcome_legend_pos Position for outcome legend, default is "top"
 #' @param outcome_legend_size Size for outcome legend text, default is 1.2
-#' @param cos_legend_pos Proportion of the legend from (left edge, bottom edge), default as (0.05, 0.4) at the left - median position
+#' @param cos_legend_pos Proportion of the legend from (left edge, bottom edge) following by the distance for multiple labels (horizontal-x space, vertical-y space), default as (0.05, 0.4, 0.1, 0.5) at the left - median position
 #' @param show_variable Logical, if TRUE displays variant IDs, default is FALSE
 #' @param lab_style Vector of two numbers for label style (size, boldness), default is c(2, 1)
 #' @param axis_style Vector of two numbers for axis style (size, boldness), default is c(2, 1)
@@ -93,7 +93,7 @@ colocboost_plot <- function(cb_output, y = "log10p",
                             ylim_each = TRUE,
                             outcome_legend_pos = "top",
                             outcome_legend_size = 1.8,
-                            cos_legend_pos = c(0.05, 0.4),
+                            cos_legend_pos = c(0.05, 0.4, 0.1, 0.5),
                             show_variable = FALSE,
                             lab_style = c(2, 1),
                             axis_style = c(2, 1),
@@ -301,7 +301,7 @@ colocboost_plot <- function(cb_output, y = "log10p",
           y_pos <- usr[3] + cb_plot_init$cos_legend_pos[2] * (usr[4] - usr[3])  # 50% from bottom edge
           legend(x = x_pos, y = y_pos, texts,
             bty = "n", col = shape_col, text.col = texts_col,
-            cex = 1.5, pt.cex = 1.5, pch = 4, x.intersp = 0.1, y.intersp = 0.5
+            cex = 1.5, pt.cex = 1.5, pch = 4, x.intersp = cos_legend_pos[3], y.intersp = cos_legend_pos[4]
           )
         }
       }
@@ -638,19 +638,55 @@ plot_initial <- function(cb_plot_input, y = "log10p",
   # - set background point color and cos color pools
   args$bg <- points_color
   if (is.null(cos_color)) {
-    # cos_color <- c("dodgerblue2", "#6A3D9A", "#FF7F00", "#FB9A99", "#33A02C",
-    #                "#A6CEE3",  "gold1", "#01665E","#FDBF6F", "#CAB2D6", "#B2DF8A",
-    #                "#8C510A", "#BF812D", "#DFC27D", "#F6E8C3", "#01665E",
-    #                "#35978F", "#80CDC1", "#C7EAE5", "#003C30")
-    # cos_color <- c("#1B9E77", "#D95F02", "#7570B3", "#1F78B4", "#66A61E",
-    #                "#E6AB02", "#A6761D", "#666666", "#E7298A", "#B2182B",
-    #                "#D73027", "#4575B4", "#313695", "#542788", "#74ADD1",
-    #                "#F46D43", "#4DAF4A", "#984EA3", "#FF7F00", "#A50F15")
+
+    # cos_color <- c(
+    #   "#377EB8", "#E69F00", "#33A02C", "#984EA3", "#F46D43",
+    #   "#A65628", "#1F4E79", "#B2182B", "#D73027", "#F781BF",
+    #   "#4DAF4A", "#E41A1C", "#FF7F00", "#6A3D9A", "#1B7837",
+    #   "#E6AB02", "#542788", "#74ADD1", "#A50F15", "#01665E"
+    # )
     cos_color <- c(
+      # Original 20 colors (preserved exactly)
       "#377EB8", "#E69F00", "#33A02C", "#984EA3", "#F46D43",
       "#A65628", "#1F4E79", "#B2182B", "#D73027", "#F781BF",
       "#4DAF4A", "#E41A1C", "#FF7F00", "#6A3D9A", "#1B7837",
-      "#E6AB02", "#542788", "#74ADD1", "#A50F15", "#01665E"
+      "#E6AB02", "#542788", "#74ADD1", "#A50F15", "#01665E",
+      
+      # Additional 80 colors - carefully selected to complement the original palette
+      # Blues and Teals
+      "#5DADE2", "#85C1E9", "#2E86C1", "#1B4F72", "#154360",
+      "#AED6F1", "#3498DB", "#21618C", "#1A5490", "#17A2B8",
+      "#20B2AA", "#008B8B", "#4682B4", "#87CEEB", "#B0E0E6",
+      
+      # Greens
+      "#58D68D", "#82E0AA", "#27AE60", "#1E8449", "#186A3B",
+      "#ABEBC6", "#2ECC71", "#229954", "#196F3D", "#52C41A",
+      "#90EE90", "#32CD32", "#228B22", "#006400", "#9ACD32",
+      
+      # Reds and Pinks
+      "#EC7063", "#F1948A", "#CB4335", "#A93226", "#922B21",
+      "#FADBD8", "#E74C3C", "#C0392B", "#943126", "#FF6B6B",
+      "#FF69B4", "#FFB6C1", "#FF1493", "#DC143C", "#B22222",
+      
+      # Oranges and Yellows
+      "#F8C471", "#FAD7A0", "#E67E22", "#CA6F1E", "#B7950B",
+      "#FCF3CF", "#F39C12", "#D68910", "#B7950B", "#FFA500",
+      "#FFFF00", "#FFD700", "#FFA500", "#FF8C00", "#DAA520",
+      
+      # Purples and Violets
+      "#BB8FCE", "#D2B4DE", "#8E44AD", "#7D3C98", "#6C3483",
+      "#E8DAEF", "#9B59B6", "#7E57C2", "#673AB7", "#9C27B0",
+      "#8A2BE2", "#9370DB", "#BA55D3", "#DA70D6", "#DDA0DD",
+      
+      # Browns and Earth Tones
+      "#CD853F", "#D2691E", "#A0522D", "#8B4513", "#654321",
+      "#DEB887", "#F4A460", "#BC8F8F", "#D2B48C", "#F5DEB3",
+      "#8B7355", "#A0522D", "#CD853F", "#DEB887", "#D2691E",
+      
+      # Grays and Neutrals
+      "#85929E", "#AEB6BF", "#5D6D7E", "#34495E", "#2C3E50",
+      "#D5D8DC", "#BDC3C7", "#95A5A6", "#7F8C8D", "#17202A",
+      "#808080", "#A9A9A9", "#C0C0C0", "#696969", "#778899"
     )
 
 
