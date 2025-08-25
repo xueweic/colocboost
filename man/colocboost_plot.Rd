@@ -33,7 +33,7 @@ colocboost_plot(
   ylim_each = TRUE,
   outcome_legend_pos = "top",
   outcome_legend_size = 1.8,
-  cos_legend_pos = c(0.05, 0.4),
+  cos_legend_pos = c(0.05, 0.4, 0.1, 0.5),
   show_variable = FALSE,
   lab_style = c(2, 1),
   axis_style = c(2, 1),
@@ -92,7 +92,7 @@ colocboost_plot(
 
 \item{outcome_legend_size}{Size for outcome legend text, default is 1.2}
 
-\item{cos_legend_pos}{Proportion of the legend from (left edge, bottom edge), default as (0.05, 0.4) at the left - median position}
+\item{cos_legend_pos}{Proportion of the legend from (left edge, bottom edge) following by the distance for multiple labels (horizontal-x space, vertical-y space), default as (0.05, 0.4, 0.1, 0.5) at the left - median position}
 
 \item{show_variable}{Logical, if TRUE displays variant IDs, default is FALSE}
 
