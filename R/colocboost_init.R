@@ -39,22 +39,43 @@ colocboost_init_data <- function(X, Y, dict_YX,
   #################  initialization #######################################
   cb_data <- list("data" = list())
   class(cb_data) <- "colocboost"
+  # if (!is.null(dict_YX) & !is.null(dict_sumstatLD)) {
+  #   dict <- c(dict_YX, max(dict_YX) + dict_sumstatLD)
+  #   n_ind_variable <- max(dict_YX)
+  # } else if (!is.null(dict_YX) & is.null(dict_sumstatLD)) {
+  #   dict <- dict_YX
+  # } else if (is.null(dict_YX) & !is.null(dict_sumstatLD)) {
+  #   dict <- dict_sumstatLD
+  #   n_ind_variable <- 0
+  # }
+  
+  # note here and remove later: dict is designed by X and LD, but we need additional dictionary for keep variables.
+  # keep variables for individual level data is based on X - there is no issue.
+  # keep variables for sumstat data is based on sumstat (not LD) - there is a issue to index the focal outcome based on dict later.
   if (!is.null(dict_YX) & !is.null(dict_sumstatLD)) {
     dict <- c(dict_YX, max(dict_YX) + dict_sumstatLD)
     n_ind_variable <- max(dict_YX)
+    dict_keep_variables <- c(dict_YX, 1:length(dict_sumstatLD) + n_ind_variable)
   } else if (!is.null(dict_YX) & is.null(dict_sumstatLD)) {
     dict <- dict_YX
+    dict_keep_variables <- dict_YX
   } else if (is.null(dict_YX) & !is.null(dict_sumstatLD)) {
     dict <- dict_sumstatLD
     n_ind_variable <- 0
+    dict_keep_variables <- 1:length(dict_sumstatLD)
   }
+  
   if (focal_outcome_variables & !is.null(focal_outcome_idx)) {
     if (focal_outcome_idx > length(dict)) {
       stop("Target outcome index is over the total number of outcomes! please check!")
     }
-    keep_variable_names <- keep_variables[[dict[focal_outcome_idx]]]
+    # keep_variable_names <- keep_variables[[dict[focal_outcome_idx]]]
+    keep_variable_names <- keep_variables[[dict_keep_variables[focal_outcome_idx]]]
     if (overlap_variables) {
-      keep_tmp <- lapply(keep_variables[-dict[focal_outcome_idx]], function(tm) {
+      # keep_tmp <- lapply(keep_variables[-dict[focal_outcome_idx]], function(tm) {
+      #   intersect(keep_variable_names, tm)
+      # })
+      keep_tmp <- lapply(keep_variables[-dict_keep_variables[focal_outcome_idx]], function(tm) {
         intersect(keep_variable_names, tm)
       })
       keep_variable_names <- Reduce(union, keep_tmp)
@@ -299,7 +320,8 @@ colocboost_init_para <- function(cb_data, cb_model, tau = 0.01,
     "num_updates_outcome" = num_updates_outcome,
     "func_multi_test" = func_multi_test,
     "multi_test_thresh" = multi_test_thresh,
-    "multi_test_max" = multi_test_max
+    "multi_test_max" = multi_test_max,
+    "model_used" = "original"
   )
   class(cb_model_para) <- "colocboost"
 
@@ -374,7 +396,11 @@ get_correlation <- function(X = NULL, res = NULL, XtY = NULL, N = NULL,
       Xtr <- res / scaling_factor
       XtY <- XtY / scaling_factor
     }
-    var_r <- YtY - 2 * sum(beta_k * XtY) + sum((XtX %*% as.matrix(beta_k)) * beta_k)
+    if (sum(XtX) == 1){
+      var_r <- YtY - 2 * sum(beta_k * XtY) + sum(beta_k^2)
+    } else {
+      var_r <- YtY - 2 * sum(beta_k * XtY) + sum((XtX %*% as.matrix(beta_k)) * beta_k)
+    }
     if (var_r > 1e-6) {
       corr_nomiss <- Xtr / sqrt(var_r)
       if (length(miss_idx) != 0) {
@@ -425,15 +451,35 @@ get_lfdr <- function(z, miss_idx = NULL) {
     z <- z[-miss_idx]
     try_run <- 1
     while (try_run == 1 && lambda_max >= 0.05) {
-      result <- try(
+      # result <- try(
+      #   {
+      #     lfdr_nomissing <- qvalue(pchisq(drop(z^2), 1, lower.tail = FALSE), lambda = seq(0.05, lambda_max, 0.05))$lfdr
+      #   },
+      #   silent = TRUE
+      # )
+      # if (inherits(result, "try-error")) {
+      #   lambda_max <- lambda_max - 0.05 # Decrement lambda_max if error occurs
+      # } else {
+      #   try_run <- 0
+      # }
+      result <- tryCatch(
         {
-          lfdr_nomissing <- qvalue(pchisq(drop(z^2), 1, lower.tail = FALSE), lambda = seq(0.05, lambda_max, 0.05))$lfdr
+          lfdr_nomissing <- qvalue(pchisq(drop(z^2), 1, lower.tail = FALSE), 
+                                   lambda = seq(0.05, lambda_max, 0.05))$lfdr
+          list(success = TRUE, value = lfdr_nomissing)
         },
-        silent = TRUE
+        warning = function(w) {
+          list(success = FALSE, message = w$message)
+        },
+        error = function(e) {
+          list(success = FALSE, message = e$message)
+        }
       )
-      if (inherits(result, "try-error")) {
-        lambda_max <- lambda_max - 0.05 # Decrement lambda_max if error occurs
+      
+      if (!result$success) {
+        lambda_max <- lambda_max - 0.05
       } else {
+        lfdr_nomissing <- result$value
         try_run <- 0
       }
     }
@@ -573,21 +619,24 @@ process_sumstat <- function(Z, N, Var_y, SeBhat, ld_matrices, variant_lists, dic
     Z_extend[pos_target] <- current_z[pos_z]
 
     # Calculate submatrix for each unique entry (not duplicates)
-    ld_submatrix <- NULL
-
-    if (length(common_variants) > 0) {
-      # Only include the submatrix if this entry is unique or is the first occurrence
-      if (i == unified_dict[i]) {
-        # Check if common_variants and rownames have identical order
-        if (identical(common_variants, rownames(current_ld_matrix))) {
-          # If order is identical, use the matrix directly without reordering
-          ld_submatrix <- current_ld_matrix
-        } else {
-          # If order is different, reorder using matched indices
-          matched_indices <- match(common_variants, rownames(current_ld_matrix))
-          ld_submatrix <- current_ld_matrix[matched_indices, matched_indices, drop = FALSE]
-          rownames(ld_submatrix) <- common_variants
-          colnames(ld_submatrix) <- common_variants
+    if (sum(current_ld_matrix) == 1){
+      ld_submatrix <- current_ld_matrix
+    } else {
+      ld_submatrix <- NULL
+      if (length(common_variants) > 0) {
+        # Only include the submatrix if this entry is unique or is the first occurrence
+        if (i == unified_dict[i]) {
+          # Check if common_variants and rownames have identical order
+          if (identical(common_variants, rownames(current_ld_matrix))) {
+            # If order is identical, use the matrix directly without reordering
+            ld_submatrix <- current_ld_matrix
+          } else {
+            # If order is different, reorder using matched indices
+            matched_indices <- match(common_variants, rownames(current_ld_matrix))
+            ld_submatrix <- current_ld_matrix[matched_indices, matched_indices, drop = FALSE]
+            rownames(ld_submatrix) <- common_variants
+            colnames(ld_submatrix) <- common_variants
+          }
         }
       }
     }

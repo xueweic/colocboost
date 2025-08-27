@@ -340,7 +340,7 @@ test_that("colocboost prioritizes focal outcome correctly", {
 # Test with ambiguous corner cases
 test_that("get_ambiguous_colocalization handles edge cases with correlation thresholds", {
 
-  data(Ambiguous_Colocalization)
+  data("Ambiguous_Colocalization", package = "colocboost", envir = environment())
   test_colocboost_results <- Ambiguous_Colocalization$ColocBoost_Results
   
   # Test with very high correlation thresholds (should find fewer ambiguities)

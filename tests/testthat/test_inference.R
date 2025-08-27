@@ -191,7 +191,7 @@ test_that("get_hierarchical_clusters functions correctly", {
 test_that("get_ambiguous_colocalization identifies ambiguous colocalizations correctly", {
   # The function expects a specialized test dataset that has ambiguous colocalizations
   # There's a reference in the example to a dataset named "Ambiguous_Colocalization"
-  data(Ambiguous_Colocalization)
+  data("Ambiguous_Colocalization", package = "colocboost", envir = environment())
   test_colocboost_results <- Ambiguous_Colocalization$ColocBoost_Results
   
   # Basic call with default parameters
@@ -256,7 +256,7 @@ test_that("get_ambiguous_colocalization identifies ambiguous colocalizations cor
 test_that("get_ucos_summary funtionality", {
   # The function expects a specialized test dataset that has ambiguous colocalizations
   # There's a reference in the example to a dataset named "Ambiguous_Colocalization"
-  data(Ambiguous_Colocalization)
+  data("Ambiguous_Colocalization", package = "colocboost", envir = environment())
   test_colocboost_results <- Ambiguous_Colocalization$ColocBoost_Results
   
   # Basic call with default parameters

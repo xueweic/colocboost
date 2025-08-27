@@ -59,6 +59,7 @@ colocboost(
   check_null = 0.1,
   check_null_method = "profile",
   check_null_max = 0.025,
+  check_null_max_ucos = 0.015,
   weaker_effect = TRUE,
   LD_free = FALSE,
   output_level = 1
@@ -182,7 +183,9 @@ to merge colocalized sets, which may resulting in a huge set.}
 
 \item{check_null_method}{The metric to check the null sets. Default is "profile"}
 
-\item{check_null_max}{The smallest value of change of profile loglikelihood for each outcome.}
+\item{check_null_max}{The smallest value of change of profile loglikelihood for each outcome in CoS.}
+
+\item{check_null_max_ucos}{The smallest value of change of profile loglikelihood for each outcome in uCoS.}
 
 \item{weaker_effect}{If \code{weaker_effect = TRUE}, consider the weaker single effect due to coupling effects}
 

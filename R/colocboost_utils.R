@@ -407,14 +407,18 @@ get_avWeigth <- function(cb_model, coloc_outcomes, update, pos.coloc, name_weigh
 }
 
 
-get_max_profile <- function(cb_obj, check_null_max = 0.02, check_null_method = "profile") {
+get_max_profile <- function(cb_obj, check_null_max = 0.025, 
+                            check_null_max_ucos = 0.015,
+                            check_null_method = "profile") {
   for (i in 1:cb_obj$cb_model_para$L) {
     cb <- cb_obj$cb_model[[i]]
     scaling_factor <- if (!is.null(cb_obj$cb_data$data[[i]]$N)) cb_obj$cb_data$data[[i]]$N - 1 else 1
     if (check_null_method == "profile") {
       cb$check_null_max <- 1000 * check_null_max / scaling_factor
+      cb$check_null_max_ucos <- 1000 * check_null_max_ucos / scaling_factor
     } else {
       cb$check_null_max <- check_null_max
+      cb$check_null_max_ucos <- check_null_max_ucos
     }
     cb_obj$cb_model[[i]] <- cb
   }
@@ -434,26 +438,49 @@ w_cs <- function(weights, coverage = 0.95) {
 #' Pure R implementation (fallback)
 #' @noRd
 get_merge_ordered_with_indices <- function(vector_list) {
-  # Quick validation
-  if (!is.list(vector_list) || length(vector_list) == 0) {
-    stop("Input must be a non-empty list of vectors")
+  
+  # Fallback function for priority-based merging (embedded)
+  get_merge_ordered_with_priority_fallback <- function(vector_list) {
+    # Convert all vectors to character
+    vector_list <- lapply(vector_list, as.character)
+    
+    # Start with empty result
+    result <- character()
+    processed_elements <- character()
+    
+    # Process vectors in priority order (1st, 2nd, 3rd, etc.)
+    for (i in seq_along(vector_list)) {
+      current_vec <- vector_list[[i]]
+      
+      # Add elements from current vector that haven't been processed yet
+      new_elements <- setdiff(current_vec, processed_elements)
+      
+      if (length(new_elements) > 0) {
+        # Find positions of new elements in current vector to maintain relative order
+        new_positions <- which(current_vec %in% new_elements)
+        ordered_new_elements <- current_vec[new_positions]
+        
+        # Add to result
+        result <- c(result, ordered_new_elements)
+        processed_elements <- c(processed_elements, ordered_new_elements)
+      }
+    }
+    
+    return(result)
   }
-
+  
   # Convert all vectors to character
   vector_list <- lapply(vector_list, as.character)
   n_vectors <- length(vector_list)
-
   # Step 1: Get all unique elements
   all_elements <- unique(unlist(vector_list))
   n_elements <- length(all_elements)
-
   # Step 2: Build a graph of ordering constraints
   # Use an adjacency list: for each element, store elements that must come after it
   graph <- new.env(hash = TRUE, parent = emptyenv(), size = n_elements)
   for (elem in all_elements) {
     graph[[elem]] <- character()
   }
-
   # Add edges based on consecutive pairs in each vector
   for (vec in vector_list) {
     for (i in seq_len(length(vec) - 1)) {
@@ -465,7 +492,6 @@ get_merge_ordered_with_indices <- function(vector_list) {
       }
     }
   }
-
   # Step 3: Compute in-degrees (number of incoming edges for each node)
   in_degree <- new.env(hash = TRUE, parent = emptyenv(), size = n_elements)
   for (elem in all_elements) {
@@ -476,7 +502,6 @@ get_merge_ordered_with_indices <- function(vector_list) {
       in_degree[[to_elem]] <- in_degree[[to_elem]] + 1
     }
   }
-
   # Step 4: Topological sort using Kahn's algorithm
   # Start with nodes that have no incoming edges
   queue <- all_elements[sapply(all_elements, function(elem) in_degree[[elem]] == 0)]
@@ -486,7 +511,6 @@ get_merge_ordered_with_indices <- function(vector_list) {
     current <- queue[1]
     queue <- queue[-1]
     result <- c(result, current)
-
     # Process all neighbors (elements that must come after current)
     neighbors <- graph[[current]]
     for (next_elem in neighbors) {
@@ -496,12 +520,14 @@ get_merge_ordered_with_indices <- function(vector_list) {
       }
     }
   }
-
-  # Step 5: Check for cycles (if result doesn't include all elements, there’s a cycle)
+  # Step 5: Check for cycles and use fallback if needed
   if (length(result) != n_elements) {
-    stop("Cycle detected in ordering constraints; cannot produce a valid merged order")
+    # Different variable orders detected - use priority-based fallback
+    warning("Variable names in different datasets have different orders (e.g., dataset1 has A then B, but dataset2 has B then A). ",
+            "Using priority-based fallback to prioritize the variable order in the earlier datasets.")
+    result <- get_merge_ordered_with_priority_fallback(vector_list)
   }
-
+  
   result
 }
 
@@ -879,12 +905,12 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
       cs_change <- data.frame("ucos_outcome" = change_outcomes, "ucos_delta" = change_values)
 
       # - filter weak ucos
-      check_null_max <- sapply(cb_model, function(cb) cb$check_null_max)
+      check_null_max_ucos <- sapply(cb_model, function(cb) cb$check_null_max_ucos)
       remove_weak <- sapply(1:nrow(cs_change), function(ic) {
         outcome_tmp <- cs_change$ucos_outcome[ic]
         delta_tmp <- cs_change$ucos_delta[ic]
         pp <- which(cb_obj$cb_model_para$outcome_names == outcome_tmp)
-        check_tmp <- check_null_max[pp]
+        check_tmp <- check_null_max_ucos[pp]
         delta_tmp >= check_tmp
       })
       keep_ucos <- which(remove_weak)

@@ -25,6 +25,7 @@ colocboost_assemble <- function(cb_obj,
                                 check_null = 0.1,
                                 check_null_method = "profile",
                                 check_null_max = 0.025,
+                                check_null_max_ucos = 0.015,
                                 dedup = TRUE,
                                 overlap = TRUE,
                                 n_purity = 100,
@@ -71,11 +72,17 @@ colocboost_assemble <- function(cb_obj,
       }
     }
   } else {
-    if (cb_obj$cb_model_para$M == 1) {
+    if (cb_obj$cb_model_para$model_used == "LD_free") {
+      # fixme later
       check_null_method <- "obj"
-      check_null <- check_null_max <- 0.1
+      check_null_max <- check_null * check_null
+    } else if (cb_obj$cb_model_para$model_used == "one_causal"){
+      # fixme later
+      check_null_max <- check_null_max * check_null
     }
-    cb_obj <- get_max_profile(cb_obj, check_null_max = check_null_max, check_null_method = check_null_method)
+    cb_obj <- get_max_profile(cb_obj, check_null_max = check_null_max, 
+                              check_null_max_ucos = check_null_max_ucos, 
+                              check_null_method = check_null_method)
     # --------- about colocalized confidence sets ---------------------------------
     out_cos <- colocboost_assemble_cos(cb_obj,
       coverage = coverage,
@@ -202,10 +209,6 @@ colocboost_assemble <- function(cb_obj,
     # - colocalization results
     cb_obj$cb_model_para$weight_fudge_factor <- weight_fudge_factor
     cb_obj$cb_model_para$coverage <- coverage
-    if (cb_obj$cb_model_para$M == 1) {
-      # fixme for single iteration model
-      cb_obj <- get_max_profile(cb_obj, check_null_max = 0.01, check_null_method = "profile")
-    }
     cos_results <- get_cos_details(cb_obj, coloc_out = past_out$cos$cos, data_info = data_info)
     cb_output <- list(
       "vcp" = cos_results$vcp,

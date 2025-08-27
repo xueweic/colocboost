@@ -111,16 +111,29 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data) {
       if (length(cb_data$data[[i]]$variable_miss) != 0) {
         beta <- cb_model[[i]]$beta[-cb_data$data[[i]]$variable_miss]  / beta_scaling
         xty <- cb_data$data[[i]]$XtY[-cb_data$data[[i]]$variable_miss]
-        cb_model[[i]]$res[-cb_data$data[[i]]$variable_miss] <- xty - scaling_factor * xtx %*% beta
+        if (sum(xtx) == 1){
+          cb_model[[i]]$res[-cb_data$data[[i]]$variable_miss] <- xty - scaling_factor * beta
+        } else {
+          cb_model[[i]]$res[-cb_data$data[[i]]$variable_miss] <- xty - scaling_factor * xtx %*% beta
+        }
+        
       } else {
         beta <- cb_model[[i]]$beta / beta_scaling
         xty <- cb_data$data[[i]]$XtY
-        cb_model[[i]]$res <- xty - scaling_factor * xtx %*% beta
+        if (sum(xtx) == 1){
+          cb_model[[i]]$res <- xty - scaling_factor * beta
+        } else {
+          cb_model[[i]]$res <- xty - scaling_factor * xtx %*% beta
+        }
       }
       # - profile-loglikelihood
       yty <- cb_data$data[[i]]$YtY / scaling_factor
       xty <- xty / scaling_factor
-      profile_log <- (yty - 2 * sum(beta * xty) + sum((xtx %*% as.matrix(beta)) * beta)) * adj_dep
+      if (sum(xtx) == 1){
+        profile_log <- (yty - 2 * sum(beta * xty) + sum(beta^2)) * adj_dep
+      } else {
+        profile_log <- (yty - 2 * sum(beta * xty) + sum((xtx %*% as.matrix(beta)) * beta)) * adj_dep
+      }
     }
     cb_model[[i]]$profile_loglike_each <- c(cb_model[[i]]$profile_loglike_each, profile_log)
   }
@@ -137,10 +150,13 @@ get_LD_jk <- function(jk1, X = NULL, XtX = NULL, N = NULL, remain_idx = NULL, P 
     })
     corr[which(is.na(corr))] <- 0
   } else if (!is.null(XtX)) {
-    # scaling <- if (!is.null(N)) N-1 else 1
     jk1.remain <- which(remain_idx == jk1)
     corr <- rep(0, P)
-    corr[remain_idx] <- XtX[, jk1.remain]
+    if (sum(XtX) == 1 | length(jk1.remain)==0){
+      corr[remain_idx] <- 1
+    } else {
+      corr[remain_idx] <- XtX[, jk1.remain]
+    }
   }
   corr
 }

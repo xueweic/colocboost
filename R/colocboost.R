@@ -82,7 +82,8 @@
 #' @param weight_fudge_factor The strength to integrate weight from different outcomes, default is 1.5
 #' @param check_null The cut off value for change conditional objective function. Default is 0.1.
 #' @param check_null_method The metric to check the null sets. Default is "profile"
-#' @param check_null_max The smallest value of change of profile loglikelihood for each outcome.
+#' @param check_null_max The smallest value of change of profile loglikelihood for each outcome in CoS.
+#' @param check_null_max_ucos The smallest value of change of profile loglikelihood for each outcome in uCoS.
 #' @param weaker_effect If \code{weaker_effect = TRUE}, consider the weaker single effect due to coupling effects
 #' @param LD_free When \code{LD_free = FALSE}, objective function doesn't include LD information.
 #' @param output_level When \code{output_level = 1}, return basic cos details for colocalization results
@@ -180,6 +181,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                        check_null = 0.1, # the cut off value for change conditional objective function
                        check_null_method = "profile", # the metric to check the null sets.
                        check_null_max = 0.025, # the smallest value of change of profile loglikelihood for each outcome.
+                       check_null_max_ucos = 0.015, # the smallest value of change of profile loglikelihood for each outcome in uCoS.
                        weaker_effect = TRUE,
                        LD_free = FALSE,
                        output_level = 1) {
@@ -398,23 +400,9 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
         "Without LD, only a single iteration will be performed under the assumption of one causal variable per outcome. ",
         "Additionally, the purity of CoS cannot be evaluated!"
       )
-
-      p.sumstat <- sapply(keep_variable_sumstat, length)
-      p.unique <- unique(p.sumstat)
-      if (length(p.unique) == 1) {
-        ld <- diag(1, nrow = p.unique)
-        colnames(ld) <- rownames(ld) <- keep_variable_sumstat[[1]]
-        LD <- list(ld)
-        sumstatLD_dict <- rep(1, length(sumstat))
-      } else {
-        LD <- lapply(keep_variable_sumstat, function(sn) {
-          ld <- diag(1, nrow = length(sn))
-          colnames(ld) <- rownames(ld) <- sn
-          return(ld)
-        })
-        sumstatLD_dict <- 1:length(sumstat)
-      }
-
+      
+      LD <- 1
+      sumstatLD_dict <- rep(1, length(sumstat))
       # change some algorithm parameters
       M <- 1 # one iteration
       min_abs_corr <- 0 # remove purity checking
@@ -427,6 +415,12 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
       }
       if (is.matrix(LD)) {
         LD <- list(LD)
+      }
+      # - check if NA in LD matrix
+      num_na <- sapply(LD, sum)
+      if (any(is.na(num_na))){
+        warning("Error: Input LD must not contain missing values (NA).")
+        return(NULL)
       }
       if (length(LD) == 1) {
         sumstatLD_dict <- rep(1, length(sumstat))
@@ -616,6 +610,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
     check_null = check_null,
     check_null_method = check_null_method,
     check_null_max = check_null_max,
+    check_null_max_ucos = check_null_max_ucos,
     dedup = dedup,
     overlap = overlap,
     n_purity = n_purity,
@@ -632,3 +627,4 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
   class(cb_output) <- "colocboost"
   return(cb_output)
 }
+

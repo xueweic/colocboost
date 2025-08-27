@@ -207,6 +207,7 @@ w_purity <- function(weights, X = NULL, Xcorr = NULL, N = NULL, n = 100, coverag
   return(is_pure)
 }
 
+
 #' Function to remove the spurious signals
 #' @importFrom utils head tail
 #' @keywords cb_post_inference
@@ -240,8 +241,11 @@ check_null_post <- function(cb_obj,
       } else {
         xty <- XtY / scaling_factor
       }
-
-      (yty - 2 * sum(cs_beta * xty) + sum((xtx %*% as.matrix(cs_beta)) * cs_beta)) * adj_dep
+      if (sum(xtx) == 1){
+        (yty - 2 * sum(cs_beta * xty) + sum(cs_beta^2)) * adj_dep
+      } else {
+        (yty - 2 * sum(cs_beta * xty) + sum((xtx %*% as.matrix(cs_beta)) * cs_beta)) * adj_dep
+      }
     }
   }
 
@@ -289,10 +293,18 @@ check_null_post <- function(cb_obj,
       if (length(miss_idx) != 0) {
         xty <- XtY[-miss_idx] / scaling.factor
         res.tmp <- rep(0, length(XtY))
-        res.tmp[-miss_idx] <- xty - xtx %*% (cs_beta[-miss_idx] / beta_scaling)
+        if (sum(xtx) == 1){
+          res.tmp[-miss_idx] <- xty - cs_beta[-miss_idx] / beta_scaling
+        } else {
+          res.tmp[-miss_idx] <- xty - xtx %*% (cs_beta[-miss_idx] / beta_scaling)
+        }
       } else {
         xty <- XtY / scaling.factor
-        res.tmp <- xty - xtx %*% (cs_beta / beta_scaling)
+        if (sum(xtx) == 1){
+          res.tmp <- xty - (cs_beta / beta_scaling)
+        } else {
+          res.tmp <- xty - xtx %*% (cs_beta / beta_scaling)
+        }
       }
       return(res.tmp)
     }
@@ -349,7 +361,7 @@ check_null_post <- function(cb_obj,
         last_obj <- min(cb_obj$cb_model[[j]]$obj_path)
         change <- abs(cs_obj - last_obj)
         if (length(cb_obj$cb_model[[j]]$obj_path) == 1) {
-          total_obj <- 1
+          total_obj <- change
         } else {
           total_obj <- diff(range(cb_obj$cb_model[[j]]$obj_path))
         }
@@ -408,8 +420,12 @@ get_purity <- function(pos, X = NULL, Xcorr = NULL, N = NULL, n = 100) {
       corr[which(is.na(corr))] <- 0
       value <- abs(get_upper_tri(corr))
     } else {
-      Xcorr <- Xcorr # if (!is.null(N)) Xcorr/(N-1) else Xcorr
-      value <- abs(get_upper_tri(Xcorr[pos, pos]))
+      if (sum(Xcorr) == 1){
+        value <- 0
+      } else {
+        Xcorr <- Xcorr # if (!is.null(N)) Xcorr/(N-1) else Xcorr
+        value <- abs(get_upper_tri(Xcorr[pos, pos]))
+      }
     }
     return(c(
       min(value),
@@ -443,14 +459,18 @@ get_between_purity <- function(pos1, pos2, X = NULL, Xcorr = NULL, miss_idx = NU
     X_sub2 <- scale(X[, pos2, drop = FALSE], center = T, scale = F)
     value <- abs(get_matrix_mult(X_sub1, X_sub2))
   } else {
-    if (length(miss_idx)!=0){
-      pos1 <- na.omit(match(pos1, setdiff(1:P, miss_idx)))
-      pos2 <- na.omit(match(pos2, setdiff(1:P, miss_idx)))
-    }
-    if (length(pos1) != 0 & length(pos2) != 0) {
-      value <- abs(Xcorr[pos1, pos2])
-    } else {
+    if (sum(Xcorr)==1){
       value <- 0
+    } else {
+      if (length(miss_idx)!=0){
+        pos1 <- na.omit(match(pos1, setdiff(1:P, miss_idx)))
+        pos2 <- na.omit(match(pos2, setdiff(1:P, miss_idx)))
+      }
+      if (length(pos1) != 0 & length(pos2) != 0) {
+        value <- abs(Xcorr[pos1, pos2])
+      } else {
+        value <- 0
+      }
     }
   }
   return(c(min(value), max(value), get_median(value)))
@@ -488,8 +508,11 @@ get_cos_evidence <- function(cb_obj, coloc_out, data_info) {
       } else {
         xty <- XtY / scaling_factor
       }
-
-      cos_profile <- (yty - 2 * sum(cs_beta * xty) + sum((xtx %*% as.matrix(cs_beta)) * cs_beta)) * adj_dep
+      if (sum(xtx) == 1){
+        cos_profile <- (yty - 2 * sum(cs_beta * xty) + sum(cs_beta^2)) * adj_dep
+      } else {
+        cos_profile <- (yty - 2 * sum(cs_beta * xty) + sum((xtx %*% as.matrix(cs_beta)) * cs_beta)) * adj_dep
+      }
     }
     delta <- yty - cos_profile
     if (delta <= 0) {
