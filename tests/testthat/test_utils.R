@@ -410,3 +410,488 @@ test_that("get_cos extracts CoS correctly with generated test results", {
   )
   expect_equal(result_empty, list("cos" = NULL, "cos_purity" = NULL))
 })
+
+library(testthat)
+
+# Test for get_merge_ordered_with_indices function - Core case handling
+test_that("get_merge_ordered_with_indices handles conflicting variable orders correctly", {
+  
+  # Test Case 1: Conflicting orders (cycle detection)
+  vec1 <- c("A", "B", "C")
+  vec2 <- c("B", "A", "C")  # B comes before A (conflicting with vec1)
+  vec3 <- c("C", "A", "B")
+  
+  vector_list_cycle <- list(vec1, vec2, vec3)
+  
+  # Should trigger warning about different orders and use priority-based fallback
+  expect_warning(
+    result_cycle <- get_merge_ordered_with_indices(vector_list_cycle),
+    "Variable names in different datasets have different orders"
+  )
+  
+  # Should prioritize the order from earlier datasets
+  expect_equal(result_cycle, c("A", "B", "C"))  # Order from vec1 (first dataset)
+  
+  # Test Case 2: Simple cycle A->B, B->A
+  vec_simple1 <- c("A", "B")
+  vec_simple2 <- c("B", "A")
+  
+  expect_warning(
+    result_simple <- get_merge_ordered_with_indices(list(vec_simple1, vec_simple2)),
+    "Variable names in different datasets have different orders"
+  )
+  expect_equal(result_simple, c("A", "B"))  # Order from first dataset
+  
+  # Test Case 3: No conflicts (topological sort should work)
+  vec_topo1 <- c("A", "B", "C")
+  vec_topo2 <- c("B", "C", "D")  # B->C is consistent
+  vec_topo3 <- c("C", "D", "E")  # C->D is consistent
+  
+  expect_silent(
+    result_topo <- get_merge_ordered_with_indices(list(vec_topo1, vec_topo2, vec_topo3))
+  )
+  expect_equal(result_topo, c("A", "B", "C", "D", "E"))
+  
+  # Test Case 4: Complex cycle with multiple conflicts
+  vec_complex1 <- c("X", "Y", "Z")
+  vec_complex2 <- c("Y", "Z", "X")  # Creates Y->Z->X cycle
+  vec_complex3 <- c("Z", "X", "Y")  # Continues the cycle
+  
+  expect_warning(
+    result_complex <- get_merge_ordered_with_indices(list(vec_complex1, vec_complex2, vec_complex3)),
+    "Variable names in different datasets have different orders"
+  )
+  expect_equal(result_complex, c("X", "Y", "Z"))  # Order from first dataset
+  
+  # Test Case 5: Partial conflicts
+  vec_partial1 <- c("A", "B", "C", "D")
+  vec_partial2 <- c("B", "A", "E", "F")  # B->A conflicts, but E->F is new
+  
+  expect_warning(
+    result_partial <- get_merge_ordered_with_indices(list(vec_partial1, vec_partial2)),
+    "Variable names in different datasets have different orders"
+  )
+  expect_equal(result_partial, c("A", "B", "C", "D", "E", "F"))  # Priority to first dataset
+  
+  
+  # Test Case 7: All same elements but different orders
+  vec_same1 <- c("X", "Y", "Z")
+  vec_same2 <- c("Z", "Y", "X")
+  vec_same3 <- c("Y", "X", "Z")
+  
+  expect_warning(
+    result_same <- get_merge_ordered_with_indices(list(vec_same1, vec_same2, vec_same3)),
+    "Variable names in different datasets have different orders"
+  )
+  expect_equal(result_same, c("X", "Y", "Z"))  # Priority to first dataset
+})
+
+# Test for get_merge_ordered_with_indices edge cases
+test_that("get_merge_ordered_with_indices handles edge cases", {
+  
+  # Test with NULL inputs
+  expect_equal(get_merge_ordered_with_indices(list()), character(0))
+  
+  # Test with single vector
+  expect_equal(get_merge_ordered_with_indices(list(c("A", "B", "C"))), c("A", "B", "C"))
+  
+  # Test with identical vectors
+  vec <- c("A", "B", "C")
+  expect_silent(
+    result <- get_merge_ordered_with_indices(list(vec, vec, vec))
+  )
+  expect_equal(result, c("A", "B", "C"))
+  
+  # Test with numeric vectors (converted to character)
+  num_vec1 <- c(1, 2, 3)
+  num_vec2 <- c(2, 3, 4)
+  expect_silent(
+    result_num <- get_merge_ordered_with_indices(list(num_vec1, num_vec2))
+  )
+  expect_equal(result_num, c("1", "2", "3", "4"))
+})
+
+# Test for missing coverage in colocboost_init_data function
+test_that("colocboost_init_data handles complex dictionary mappings", {
+  
+  # Create test data with mixed individual and summary data
+  set.seed(123)
+  n <- 100
+  p_ind <- 50
+  p_sumstat <- 100
+  
+  # Individual level data
+  X_ind <- matrix(rnorm(n * p_ind), n, p_ind)
+  colnames(X_ind) <- paste0("SNP_IND_", 1:p_ind)
+  Y1 <- matrix(rnorm(n), n, 1)
+  Y2 <- matrix(rnorm(n), n, 1)
+  
+  # Summary statistics
+  sumstat1 <- data.frame(
+    beta = rnorm(p_sumstat),
+    sebeta = abs(rnorm(p_sumstat, 0, 0.1)),
+    n = n,
+    variant = paste0("SNP_SUM_", 1:p_sumstat)
+  )
+  
+  sumstat2 <- data.frame(
+    beta = rnorm(p_sumstat),
+    sebeta = abs(rnorm(p_sumstat, 0, 0.1)),
+    n = n,
+    variant = paste0("SNP_SUM_", 1:p_sumstat)
+  )
+  
+  # LD matrix
+  LD_matrix <- diag(p_sumstat)
+  colnames(LD_matrix) <- rownames(LD_matrix) <- paste0("SNP_SUM_", 1:p_sumstat)
+  
+  # Test case: Mixed individual and summary data with complex mappings
+  X_list <- list(X_ind)
+  Y_list <- list(Y1, Y2)
+  Z_list <- list(sumstat1$beta / sumstat1$sebeta, sumstat2$beta / sumstat2$sebeta)
+  LD_list <- list(LD_matrix)
+  N_sumstat <- list(n, n)
+  
+  dict_YX <- c(1, 1)  # Both Y outcomes use the same X
+  dict_sumstatLD <- c(1, 1)  # Both sumstats use the same LD
+  
+  keep_variables <- list(
+    colnames(X_ind),        # X variables
+    sumstat1$variant,       # Sumstat 1 variables  
+    sumstat2$variant        # Sumstat 2 variables
+  )
+  
+  # Test focal outcome mapping with mixed data
+  if (exists("colocboost_init_data")) {
+    # Test focal outcome index that maps to summary statistics
+    expect_error({
+      cb_data_mixed <- colocboost_init_data(
+        X = X_list,
+        Y = Y_list,
+        dict_YX = dict_YX,
+        Z = Z_list,
+        LD = LD_list,
+        N_sumstat = N_sumstat,
+        dict_sumstatLD = dict_sumstatLD,
+        Var_y = NULL,
+        SeBhat = NULL,
+        keep_variables = keep_variables,
+        focal_outcome_idx = 3,  # Should map to first summary statistic
+        focal_outcome_variables = TRUE,
+        overlap_variables = FALSE
+      )
+      
+      # Should use variables from the first summary statistic
+      expect_equal(length(cb_data_mixed$variable.names), p_sumstat)
+      expect_true(all(grepl("SNP_SUM_", cb_data_mixed$variable.names)))
+    }, NA)
+  } else {
+    skip("colocboost_init_data not directly accessible")
+  }
+})
+
+# Test for error handling in input validation
+test_that("colocboost input validation handles edge cases", {
+  
+  
+  # Test with very few overlapping variables
+  sumstat1 <- data.frame(
+    beta = rnorm(5),
+    sebeta = abs(rnorm(5, 0, 0.1)),
+    variant = paste0("SNP_A_", 1:5)
+  )
+  
+  sumstat2 <- data.frame(
+    beta = rnorm(5),
+    sebeta = abs(rnorm(5, 0, 0.1)),
+    variant = paste0("SNP_B_", 1:5)  # No overlap with sumstat1
+  )
+  
+warnings <- testthat::capture_warnings(
+  colocboost(sumstat = list(sumstat1, sumstat2))
+)
+expect_true(any(grepl("No or only 1 overlapping variables were found", warnings)))
+  
+  # Test with inconsistent effect matrices
+  effect_est_bad <- matrix(rnorm(10), 5, 2)
+  effect_se_bad <- matrix(abs(rnorm(12)), 6, 2)  # Different dimensions
+  
+  expect_warning(
+    colocboost(effect_est = effect_est_bad, effect_se = effect_se_bad),
+    "effect_est and effect_se should be the same dimension!"
+  )
+})
+
+# Test for LD matrix edge cases
+test_that("colocboost handles LD matrix edge cases", {
+  
+  # Test with singular LD matrix (rank deficient)
+  set.seed(123)
+  n <- 100
+  p <- 10
+  
+  # Create summary statistics
+  sumstat_sing <- data.frame(
+    beta = rnorm(p),
+    sebeta = abs(rnorm(p, 0, 0.1)),
+    n = n,
+    variant = paste0("SNP", 1:p)
+  )
+  
+  # Create singular LD matrix (first row = second row)
+  LD_singular <- matrix(0.5, p, p)
+  diag(LD_singular) <- 1
+  LD_singular[2, ] <- LD_singular[1, ]  # Make second row identical to first
+  LD_singular[, 2] <- LD_singular[, 1]  # Make second column identical to first
+  colnames(LD_singular) <- rownames(LD_singular) <- paste0("SNP", 1:p)
+  
+  # Should handle singular LD matrix without crashing
+  expect_error({
+    suppressWarnings(result_singular <- colocboost(
+      sumstat = list(sumstat_sing, sumstat_sing),
+      LD = LD_singular,
+      M = 1
+    ))
+  }, NA)
+  
+  # Test with identity LD matrix
+  LD_identity <- diag(p)
+  colnames(LD_identity) <- rownames(LD_identity) <- paste0("SNP", 1:p)
+  
+  expect_error({
+    suppressWarnings(result_identity <- colocboost(
+      sumstat = list(sumstat_sing, sumstat_sing),
+      LD = LD_identity,
+      M = 1
+    ))
+  }, NA)
+})
+
+# Test for outcome name handling edge cases
+test_that("colocboost handles outcome names correctly", {
+  
+  # Generate basic test data
+  set.seed(123)
+  X_basic <- matrix(rnorm(100 * 10), 100, 10)
+  colnames(X_basic) <- paste0("SNP", 1:10)
+  Y_basic <- matrix(rnorm(100 * 3), 100, 3)
+  
+  Y_basic_list <- list(Y_basic[,1], Y_basic[,2], Y_basic[,3])
+  X_basic_list <- list(X_basic, X_basic, X_basic)
+  
+
+  warnings <- testthat::capture_warnings(
+    result_mismatch <- colocboost(
+      X = X_basic_list, 
+      Y = Y_basic_list,
+      outcome_names = c("Trait1", "Trait2"),  # Only 2 names for 3 traits
+      M = 2
+    )
+  )
+  expect_true(any(grepl("There are 3 outcomes inputed, but only 2 provided.*Using default outcome_names as Y1,...,YL", warnings)))
+  
+  expect_equal(result_mismatch$data_info$outcome_info$outcome_names, c("Y1", "Y2", "Y3"))
+  
+  # Test with NULL outcome_names
+  expect_error({
+    suppressWarnings(result_null_names <- colocboost(
+      X = X_basic_list, 
+      Y = Y_basic_list,
+      outcome_names = NULL,
+      M = 2
+    ))
+    expect_equal(result_null_names$data_info$outcome_info$outcome_names, c("Y1", "Y2", "Y3"))
+  }, NA)
+})
+
+
+# Test for missing value handling edge cases
+test_that("colocboost handles missing values in different scenarios", {
+  
+  # Generate test data with systematic missing values
+  set.seed(123)
+  n <- 100
+  p <- 15
+  X_miss <- matrix(rnorm(n * p), n, p)
+  colnames(X_miss) <- paste0("SNP", 1:p)
+  Y_miss <- matrix(rnorm(n * 2), n, 2)
+  
+  # Introduce missing values in specific pattern
+  missing_indices <- sample(1:n, 10)
+  Y_miss[missing_indices, 1] <- NA
+  
+  # Different missing indices for second outcome
+  missing_indices2 <- sample(1:n, 8)
+  Y_miss[missing_indices2, 2] <- NA
+  
+  Y_miss_list <- list(Y_miss[,1], Y_miss[,2])
+  X_miss_list <- list(X_miss, X_miss)
+  
+  # Should handle missing values by creating separate X matrices
+  expect_error({
+    suppressWarnings(result_miss <- colocboost(
+      X = X_miss_list, 
+      Y = Y_miss_list,
+      M = 2
+    ))
+  }, NA)
+  
+  expect_s3_class(result_miss, "colocboost")
+})
+
+# Test for custom parameter combinations
+test_that("colocboost handles custom parameter combinations", {
+  
+  # Generate test data
+  set.seed(123)
+  X_param <- matrix(rnorm(200 * 25), 200, 25)
+  colnames(X_param) <- paste0("SNP", 1:25)
+  Y_param <- matrix(rnorm(200 * 2), 200, 2)
+  
+  Y_param_list <- list(Y_param[,1], Y_param[,2])
+  X_param_list <- list(X_param, X_param)
+  
+  # Test extreme parameter values
+  expect_error({
+    suppressWarnings(result_extreme <- colocboost(
+      X = X_param_list, 
+      Y = Y_param_list,
+      M = 2,
+      lambda = 0.99,           # Very high lambda
+      tau = 0.001,             # Very small tau
+      learning_rate_init = 0.001,  # Very small learning rate
+      jk_equiv_corr = 0.99,    # Very high correlation threshold
+      coverage = 0.99,         # Very high coverage
+      min_abs_corr = 0.1       # Low correlation threshold
+    ))
+  }, NA)
+  
+  expect_s3_class(result_extreme, "colocboost")
+})
+
+# Test for plotting edge cases with no colocalization
+test_that("colocboost_plot handles results with no colocalization", {
+  
+  # Create a colocboost result with no colocalization
+  set.seed(123)
+  X_no_coloc <- matrix(rnorm(100 * 20), 100, 20)
+  colnames(X_no_coloc) <- paste0("SNP", 1:20)
+  
+  # Independent traits (no colocalization)
+  Y_no_coloc <- matrix(rnorm(100 * 2) * 0.01, 100, 2)  # Very weak independent signals
+  
+  Y_no_coloc_list <- list(Y_no_coloc[,1], Y_no_coloc[,2])
+  X_no_coloc_list <- list(X_no_coloc, X_no_coloc)
+  
+  suppressWarnings({
+    result_no_coloc <- colocboost(
+      X = X_no_coloc_list, 
+      Y = Y_no_coloc_list,
+      M = 2
+    )
+  })
+  
+  # Should plot without error even with no colocalization
+  expect_error(suppressWarnings(colocboost_plot(result_no_coloc)), NA)
+  
+  # Test with different y-axis options
+  expect_error(suppressWarnings(colocboost_plot(result_no_coloc, y = "vcp")), NA)
+  expect_error(suppressWarnings(colocboost_plot(result_no_coloc, y = "cos_vcp")), NA)
+})
+
+
+# Test for complex coverage scenarios in get_cos
+test_that("get_cos handles complex coverage scenarios", {
+  
+  # Generate test colocboost result
+  set.seed(123)
+  cb_result_complex <- generate_test_result(n = 200, p = 30, L = 3)
+  
+  # Test with coverage = 1.0 (should include all variants)
+  expect_error({
+    result_full_coverage <- get_cos(cb_result_complex, coverage = 1.0)
+  }, NA)
+  
+  # Test with coverage = 0.5 (should include fewer variants)
+  expect_error({
+    result_half_coverage <- get_cos(cb_result_complex, coverage = 0.5)
+  }, NA)
+  
+  # Generate large genotype matrix for purity testing
+  set.seed(456)
+  N_large <- 150
+  P_large <- 100
+  sigma_large <- 0.7^abs(outer(1:P_large, 1:P_large, "-"))
+  X_large <- MASS::mvrnorm(N_large, rep(0, P_large), sigma_large)
+  colnames(X_large) <- paste0("SNP", 1:P_large)
+  
+  # Test with very stringent purity thresholds
+  expect_error({
+    result_stringent <- get_cos(cb_result_complex, 
+                               coverage = 0.95, 
+                               X = X_large, 
+                               min_abs_corr = 0.9,
+                               median_abs_corr = 0.95)
+  }, NA)
+  
+  # Should potentially filter out impure CoS
+  expect_type(result_stringent, "list")
+  expect_named(result_stringent, c("cos", "cos_purity"))
+})
+
+# Test for get_hierarchical_clusters with extreme correlation structures
+test_that("get_hierarchical_clusters handles extreme correlation structures", {
+  
+  # Test with perfect block structure
+  set.seed(789)
+  N <- 100
+  P <- 12
+  
+  # Create perfect block correlation structure
+  sigma_block <- matrix(0.1, P, P)
+  diag(sigma_block) <- 1
+  # Block 1: variables 1-4
+  sigma_block[1:4, 1:4] <- 0.95
+  # Block 2: variables 5-8  
+  sigma_block[5:8, 5:8] <- 0.95
+  # Block 3: variables 9-12
+  sigma_block[9:12, 9:12] <- 0.95
+  
+  X_block <- MASS::mvrnorm(N, rep(0, P), sigma_block)
+  cormat_block <- cor(X_block)
+  
+  # Should detect 3 clusters with high min_cluster_corr
+  result_block <- get_hierarchical_clusters(cormat_block, min_cluster_corr = 0.9)
+  
+  expect_equal(ncol(result_block$cluster), 3)
+  expect_equal(nrow(result_block$cluster), P)
+  
+  # Test with all low correlations (should result in many clusters)
+  cormat_low <- matrix(0.1, 8, 8)
+  diag(cormat_low) <- 1
+  
+  result_low <- get_hierarchical_clusters(cormat_low, min_cluster_corr = 0.5)
+  
+  # Should create multiple clusters due to low correlations
+  expect_gt(ncol(result_low$cluster), 1)
+  
+  # Test with mixed correlation structure
+  P_mixed <- 6
+  sigma_mixed <- matrix(0.2, P_mixed, P_mixed)
+  diag(sigma_mixed) <- 1
+  # High correlation pair: 1-2
+  sigma_mixed[1:2, 1:2] <- 0.9
+  # Medium correlation pair: 3-4  
+  sigma_mixed[3:4, 3:4] <- 0.6
+  # Low correlation singletons: 5, 6
+  
+  X_mixed <- MASS::mvrnorm(N, rep(0, P_mixed), sigma_mixed)
+  cormat_mixed <- cor(X_mixed)
+  
+  result_mixed <- get_hierarchical_clusters(cormat_mixed, min_cluster_corr = 0.7)
+  
+  expect_type(result_mixed, "list")
+  expect_named(result_mixed, c("cluster", "Q_modularity"))
+  expect_equal(nrow(result_mixed$cluster), P_mixed)
+})
+
