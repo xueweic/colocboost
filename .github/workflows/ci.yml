@@ -105,9 +105,9 @@ jobs:
           manifest-path: /tmp/pixi/pixi.toml
 
       - name: Run unit tests
-        run: pixi run --environment ${{ matrix.environment }} --manifest /tmp/pixi/pixi.toml devtools_test
+        run: pixi run --environment ${{ matrix.environment }} --manifest-path /tmp/pixi/pixi.toml devtools_test
 
       - name: Run R CMD CHECK
         run: |
-          pixi run --environment ${{ matrix.environment }} --manifest /tmp/pixi/pixi.toml build
-          pixi run --environment ${{ matrix.environment }} --manifest /tmp/pixi/pixi.toml rcmdcheck
+          pixi run --environment ${{ matrix.environment }} --manifest-path /tmp/pixi/pixi.toml build
+          pixi run --environment ${{ matrix.environment }} --manifest-path /tmp/pixi/pixi.toml rcmdcheck
