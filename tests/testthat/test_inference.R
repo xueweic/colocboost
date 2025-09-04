@@ -65,13 +65,13 @@ test_that("get_robust_colocalization filters results correctly", {
   cb_res <- generate_test_result()
   
   # Basic call
-  expect_error(get_robust_colocalization(cb_res), NA)
+  expect_error(suppressWarnings(get_robust_colocalization(cb_res)), NA)
   
   # With stricter thresholds
-  expect_error(get_robust_colocalization(cb_res, cos_npc_cutoff = 0.8), NA)
+  expect_error(suppressWarnings(get_robust_colocalization(cb_res, cos_npc_cutoff = 0.8)), NA)
   
   # With p-value threshold
-  expect_error(get_robust_colocalization(cb_res, pvalue_cutoff = 0.05), NA)
+  expect_error(suppressWarnings(get_robust_colocalization(cb_res, pvalue_cutoff = 0.05)), NA)
 })
 
 # Test for get_hierarchical_clusters
