@@ -537,7 +537,6 @@ check_jk_jkeach <- function(jk, jk_each,
   return(judge)
 }
 
-
 check_pair_jkeach <- function(jk_each,
                               pos.update,
                               model_update,
