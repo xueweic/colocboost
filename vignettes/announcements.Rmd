@@ -14,7 +14,11 @@ vignette: >
 - *May 2, 2025*: `colocboost` R package is available on [CRAN](https://cran.r-project.org/web/packages/colocboost/index.html).
 
 ## Software updates
-- `v1.0.5` Improve package and minor resolved bugs [CRAN](https://cran.r-project.org/web/packages/colocboost/index.html). For changelog, see [PR](https://github.com/StatFunGen/colocboost/pull/102).
+- `v1.0.5` Memory optimization and visualization improvements with bug fixes [CRAN](https://cran.r-project.org/web/packages/colocboost/index.html). 
+  - Optimized LD-free version to reduce memory usage by eliminating large identity LD matrix generation
+  - Enhanced `colocboost_plot` function with improved horizontal and vertical spacing labels
+  - Resolved minor bugs for improved stability
+  For detailed changelog, see [PR](https://github.com/StatFunGen/colocboost/pull/102).
 - `v1.0.4` Initial public stable release on [CRAN](https://cran.r-project.org/web/packages/colocboost/index.html). 
 Due to the file size limitation of CRAN release, all example data are the subset of the simulated data. 
 See full dataset in [colocboost paper repo](https://github.com/StatFunGen/colocboost-paper).
