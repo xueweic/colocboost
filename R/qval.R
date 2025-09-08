@@ -313,7 +313,7 @@ pi0est <- function(p, lambda = seq(0.05, 0.95, 0.05), pi0.method = c("smoother",
 #' @param trunc If TRUE, local FDR values >1 are set to 1. Default is TRUE.
 #' @param monotone If TRUE, local FDR values are non-decreasing with increasing p-values. Default is TRUE; this is recommended.
 #' @param transf Either a "probit" or "logit" transformation is applied to the p-values so that a local FDR estimate can be formed that
-#' does not involve edge effects of the [0,1] interval in which the p-values lie.
+#' does not involve edge effects of the (0,1) interval in which the p-values lie.
 #' @param adj Numeric value that is applied as a multiple of the smoothing bandwidth used in the density estimation. Default is \code{adj=1.0}.
 #' @param eps Numeric value that is threshold for the tails of the empirical p-value distribution. Default is 10^-8.
 #' @param \ldots Additional arguments, passed to \code{\link{pi0est}}.

@@ -1,6 +1,6 @@
 Package: colocboost
 Type: Package
-Date: 2025-04-22
+Date: 2025-09-08
 Title: Multi-Context Colocalization Analysis for QTL and GWAS Studies
 Version: 1.0.5
 Authors@R: c(
