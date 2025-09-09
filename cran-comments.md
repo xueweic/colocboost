@@ -1,10 +1,9 @@
-## R CMD check results
 
-0 errors | 0 warnings | 1 note
+## New release comments
 
-* This is a new release.
+* This is an important update for the latest release colocboost_1.0.5. We resolved an computational issue caused by the latest update.
 
-## Addtional comments
+## Previous comments
 
 * This package implements methods described in our paper "ColocBoost" (Cao et al., 2025), added in DESCRIPTION
 * Fixed issues requested by CRAN in previous submission:
