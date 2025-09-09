@@ -111,7 +111,7 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data) {
       if (length(cb_data$data[[i]]$variable_miss) != 0) {
         beta <- cb_model[[i]]$beta[-cb_data$data[[i]]$variable_miss]  / beta_scaling
         xty <- cb_data$data[[i]]$XtY[-cb_data$data[[i]]$variable_miss]
-        if (sum(xtx) == 1){
+        if (length(xtx) == 1){
           cb_model[[i]]$res[-cb_data$data[[i]]$variable_miss] <- xty - scaling_factor * beta
         } else {
           cb_model[[i]]$res[-cb_data$data[[i]]$variable_miss] <- xty - scaling_factor * xtx %*% beta
@@ -120,7 +120,7 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data) {
       } else {
         beta <- cb_model[[i]]$beta / beta_scaling
         xty <- cb_data$data[[i]]$XtY
-        if (sum(xtx) == 1){
+        if (length(xtx) == 1){
           cb_model[[i]]$res <- xty - scaling_factor * beta
         } else {
           cb_model[[i]]$res <- xty - scaling_factor * xtx %*% beta
@@ -129,7 +129,7 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data) {
       # - profile-loglikelihood
       yty <- cb_data$data[[i]]$YtY / scaling_factor
       xty <- xty / scaling_factor
-      if (sum(xtx) == 1){
+      if (length(xtx) == 1){
         profile_log <- (yty - 2 * sum(beta * xty) + sum(beta^2)) * adj_dep
       } else {
         profile_log <- (yty - 2 * sum(beta * xty) + sum((xtx %*% as.matrix(beta)) * beta)) * adj_dep
@@ -152,7 +152,7 @@ get_LD_jk <- function(jk1, X = NULL, XtX = NULL, N = NULL, remain_idx = NULL, P 
   } else if (!is.null(XtX)) {
     jk1.remain <- which(remain_idx == jk1)
     corr <- rep(0, P)
-    if (sum(XtX) == 1 | length(jk1.remain)==0){
+    if (length(XtX) == 1 | length(jk1.remain)==0){
       corr[remain_idx] <- 1
     } else {
       corr[remain_idx] <- XtX[, jk1.remain]
