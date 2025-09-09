@@ -396,7 +396,7 @@ get_correlation <- function(X = NULL, res = NULL, XtY = NULL, N = NULL,
       Xtr <- res / scaling_factor
       XtY <- XtY / scaling_factor
     }
-    if (sum(XtX) == 1){
+    if (length(XtX) == 1){
       var_r <- YtY - 2 * sum(beta_k * XtY) + sum(beta_k^2)
     } else {
       var_r <- YtY - 2 * sum(beta_k * XtY) + sum((XtX %*% as.matrix(beta_k)) * beta_k)

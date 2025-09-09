@@ -241,7 +241,7 @@ check_null_post <- function(cb_obj,
       } else {
         xty <- XtY / scaling_factor
       }
-      if (sum(xtx) == 1){
+      if (length(xtx) == 1){
         (yty - 2 * sum(cs_beta * xty) + sum(cs_beta^2)) * adj_dep
       } else {
         (yty - 2 * sum(cs_beta * xty) + sum((xtx %*% as.matrix(cs_beta)) * cs_beta)) * adj_dep
@@ -293,14 +293,14 @@ check_null_post <- function(cb_obj,
       if (length(miss_idx) != 0) {
         xty <- XtY[-miss_idx] / scaling.factor
         res.tmp <- rep(0, length(XtY))
-        if (sum(xtx) == 1){
+        if (length(xtx) == 1){
           res.tmp[-miss_idx] <- xty - cs_beta[-miss_idx] / beta_scaling
         } else {
           res.tmp[-miss_idx] <- xty - xtx %*% (cs_beta[-miss_idx] / beta_scaling)
         }
       } else {
         xty <- XtY / scaling.factor
-        if (sum(xtx) == 1){
+        if (length(xtx) == 1){
           res.tmp <- xty - (cs_beta / beta_scaling)
         } else {
           res.tmp <- xty - xtx %*% (cs_beta / beta_scaling)
@@ -508,7 +508,7 @@ get_cos_evidence <- function(cb_obj, coloc_out, data_info) {
       } else {
         xty <- XtY / scaling_factor
       }
-      if (sum(xtx) == 1){
+      if (length(xtx) == 1){
         cos_profile <- (yty - 2 * sum(cs_beta * xty) + sum(cs_beta^2)) * adj_dep
       } else {
         cos_profile <- (yty - 2 * sum(cs_beta * xty) + sum((xtx %*% as.matrix(cs_beta)) * cs_beta)) * adj_dep

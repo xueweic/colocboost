@@ -76,6 +76,8 @@ boost_check_update_jk_nofocal <- function(cb_model, cb_model_para, cb_data) {
       return(ifelse(length(jk_temp) == 1, jk_temp, sample(jk_temp, 1)))
     })
     update_jk[c(1, pos.update + 1)] <- c(jk, jk_each)
+
+    
     judge_each <- check_jk_jkeach(jk, jk_each,
       pos.update,
       model_update = model_update,
@@ -493,12 +495,12 @@ get_LD_jk1_jk2 <- function(jk1, jk2,
                            remain_jk = NULL) {
   if (!is.null(X)) {
     LD_temp <- suppressWarnings({
-      cor(X[, c(jk1, jk2)])
+      get_cormat(X[, c(jk1, jk2)])
     })
     LD_temp[which(is.na(LD_temp))] <- 0
     LD_temp <- LD_temp[1, 2]
   } else if (!is.null(XtX)) {
-    if (sum(XtX) == 1){
+    if (length(XtX) == 1){
       LD_temp <- 0
     } else {
       jk1.remain <- which(remain_jk == jk1)
@@ -545,8 +547,9 @@ check_pair_jkeach <- function(jk_each,
                               jk_equiv_loglik = 0.001) {
   data_update <- cb_data$data[pos.update]
   # -- check if jk_i ~ jk_j
-  change_each_pair <- matrix(NA, nrow = length(jk_each), ncol = length(jk_each))
+  change_each_pair <- matrix(FALSE, nrow = length(jk_each), ncol = length(jk_each))
   for (i in 1:length(jk_each)) {
+    
     jk_i <- jk_each[i]
     change_log_jk_i <- model_update[[i]]$change_loglike[jk_i]
     for (j in 1:length(jk_each)) {
@@ -597,7 +600,7 @@ estimate_change_profile_res <- function(jk,
     } else {
       xty <- XtY / scaling_factor
     }
-    if (sum(xtx) == 1){
+    if (length(xtx) == 1){
       rtr <- yty - 2 * sum(beta_k * xty) + sum(beta_k^2)
     } else {
       rtr <- yty - 2 * sum(beta_k * xty) + sum((xtx %*% as.matrix(beta_k)) * beta_k)
