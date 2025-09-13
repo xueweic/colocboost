@@ -426,14 +426,19 @@ get_max_profile <- function(cb_obj, check_null_max = 0.025,
 }
 
 
+# ### Function for check cs for each weight
+# w_cs <- function(weights, coverage = 0.95) {
+#   indices <- unlist(get_in_cos(weights, coverage = coverage))
+#   result <- rep(0, length(weights))
+#   result[indices] <- 1
+#   return(result)
+# }
+
 ### Function for check cs for each weight
 w_cs <- function(weights, coverage = 0.95) {
   indices <- unlist(get_in_cos(weights, coverage = coverage))
-  result <- rep(0, length(weights))
-  result[indices] <- 1
-  return(result)
+  return(indices)
 }
-
 
 #' Pure R implementation (fallback)
 #' @noRd
@@ -505,12 +510,14 @@ get_merge_ordered_with_indices <- function(vector_list) {
   # Step 4: Topological sort using Kahn's algorithm
   # Start with nodes that have no incoming edges
   queue <- all_elements[sapply(all_elements, function(elem) in_degree[[elem]] == 0)]
-  result <- character()
+  result <- list()
+  result_idx <- 1
   while (length(queue) > 0) {
     # Take the first element from the queue
     current <- queue[1]
     queue <- queue[-1]
-    result <- c(result, current)
+    result[[result_idx]] <- current  # List assignment is fast
+    result_idx <- result_idx + 1
     # Process all neighbors (elements that must come after current)
     neighbors <- graph[[current]]
     for (next_elem in neighbors) {
@@ -520,6 +527,7 @@ get_merge_ordered_with_indices <- function(vector_list) {
       }
     }
   }
+  result <- unlist(result)
   # Step 5: Check for cycles and use fallback if needed
   if (length(result) != n_elements) {
     # Different variable orders detected - use priority-based fallback

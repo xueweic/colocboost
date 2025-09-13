@@ -619,7 +619,7 @@ process_sumstat <- function(Z, N, Var_y, SeBhat, ld_matrices, variant_lists, dic
     Z_extend[pos_target] <- current_z[pos_z]
 
     # Calculate submatrix for each unique entry (not duplicates)
-    if (sum(current_ld_matrix) == 1){
+    if (length(current_ld_matrix) == 1){
       ld_submatrix <- current_ld_matrix
     } else {
       ld_submatrix <- NULL

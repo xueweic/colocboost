@@ -132,7 +132,8 @@ get_modularity <- function(Weight, B) {
   
   if (m == 0) return(0)
   
-  cate <- B %*% t(B)
+  # cate <- B %*% t(B)
+  cate <- tcrossprod(B)
   
   if (m_pos == 0 & m_neg == 0) return(0)
   
@@ -190,12 +191,12 @@ get_n_cluster <- function(hc, Sigma, m = ncol(Sigma), min_cluster_corr = 0.8) {
 #' @noRd
 w_purity <- function(weights, X = NULL, Xcorr = NULL, N = NULL, n = 100, coverage = 0.95,
                      min_abs_corr = 0.5, median_abs_corr = NULL, miss_idx = NULL) {
-  tmp <- apply(weights, 2, w_cs, coverage = coverage)
-  tmp_purity <- apply(tmp, 2, function(tt) {
-    pos <- which(tt == 1)
+  
+  tmp_purity <- apply(weights, 2, function(w) {
+    pos <- w_cs(w, coverage = coverage)
     # deal with missing snp here
     if (!is.null(Xcorr)) {
-      pos <- match(pos, setdiff(1:length(tmp), miss_idx))
+      pos <- match(pos, setdiff(1:length(w), miss_idx))
     }
     get_purity(pos, X = X, Xcorr = Xcorr, N = N, n = n)
   })
@@ -420,7 +421,7 @@ get_purity <- function(pos, X = NULL, Xcorr = NULL, N = NULL, n = 100) {
       corr[which(is.na(corr))] <- 0
       value <- abs(get_upper_tri(corr))
     } else {
-      if (sum(Xcorr) == 1){
+      if (length(Xcorr) == 1){
         value <- 0
       } else {
         Xcorr <- Xcorr # if (!is.null(N)) Xcorr/(N-1) else Xcorr
