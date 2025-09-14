@@ -538,66 +538,54 @@ check_jk_jkeach <- function(jk, jk_each,
   return(judge)
 }
 
-# check_pair_jkeach <- function(jk_each,
-#                               pos.update,
-#                               model_update,
-#                               cb_data, X_dict,
-#                               jk_equiv_corr = 0.8,
-#                               jk_equiv_loglik = 0.001) {
-#   data_update <- cb_data$data[pos.update]
-#   # -- check if jk_i ~ jk_j
-#   change_each_pair <- matrix(FALSE, nrow = length(jk_each), ncol = length(jk_each))
-#   for (i in 1:length(jk_each)) {
-#     
-#     jk_i <- jk_each[i]
-#     change_log_jk_i <- model_update[[i]]$change_loglike[jk_i]
-#     for (j in 1:length(jk_each)) {
-#       if (j != i) {
-#         jk_j <- jk_each[j]
-# 
-#         if (!(jk_i %in% data_update[[i]]$variable_miss) & !(jk_j %in% data_update[[i]]$variable_miss)) {
-#           change_log_jk_j <- model_update[[i]]$change_loglike[jk_j]
-#           change_each <- abs(change_log_jk_i - change_log_jk_j)
-#           LD_temp <- get_LD_jk1_jk2(jk_i, jk_j,
-#             X = cb_data$data[[X_dict[i]]]$X,
-#             XtX = cb_data$data[[X_dict[i]]]$XtX,
-#             N = data_update[[i]]$N,
-#             remain_jk = setdiff(1:length(model_update[[i]]$res), data_update[[i]]$variable_miss)
-#           )
-#           change_each_pair[i, j] <- (change_each <= jk_equiv_loglik) & (abs(LD_temp) >= jk_equiv_corr)
-#         } else {
-#           change_each_pair[i, j] <- FALSE
-#         }
-#       } else {
-#         change_each_pair[i, j] <- FALSE
-#       }
-#     }
-#   }
-#   change_each_pair <- change_each_pair + t(change_each_pair)
-#   return(change_each_pair)
-# }
-
 check_pair_jkeach <- function(jk_each,
                               pos.update,
                               model_update,
                               cb_data, X_dict,
                               jk_equiv_corr = 0.8,
                               jk_equiv_loglik = 0.001) {
-  
-  detect_func <- function(idx, jk_i, jk_j){
+
+
+  #' @importFrom stats cor
+  get_LD_jk_each <- function(jk_each,
+                             X = NULL, XtX = NULL, N = NULL,
+                             remain_jk = NULL) {
+    if (!is.null(X)) {
+      LD_temp <- suppressWarnings({
+        get_cormat(X[, jk_each])
+      })
+      LD_temp[which(is.na(LD_temp))] <- 0
+      # LD_temp <- LD_temp[1, 2]
+    } else if (!is.null(XtX)) {
+      if (length(XtX) == 1){
+        LD_temp <- matrix(0, length(jk_each), length(jk_each))
+      } else {
+        jk.remain <- match(jk_each, remain_jk)
+        LD_temp <- XtX[jk.remain, jk.remain]
+        LD_temp[which(is.na(LD_temp))] <- 0
+      }
+    }
+    return(LD_temp)
+  }
+
+  detect_func <- function(idx, LD_all, jk_i, jk_j, i, j){
     change_log_jk_i <- model_update[[idx]]$change_loglike[jk_i]
     change_log_jk_j <- model_update[[idx]]$change_loglike[jk_j]
     change_each <- abs(change_log_jk_i - change_log_jk_j)
-    LD_temp <- get_LD_jk1_jk2(jk_i, jk_j,
-                              X = cb_data$data[[X_dict[idx]]]$X,
-                              XtX = cb_data$data[[X_dict[idx]]]$XtX,
-                              N = data_update[[idx]]$N,
-                              remain_jk = setdiff(1:length(model_update[[idx]]$res), data_update[[idx]]$variable_miss)
-    )
+    LD_temp <- LD_all[[idx]][i, j]
     return((change_each <= jk_equiv_loglik) & (abs(LD_temp) >= jk_equiv_corr))
   }
-  
+
   data_update <- cb_data$data[pos.update]
+  LD_all <- lapply(1:length(jk_each), function(idx){
+    get_LD_jk_each(jk_each,
+                   X = cb_data$data[[X_dict[idx]]]$X,
+                   XtX = cb_data$data[[X_dict[idx]]]$XtX,
+                   N = data_update[[idx]]$N,
+                   remain_jk = setdiff(1:length(model_update[[idx]]$res), data_update[[idx]]$variable_miss)
+    )
+  })
+
   # -- check if jk_i ~ jk_j
   change_each_pair <- matrix(FALSE, nrow = length(jk_each), ncol = length(jk_each))
   for (i in 1:length(jk_each)) {
@@ -605,18 +593,10 @@ check_pair_jkeach <- function(jk_each,
     for (j in i:length(jk_each)) {
       if (j != i) {
         jk_j <- jk_each[j]
-        if (!(jk_i %in% data_update[[i]]$variable_miss) & !(jk_j %in% data_update[[i]]$variable_miss)) {
-          change_each_pair[i, j] <- detect_func(i, jk_i, jk_j)
-          # if jk_i and jk_j are equivalent on dataset i, then we don't need to check dataset j
-          if ( !change_each_pair[i, j] ){
-            if (!(jk_i %in% data_update[[j]]$variable_miss) & !(jk_j %in% data_update[[j]]$variable_miss)) {
-              change_each_pair[j, i] <- detect_func(j, jk_i, jk_j)
-            } else {
-              change_each_pair[j, i] <- FALSE
-            }
-          }
-        } else {
-          change_each_pair[i, j] <- FALSE
+        change_each_pair[i, j] <- detect_func(idx = i, LD_all, jk_i, jk_j, i, j)
+        # if jk_i and jk_j are equivalent on dataset i, then we don't need to check dataset j
+        if ( !change_each_pair[i, j] ){
+          change_each_pair[j, i] <- detect_func(idx = j, LD_all, jk_i, jk_j, i, j)
         }
       } else {
         change_each_pair[i, j] <- FALSE
