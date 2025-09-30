@@ -665,8 +665,6 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL) {
     })
     int_weight <- lapply(cos_weights, get_integrated_weight, weight_fudge_factor = cb_obj$cb_model_para$weight_fudge_factor)
     names(int_weight) <- names(cos_weights) <- colocset_names
-    vcp <- as.vector(1 - apply(1 - do.call(cbind, int_weight), 1, prod))
-    names(vcp) <- data_info$variables
 
     # - resummary results
     cos_re_idx <- lapply(int_weight, function(w) {
@@ -676,7 +674,55 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL) {
       data_info$variables[idx]
     })
     coloc_csets <- list("cos_index" = cos_re_idx, "cos_variables" = cos_re_var)
-
+    
+    # - recalculate purity
+    purity <- vector(mode = "list", length = length(cos_re_idx))
+    for (ee in 1:length(cos_re_idx)) {
+      coloc_t <- coloc_outcome_index[[ee]]
+      p_tmp <- c()
+      for (i3 in coloc_t) {
+        pos <- cos_re_idx[[ee]]
+        X_dict <- cb_obj$cb_data$dict[i3]
+        if (!is.null(cb_obj$cb_data$data[[X_dict]]$XtX)) {
+          pos <- match(pos, setdiff(1:cb_obj$cb_model_para$P, cb_obj$cb_data$data[[i3]]$variable_miss))
+        }
+        tmp <- matrix(get_purity(pos,
+                                 X = cb_obj$cb_data$data[[X_dict]]$X,
+                                 Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
+                                 N = cb_obj$cb_data$data[[i3]]$N, n = cb_obj$cb_model_para$n_purity
+        ), 1, 3)
+        p_tmp <- rbind(p_tmp, tmp)
+      }
+      purity[[ee]] <- matrix(apply(p_tmp, 2, max), 1, 3)
+    }
+    purity_all <- do.call(rbind, purity)
+    purity_all <- as.data.frame(purity_all)
+    colnames(purity_all) <- c("min_abs_corr", "mean_abs_corr", "median_abs_corr")
+    coloc_out$purity <- purity_all
+    if (is.null(cb_obj$cb_model_para$median_abs_corr)) {
+      is_pure <- which(purity_all[, 1] >= cb_obj$cb_model_para$min_abs_corr)
+    } else {
+      is_pure <- which(purity_all[, 1] >= cb_obj$cb_model_para$min_abs_corr | purity_all[, 3] >= cb_obj$cb_model_para$median_abs_corr)
+    }
+    if (length(is_pure)==0){
+      coloc_results <- NULL
+      vcp <- NULL
+      return(list("cos_results" = coloc_results, "vcp" = vcp))
+    } else if (length(is_pure)!=length(cos_re_idx)){
+      int_weight = int_weight[is_pure]
+      coloc_csets <- lapply(coloc_csets, function(cs) cs[is_pure])
+      coloc_outcomes <- lapply(coloc_outcomes, function(cs) cs[is_pure])
+      normalization_evidence <- normalization_evidence[is_pure]
+      npc <- npc[is_pure]
+      cos_min_npc_outcome <- cos_min_npc_outcome[is_pure]
+      cos_weights <- cos_weights[is_pure]
+      coloc_out$purity <- purity_all[is_pure,,drop = FALSE]
+      colocset_names <- colocset_names[is_pure]
+    }
+    vcp <- as.vector(1 - apply(1 - do.call(cbind, int_weight), 1, prod))
+    names(vcp) <- data_info$variables
+    
+    
     # - hits variables in each csets
     coloc_hits <- coloc_hits_variablenames <- coloc_hits_names <- c()
     for (i in 1:length(int_weight)) {

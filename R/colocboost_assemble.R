@@ -209,6 +209,9 @@ colocboost_assemble <- function(cb_obj,
     # - colocalization results
     cb_obj$cb_model_para$weight_fudge_factor <- weight_fudge_factor
     cb_obj$cb_model_para$coverage <- coverage
+    cb_obj$cb_model_para$min_abs_corr <- min_abs_corr
+    cb_obj$cb_model_para$median_abs_corr <- median_abs_corr
+    cb_obj$cb_model_para$n_purity <- n_purity
     cos_results <- get_cos_details(cb_obj, coloc_out = past_out$cos$cos, data_info = data_info)
     cb_output <- list(
       "vcp" = cos_results$vcp,
