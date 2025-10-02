@@ -893,7 +893,7 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
   cb_model_para <- cb_obj$cb_model_para
 
   ## - obtain the order of variables based on the variables names if it has position information
-  if (!is.null(variables)) {
+  if (is.null(variables)) {
     ordered <- 1:length(cb_obj$cb_model_para$variables)
   } else {
     ordered <- match(variables, cb_obj$cb_model_para$variables)

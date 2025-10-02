@@ -103,6 +103,9 @@ colocboost_workhorse <- function(cb_data,
   }
 
   if (sum(cb_model_para$update_y == 1) == 0) {
+    for (i in 1:length(cb_model)){
+      cb_model[[i]]$weights_path <- matrix(0, ncol = cb_model_para$P)
+    }
     cb_obj <- list("cb_data" = cb_data, "cb_model" = cb_model, "cb_model_para" = cb_model_para)
     class(cb_obj) <- "colocboost"
     return(cb_obj)

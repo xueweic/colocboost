@@ -58,7 +58,7 @@ colocboost_assemble <- function(cb_obj,
     )
     # - save model and all coloc and single information for diagnostic
     if (output_level != 1) {
-      tmp <- get_full_output(cb_obj = cb_obj, past_out = NULL, variables = NULL)
+      tmp <- get_full_output(cb_obj = cb_obj, past_out = NULL, variables = data_info$variables)
       if (output_level == 2) {
         cb_output <- c(cb_output, list("ucos_details" = tmp$ucos_detials))
         cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "model_info", "ucos_details")]
