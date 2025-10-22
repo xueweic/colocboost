@@ -987,7 +987,7 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
         # - hits variables in each csets
         cs_hits <- sapply(1:length(specific_w), function(jj) {
           inw <- specific_w[[jj]]
-          sample(which(inw == max(inw)), 1)
+          which(inw == max(inw))[1]
         })
         cs_hits_variablenames <- sapply(cs_hits, function(ch) variables[ch])
         specific_cs_hits <- data.frame("top_index" = cs_hits, "top_variables" = cs_hits_variablenames) # save
