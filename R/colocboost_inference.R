@@ -374,7 +374,12 @@ check_null_post <- function(cb_obj,
   }
   if (!weaker_effect) {
     check_cs_change <- cs_change
-    check_null_tmp <- sapply(1:cb_obj$cb_model_para$L, function(j) cb_obj$cb_model[[j]]$check_null_max)
+    if (cb_obj$cb_model_para$L == 1){
+      check_null_max_tmp <- cb_obj$cb_model[[j]]$check_null_max_ucos
+    } else {
+      check_null_max_tmp <- cb_obj$cb_model[[j]]$check_null_max
+    }
+    check_null_tmp <- sapply(1:cb_obj$cb_model_para$L, function(j) check_null_max_tmp)
   } else {
     check_null_tmp <- rep(check_null, cb_obj$cb_model_para$L)
   }

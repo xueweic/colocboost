@@ -79,6 +79,7 @@ colocboost_assemble <- function(cb_obj,
     } else if (cb_obj$cb_model_para$model_used == "one_causal"){
       # fixme later
       check_null_max <- check_null_max * check_null
+      check_null_max_ucos <- check_null_max_ucos * check_null
     }
     cb_obj <- get_max_profile(cb_obj, check_null_max = check_null_max, 
                               check_null_max_ucos = check_null_max_ucos, 
