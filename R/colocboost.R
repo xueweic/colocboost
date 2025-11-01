@@ -247,7 +247,17 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
         return(xx)
       })
     }
-
+    
+    # Remove duplicates and report: if duplicate columns of X
+    X <- lapply(seq_along(X), function(i) {
+      df <- X[[i]]
+      if (anyDuplicated(colnames(df))) {
+        message(paste("Removed duplicate columns from X matrix ", i))
+        df[, !duplicated(colnames(df)), drop = FALSE]
+      } else {
+        df
+      }
+    })
     keep_variable_individual <- lapply(X, colnames)
     if (!is.list(X) & !is.list(Y)) {
       warning("Error: Input X and Y must be the list containing genotype matrics and all phenotype vectors!")
@@ -333,11 +343,19 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
         warning("Error: effect_est and effect_se should be the same dimension! Please check!")
         return(NULL)
       }
-      variables <- rownames(effect_est)
       effect_est <- as.matrix(effect_est)
       effect_se <- as.matrix(effect_se)
+      variables <- rownames(effect_est)
       if (is.null(variables)) {
         variables <- paste0("variant_", 1:nrow(effect_est))
+      } else {
+        # add - if duplciates occurs, only keep one
+        if (anyDuplicated(variables)) {
+          keep_idx <- !duplicated(variables)
+          variables <- variables[keep_idx]
+          effect_est <- effect_est[keep_idx, , drop = FALSE]
+          effect_se <- effect_se[keep_idx, , drop = FALSE]
+        }
       }
       sumstat <- list()
       for (sum_iy in 1:ncol(effect_est)) {
@@ -388,6 +406,17 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
         })
       }
     }
+    
+    # Remove duplicates and report: if duplicate variant in summary statistics
+    sumstat <- lapply(seq_along(sumstat), function(i) {
+      xx <- sumstat[[i]]
+      if (anyDuplicated(xx$variant)) {
+        message(paste("Removed duplicate variants from sumstat", i))
+        xx[!duplicated(xx$variant), , drop = FALSE]
+      } else {
+        xx
+      }
+    })
     keep_variable_sumstat <- lapply(sumstat, function(xx) {
       xx$variant
     })
