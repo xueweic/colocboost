@@ -22,21 +22,8 @@ This vignette demonstrates how to use the bioinformatics pipeline for ColocBoost
 - See more details about input data preparation in `xqtl_protocol` with [link](https://statfungen.github.io/xqtl-protocol/code/mnm_analysis/mnm_methods/colocboost.html).
 
 
-# 1. Loading individual-level and summary statistics using `load_multitask_regional_data` function from multiple cohorts or datasets
-
-This function harmonizes the input data and prepares it for colocalization analysis. 
+Step 1: Loading individual-level and summary statistics using `load_multitask_regional_data` function from multiple cohorts or datasets
 
 
-In this section, we introduce how to load the regional data required for the ColocBoost analysis using the `load_multitask_regional_data` function. 
-This function loads mixed datasets for a specific region, including individual-level data (genotype, phenotype, covariate data), summary statistics 
-(sumstats, LD), or a combination of both. It runs `load_regional_univariate_data` for each individual-level dataset and `load_rss_data` for each summary statistics dataset.
-The output is a list with `individual_data` and `sumstat_data` components, where `individual_data` is a list of individual-level data and `sumstat_data` is a list of summary statistics data. 
-This list is then passed to the `colocboost_analysis_pipeline` function for the colocalization analysis.
-
-
-
-# 2. Perform ColocBoost using `colocboost_analysis_pipeline` function
-
-In this section, we load region data for a combination of individual-level and summary statistics data, then perform the colocalization analysis using the `colocboost_analysis_pipeline` function. 
-The colocalization analysis can be run in any one of three modes, or in a combination of these modes (names assume that individual-level data is xQTL data and summary statistics data is GWAS data):
+Step 2: Perform ColocBoost using `colocboost_analysis_pipeline` function
 
