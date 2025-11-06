@@ -247,7 +247,7 @@ test_that("colocboost handles mismatched inputs correctly", {
   
   # Expect error with mismatched dimensions
   expect_warning(
-    colocboost(
+    colocboost_validate_input_data(
       effect_est = bad_effect_est,
       effect_se = test_sumstat_data$effect_se
     ),
@@ -282,3 +282,76 @@ test_that("colocboost handles missing sample size correctly", {
   # Still should get a valid result
   expect_s3_class(result, "colocboost")
 })
+
+# Test 8: Handling of NA variants
+test_that("colocboost removes NA variants correctly", {
+  sumstat_with_na <- test_sumstat_data$sumstat
+  sumstat_with_na[[1]]$variant[1:2] <- NA
+  
+  warnings <- capture_warnings({
+    validated_data <- colocboost_validate_input_data(
+      sumstat = sumstat_with_na,
+      LD = test_sumstat_data$LD
+    )
+  })
+  
+  expect_true(any(grepl("Removed variant with NA from sumstat 1", warnings)))
+  # Should have 2 fewer variants
+  expect_true(length(validated_data$Z[[1]]) == length(validated_data$Z[[2]])-2)
+})
+
+# Test 9: Handling of duplicate variants
+test_that("colocboost removes duplicate variants correctly", {
+  sumstat_with_dup <- test_sumstat_data$sumstat
+  # Duplicate the first variant
+  sumstat_with_dup[[1]] <- rbind(
+    sumstat_with_dup[[1]][1, ],
+    sumstat_with_dup[[1]]
+  )
+  
+  warnings <- capture_warnings({
+    result <- colocboost(
+      sumstat = sumstat_with_dup,
+      LD = test_sumstat_data$LD
+    )
+  })
+  
+  expect_true(any(grepl("Removed duplicate variants from sumstat 1", warnings)))
+  expect_s3_class(result, "colocboost")
+  # Should be back to original count
+  expect_equal(length(result$data_info$variables), ncol(test_sumstat_data$X))
+})
+
+# Test 10: Handling of mismatched variants between sumstat and LD
+test_that("colocboost handles variant mismatch between sumstat and LD", {
+  # Create LD with different variant names
+  LD_modified <- test_sumstat_data$LD
+  rownames(LD_modified) <- colnames(LD_modified) <- paste0("SNP", 11:30)
+  
+  warnings <- capture_warnings({
+    result <- colocboost_validate_input_data(
+      sumstat = test_sumstat_data$sumstat,
+      LD = LD_modified
+    )
+  })
+  
+  # Should warn about removing variants
+  expect_true(any(grepl("removing.*variants since those variants are not in LD", warnings)))
+})
+
+# Test 11: Error when no common variants
+test_that("colocboost errors with no common variants", {
+  # Create LD with completely different variant names
+  LD_no_overlap <- test_sumstat_data$LD
+  rownames(LD_no_overlap) <- colnames(LD_no_overlap) <- paste0("DIFF", 1:20)
+  
+  warnings <- capture_warnings(
+    colocboost_validate_input_data(
+      sumstat = test_sumstat_data$sumstat,
+      LD = LD_no_overlap
+    )
+  )
+  expect_true(any(grepl("removing.*variants since those variants are not in LD", warnings)))
+  expect_true(any(grepl("is empty after filtering", warnings)))
+})
+

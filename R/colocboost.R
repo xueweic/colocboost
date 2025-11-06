@@ -195,6 +195,181 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
     return(NULL)
   }
 
+  # - check input data: individual level data and summary-level data
+  validated_data <- colocboost_validate_input_data(
+    X = X, Y = Y,
+    sumstat = sumstat, LD = LD,
+    dict_YX = dict_YX, dict_sumstatLD = dict_sumstatLD,
+    effect_est = effect_est, effect_se = effect_se, effect_n = effect_n,
+    overlap_variables = overlap_variables,
+    M = M, min_abs_corr = min_abs_corr
+  )
+  if (is.null(validated_data)) {
+    return(NULL)
+  }
+  # Extract validated data
+  X <- validated_data$X
+  Y <- validated_data$Y
+  yx_dict <- validated_data$yx_dict
+  keep_variable_individual <- validated_data$keep_variable_individual
+  sumstat <- validated_data$sumstat
+  LD <- validated_data$LD
+  sumstatLD_dict <- validated_data$sumstatLD_dict
+  keep_variable_sumstat <- validated_data$keep_variable_sumstat
+  Z <- validated_data$Z
+  N_sumstat <- validated_data$N_sumstat
+  Var_y <- validated_data$Var_y
+  SeBhat <- validated_data$SeBhat
+  
+  # Update parameters if LD was not provided
+  M <- validated_data$M
+  min_abs_corr <- validated_data$min_abs_corr
+  jk_equiv_corr <- validated_data$jk_equiv_corr
+  jk_equiv_loglik <- validated_data$jk_equiv_loglik
+  func_simplex <- validated_data$func_simplex
+  
+  # - initial colocboost object
+  keep_variables <- c(keep_variable_individual, keep_variable_sumstat)
+  overlapped_variables <- Reduce("intersect", keep_variables)
+  mean_variables <- mean(sapply(keep_variables, length))
+  min_variables <- min(sapply(keep_variables, length))
+  if (min_variables < 100) {
+    warning(
+      "Warning message about the number of variables.\n",
+      "The smallest number of variables across outcomes is ", min_variables, " < 100.",
+      " If this is what you expected, this is not a problem.",
+      " If this is not what you expected, please check input data."
+    )
+  }
+  if (length(overlapped_variables) <= 1) {
+    warning(
+      "Error: No or only 1 overlapping variables were found across all outcomes, colocalization cannot be performed. ",
+      "Please verify the variable names across different outcomes."
+    )
+    return(NULL)
+  } else if ((length(overlapped_variables) / mean_variables) < 0.1) {
+    warning(
+      "Warning message about the overlapped variables.\n",
+      "The average number of variables across outcomes is ", mean_variables,
+      ". But only ", length(overlapped_variables), " number of variables overlapped (<10%).\n",
+      " If this is what you expected, this is not a problem.",
+      " If this is not what you expected, please check if the variable name matched across outcomes."
+    )
+  }
+  cb_data <- colocboost_init_data(
+    X = X, Y = Y, dict_YX = yx_dict,
+    Z = Z, LD = LD, N_sumstat = N_sumstat, dict_sumstatLD = sumstatLD_dict,
+    Var_y = Var_y, SeBhat = SeBhat,
+    keep_variables = keep_variables,
+    focal_outcome_idx = focal_outcome_idx,
+    focal_outcome_variables = focal_outcome_variables,
+    overlap_variables = overlap_variables,
+    intercept = intercept,
+    standardize = standardize,
+    residual_correlation = residual_correlation
+  )
+
+  ##################  colocboost updates   ###################################
+  message("Starting gradient boosting algorithm.")
+  cb_obj <- colocboost_workhorse(cb_data,
+    M = M,
+    prioritize_jkstar = prioritize_jkstar,
+    tau = tau,
+    learning_rate_init = learning_rate_init,
+    learning_rate_decay = learning_rate_decay,
+    func_simplex = func_simplex,
+    lambda = lambda,
+    lambda_focal_outcome = lambda_focal_outcome,
+    stop_thresh = stop_thresh,
+    func_multi_test = func_multi_test,
+    stop_null = stop_null,
+    multi_test_max = multi_test_max,
+    multi_test_thresh = multi_test_thresh,
+    ash_prior = ash_prior,
+    p.adjust.methods = p.adjust.methods,
+    jk_equiv_corr = jk_equiv_corr,
+    jk_equiv_loglik = jk_equiv_loglik,
+    func_compare = func_compare,
+    coloc_thresh = coloc_thresh,
+    LD_free = LD_free,
+    dynamic_learning_rate = dynamic_learning_rate,
+    focal_outcome_idx = focal_outcome_idx,
+    outcome_names = outcome_names
+  )
+
+  # --- post-processing of the colocboost updates
+  message("Performing inference on colocalization events.")
+  cb_output <- colocboost_assemble(cb_obj,
+    coverage = coverage,
+    weight_fudge_factor = weight_fudge_factor,
+    check_null = check_null,
+    check_null_method = check_null_method,
+    check_null_max = check_null_max,
+    check_null_max_ucos = check_null_max_ucos,
+    dedup = dedup,
+    overlap = overlap,
+    n_purity = n_purity,
+    min_abs_corr = min_abs_corr,
+    sec_coverage_thresh = sec_coverage_thresh,
+    median_abs_corr = median_abs_corr,
+    min_cluster_corr = min_cluster_corr,
+    median_cos_abs_corr = median_cos_abs_corr,
+    weaker_effect = weaker_effect,
+    merge_cos = merge_cos,
+    tol = tol,
+    output_level = output_level
+  )
+  class(cb_output) <- "colocboost"
+  return(cb_output)
+}
+
+
+
+
+#' @title Validate and Process All Input Data for ColocBoost
+#'
+#' @description Internal function to validate and process both individual-level and summary-level input data
+#'
+#' @param X A list of genotype matrices for different outcomes, or a single matrix if all outcomes share the same genotypes.
+#' @param Y A list of vectors of outcomes or an N by L matrix if it is considered for the same X and multiple outcomes.
+#' @param sumstat A list of data.frames of summary statistics.
+#' @param LD A list of correlation matrices indicating the LD matrix for each genotype.
+#' @param dict_YX A L by 2 matrix of dictionary for X and Y if there exist subsets of outcomes corresponding to the same X matrix.
+#' @param dict_sumstatLD A L by 2 matrix of dictionary for sumstat and LD if there exist subsets of outcomes corresponding to the same sumstat.
+#' @param effect_est Matrix of variable regression coefficients (i.e. regression beta values) in the genomic region
+#' @param effect_se Matrix of standard errors associated with the beta values
+#' @param effect_n A scalar or a vector of sample sizes for estimating regression coefficients.
+#' @param overlap_variables If overlap_variables = TRUE, only perform colocalization in the overlapped region.
+#' @param M The maximum number of gradient boosting rounds for each outcome (default is 500).
+#' @param min_abs_corr Minimum absolute correlation allowed in a confidence set.
+#'
+#' @return A list containing:
+#'   \item{X}{Processed list of genotype matrices}
+#'   \item{Y}{Processed list of phenotype vectors}
+#'   \item{yx_dict}{Dictionary mapping Y to X}
+#'   \item{keep_variable_individual}{List of variable names for each X matrix}
+#'   \item{sumstat}{Processed list of summary statistics data.frames}
+#'   \item{LD}{Processed list of LD matrices}
+#'   \item{sumstatLD_dict}{Dictionary mapping sumstat to LD}
+#'   \item{keep_variable_sumstat}{List of variant names for each sumstat}
+#'   \item{Z}{List of z-scores for each outcome}
+#'   \item{N_sumstat}{List of sample sizes for each outcome}
+#'   \item{Var_y}{List of phenotype variances for each outcome}
+#'   \item{SeBhat}{List of standard errors for each outcome}
+#'   \item{M_updated}{Updated M value (may be changed if LD not provided)}
+#'   \item{min_abs_corr_updated}{Updated min_abs_corr value (may be changed if LD not provided)}
+#'   \item{jk_equiv_corr_updated}{Updated jk_equiv_corr value}
+#'   \item{jk_equiv_loglik_updated}{Updated jk_equiv_loglik value}
+#'   \item{func_simplex_updated}{Updated func_simplex value}
+#'
+#' @keywords internal
+colocboost_validate_input_data <- function(X = NULL, Y = NULL,
+                                           sumstat = NULL, LD = NULL,
+                                           dict_YX = NULL, dict_sumstatLD = NULL,
+                                           effect_est = NULL, effect_se = NULL, effect_n = NULL,
+                                           overlap_variables = FALSE,
+                                           M = 500, min_abs_corr = 0.5) {
+  
   # - check individual level data
   if (!is.null(X) & !is.null(Y)) {
     # --- check input
@@ -334,7 +509,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
   } else {
     yx_dict <- keep_variable_individual <- NULL
   }
-
+  
   # - check summary-level data
   if ((!is.null(sumstat)) | (!is.null(effect_est) & !is.null(effect_se))) {
     # --- check input of (effect_est, effect_se)
@@ -376,7 +551,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
         sumstat[[sum_iy]] <- sumstat_y
       }
     }
-
+    
     if (!is.null(sumstat)) {
       if (is.data.frame(sumstat)) {
         sumstat <- list(sumstat)
@@ -385,6 +560,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
         warning("Error: Input sumstat must be the list containing summary level data for all outcomes!")
         return(NULL)
       }
+      sumstat <- lapply(sumstat, as.data.frame)
       # --- check if variables names in summary data
       variable.tmp <- sapply(sumstat, function(xx) {
         if (("variant" %in% colnames(xx))) {
@@ -407,21 +583,32 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
       }
     }
     
+    # Remove NA for sumstat$variant columns - add on
+    sumstat <- lapply(seq_along(sumstat), function(i) {
+      xx <- sumstat[[i]]
+      if (anyNA(xx$variant)) {
+        warning(paste("Removed variant with NA from sumstat", i))
+        xx = as.data.frame(xx[!is.na(xx$variant), , drop = FALSE])
+      }
+      return(xx)
+    })
     # Remove duplicates and report: if duplicate variant in summary statistics
     sumstat <- lapply(seq_along(sumstat), function(i) {
       xx <- sumstat[[i]]
       if (anyDuplicated(xx$variant)) {
-        message(paste("Removed duplicate variants from sumstat", i))
-        xx[!duplicated(xx$variant), , drop = FALSE]
-      } else {
-        xx
+        warning(paste("Removed duplicate variants from sumstat", i))
+        xx = as.data.frame(xx[!duplicated(xx$variant), , drop = FALSE])
       }
+      return(xx)
     })
-    keep_variable_sumstat <- lapply(sumstat, function(xx) {
-      xx$variant
-    })
-
+    
     # --- check input of LD
+    M_updated <- M
+    min_abs_corr_updated <- min_abs_corr
+    jk_equiv_corr_updated <- 0.8
+    jk_equiv_loglik_updated <- 1
+    func_simplex_updated <- "LD_z2z"
+    
     if (is.null(LD)) {
       # if no LD input, set diagonal matrix to LD
       warning(
@@ -433,55 +620,84 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
       LD <- 1
       sumstatLD_dict <- rep(1, length(sumstat))
       # change some algorithm parameters
-      M <- 1 # one iteration
-      min_abs_corr <- 0 # remove purity checking
-      jk_equiv_corr <- 0
-      jk_equiv_loglik <- 0.1
-      func_simplex <- "only_z2z"
+      M_updated <- 1 # one iteration
+      min_abs_corr_updated <- 0 # remove purity checking
+      jk_equiv_corr_updated <- 0
+      jk_equiv_loglik_updated <- 0.1
+      func_simplex_updated <- "only_z2z"
+      
     } else {
-      if (is.data.frame(LD)) {
-        LD <- as.matrix(LD)
-      }
-      if (is.matrix(LD)) {
-        LD <- list(LD)
-      }
+      
+      if (is.data.frame(LD)) LD <- as.matrix(LD)
+      if (is.matrix(LD)) LD <- list(LD)
       # - check if NA in LD matrix
       num_na <- sapply(LD, sum)
       if (any(is.na(num_na))){
         warning("Error: Input LD must not contain missing values (NA).")
         return(NULL)
       }
+      # Create sumstat-LD mapping ===
       if (length(LD) == 1) {
         sumstatLD_dict <- rep(1, length(sumstat))
       } else if (length(LD) == length(sumstat)) {
-        sumstatLD_dict <- 1:length(sumstat)
+        sumstatLD_dict <- seq_along(sumstat)
       } else {
         if (is.null(dict_sumstatLD)) {
-          warning("Error: Please provide the dict_sumstatLD since you have multiple sumstat but only few LD!")
+          warning('Error: Please provide dict_sumstatLD: you have ', length(sumstat), 
+                  ' sumstats but only ', length(LD), ' LD matrices')
           return(NULL)
-        } else {
-          # - dict for sumstat to LD mapping
-          sumstatLD_dict <- rep(NA, length(sumstat))
-          for (i in 1:length(sumstat)) {
-            tmp <- unique(dict_sumstatLD[dict_sumstatLD[, 1] == i, 2])
-            if (length(tmp) == 0) {
-              warning(paste("Error: You don't provide matched LD for sumstat", i))
-              return(NULL)
-            } else if (length(tmp) != 1) {
-              warning(paste("Error: You provide multiple matched LD for sumstat", i))
-              return(NULL)
-            } else {
-              sumstatLD_dict[i] <- tmp
-            }
-          }
-          if (max(sumstatLD_dict) > length(LD)) {
-            warning("Error: You don't provide enough LD matrices!")
+        }
+        if (length(dict_sumstatLD) != length(sumstat)) {
+          warning('Error: dict_sumstatLD must have length ', length(sumstat))
+          return(NULL)
+        }
+        if (any(is.na(dict_sumstatLD))) {
+          warning('Error: dict_sumstatLD contains NA values')
+          return(NULL)
+        }
+        if (any(dict_sumstatLD < 1) || any(dict_sumstatLD > length(LD))) {
+          warning('Error: dict_sumstatLD values must be between 1 and ', length(LD))
+          return(NULL)
+        }
+        sumstatLD_dict <- as.integer(dict_sumstatLD)
+      }
+      
+      # === Filter variants for each sumstat ===
+      for (i in seq_along(sumstat)) {
+        # Get sumstat variants (adjust field name based on your data structure)
+        sumstat_variants <- sumstat[[i]]$variant
+        n_total <- length(sumstat_variants)
+        # Get LD variants
+        ld_idx <- sumstatLD_dict[i]
+        current_ld <- LD[[ld_idx]]
+        ld_variants <- rownames(current_ld)
+        if (is.null(ld_variants)) {
+          if (ncol(current_ld) != n_total){
+            warning('Error: LD matrix ', ld_idx, ' has no rownames. Please ensure all LD matrices have variant names as rownames.')
             return(NULL)
           }
         }
+        # Find common variants
+        common_variants <- intersect(sumstat_variants, ld_variants)
+        n_removed <- n_total - length(common_variants)
+        # Filter if needed
+        if (n_removed > 0) {
+          warning('Sumstat ', i, ': removing ', n_removed, ' out of ', n_total,
+                  ' variants since those variants are not in LD matrix ', ld_idx)
+          keep_idx <- match(common_variants, sumstat_variants)
+          if (length(keep_idx) == 0){
+            warning('Error: Sumstat data ', i, ' is empty after filtering. Returning NULL')
+            return(NULL)
+          }
+          # Filter all relevant fields - ADJUST THESE FIELD NAMES TO YOUR DATA
+          sumstat[[i]] <- sumstat[[i]][keep_idx, , drop = FALSE]
+        }
       }
     }
-
+    keep_variable_sumstat <- lapply(sumstat, function(xx) {
+      xx$variant
+    })
+    
     # - checking sample size existency
     n_exist <- sapply(sumstat, function(ss) {
       "n" %in% colnames(ss)
@@ -498,7 +714,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
         "Outcome ", paste(p_no, collapse = ", "), " in sumstat don't contain 'n'!"
       )
     }
-
+    
     Z <- N_sumstat <- Var_y <- SeBhat <- vector(mode = "list", length = length(sumstat))
     for (i.summstat in 1:length(sumstat)) {
       summstat_tmp <- sumstat[[i.summstat]]
@@ -528,7 +744,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
         warning(paste("summary statistic dataset", i.summstat, "contains NA values that are replaced with 0"))
         z[is.na(z)] <- 0
       }
-
+      
       # - check N
       if (!("n" %in% colVar)) {
         z <- z
@@ -541,7 +757,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
         }
         n <- median(n)
         N_sumstat[[i.summstat]] <- n
-
+        
         # When n is provided, compute the adjusted z-scores.
         z <- z * sqrt((n - 1) / (z^2 + n - 2))
         if ("var_y" %in% colVar) {
@@ -561,99 +777,31 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
     }
   } else {
     Z <- N_sumstat <- Var_y <- SeBhat <- sumstatLD_dict <- keep_variable_sumstat <- NULL
+    M_updated <- M
+    min_abs_corr_updated <- min_abs_corr
+    jk_equiv_corr_updated <- 0.8
+    jk_equiv_loglik_updated <- 1
+    func_simplex_updated <- "LD_z2z"
   }
-  # - initial colocboost object
-  keep_variables <- c(keep_variable_individual, keep_variable_sumstat)
-  overlapped_variables <- Reduce("intersect", keep_variables)
-  mean_variables <- mean(sapply(keep_variables, length))
-  min_variables <- min(sapply(keep_variables, length))
-  if (min_variables < 100) {
-    warning(
-      "Warning message about the number of variables.\n",
-      "The smallest number of variables across outcomes is ", min_variables, " < 100.",
-      " If this is what you expected, this is not a problem.",
-      " If this is not what you expected, please check input data."
-    )
-  }
-  if (length(overlapped_variables) <= 1) {
-    warning(
-      "Error: No or only 1 overlapping variables were found across all outcomes, colocalization cannot be performed. ",
-      "Please verify the variable names across different outcomes."
-    )
-    return(NULL)
-  } else if ((length(overlapped_variables) / mean_variables) < 0.1) {
-    warning(
-      "Warning message about the overlapped variables.\n",
-      "The average number of variables across outcomes is ", mean_variables,
-      ". But only ", length(overlapped_variables), " number of variables overlapped (<10%).\n",
-      " If this is what you expected, this is not a problem.",
-      " If this is not what you expected, please check if the variable name matched across outcomes."
-    )
-  }
-  cb_data <- colocboost_init_data(
-    X = X, Y = Y, dict_YX = yx_dict,
-    Z = Z, LD = LD, N_sumstat = N_sumstat, dict_sumstatLD = sumstatLD_dict,
-    Var_y = Var_y, SeBhat = SeBhat,
-    keep_variables = keep_variables,
-    focal_outcome_idx = focal_outcome_idx,
-    focal_outcome_variables = focal_outcome_variables,
-    overlap_variables = overlap_variables,
-    intercept = intercept,
-    standardize = standardize,
-    residual_correlation = residual_correlation
-  )
-
-  ##################  colocboost updates   ###################################
-  message("Starting gradient boosting algorithm.")
-  cb_obj <- colocboost_workhorse(cb_data,
-    M = M,
-    prioritize_jkstar = prioritize_jkstar,
-    tau = tau,
-    learning_rate_init = learning_rate_init,
-    learning_rate_decay = learning_rate_decay,
-    func_simplex = func_simplex,
-    lambda = lambda,
-    lambda_focal_outcome = lambda_focal_outcome,
-    stop_thresh = stop_thresh,
-    func_multi_test = func_multi_test,
-    stop_null = stop_null,
-    multi_test_max = multi_test_max,
-    multi_test_thresh = multi_test_thresh,
-    ash_prior = ash_prior,
-    p.adjust.methods = p.adjust.methods,
-    jk_equiv_corr = jk_equiv_corr,
-    jk_equiv_loglik = jk_equiv_loglik,
-    func_compare = func_compare,
-    coloc_thresh = coloc_thresh,
-    LD_free = LD_free,
-    dynamic_learning_rate = dynamic_learning_rate,
-    focal_outcome_idx = focal_outcome_idx,
-    outcome_names = outcome_names
-  )
-
-  # --- post-processing of the colocboost updates
-  message("Performing inference on colocalization events.")
-  cb_output <- colocboost_assemble(cb_obj,
-    coverage = coverage,
-    weight_fudge_factor = weight_fudge_factor,
-    check_null = check_null,
-    check_null_method = check_null_method,
-    check_null_max = check_null_max,
-    check_null_max_ucos = check_null_max_ucos,
-    dedup = dedup,
-    overlap = overlap,
-    n_purity = n_purity,
-    min_abs_corr = min_abs_corr,
-    sec_coverage_thresh = sec_coverage_thresh,
-    median_abs_corr = median_abs_corr,
-    min_cluster_corr = min_cluster_corr,
-    median_cos_abs_corr = median_cos_abs_corr,
-    weaker_effect = weaker_effect,
-    merge_cos = merge_cos,
-    tol = tol,
-    output_level = output_level
-  )
-  class(cb_output) <- "colocboost"
-  return(cb_output)
+  
+  return(list(
+    X = X,
+    Y = Y,
+    yx_dict = yx_dict,
+    keep_variable_individual = keep_variable_individual,
+    sumstat = sumstat,
+    LD = LD,
+    sumstatLD_dict = sumstatLD_dict,
+    keep_variable_sumstat = keep_variable_sumstat,
+    Z = Z,
+    N_sumstat = N_sumstat,
+    Var_y = Var_y,
+    SeBhat = SeBhat,
+    M = M_updated,
+    min_abs_corr = min_abs_corr_updated,
+    jk_equiv_corr = jk_equiv_corr_updated,
+    jk_equiv_loglik = jk_equiv_loglik_updated,
+    func_simplex = func_simplex_updated
+  ))
 }
 
