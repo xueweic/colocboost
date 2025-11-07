@@ -21,11 +21,12 @@ This vignette demonstrates how to use the bioinformatics pipeline for ColocBoost
 `colocboost_pipeline` with [link](https://github.com/StatFunGen/pecotmr/blob/main/R/colocboost_pipeline.R). 
 - See more details about input data preparation in `xqtl_protocol` with [link](https://statfungen.github.io/xqtl-protocol/code/mnm_analysis/mnm_methods/colocboost.html).
 
+Acknowledgements: Thanks to Kate (Kathryn) Lawrence (GitHub:@kal26) for her contributions to this vignette.
 
-Step 1: Loading individual-level and summary statistics using `load_multitask_regional_data` function from multiple cohorts or datasets
+# 1. Loading Data using `colocboost_analysis_pipeline` function
 
+This function harmonizes the input data and prepares it for colocalization analysis. 
 
-Step 2: Perform ColocBoost using `colocboost_analysis_pipeline` function
 
 In this section, we introduce how to load the regional data required for the ColocBoost analysis using the `load_multitask_regional_data` function. 
 This function loads mixed datasets for a specific region, including individual-level data (genotype, phenotype, covariate data), summary statistics 
@@ -38,7 +39,8 @@ Below are the input parameters for this function for loading individual-level da
 
 ## 1.1. Loading individual-level data from multiple cohorts
 
-inputs:
+Inputs:
+
 - **`region`**: String ; Genomic region of interest in the format of `chr:start-end` for the phenotype region you want to analyze. 
 - **`genotype_list`**: Character vector; Paths for PLINK bed files containing genotype data (do NOT include .bed suffix). 
 - **`phenotype_list`**: Character vector; Paths for phenotype file names.
@@ -55,7 +57,8 @@ inputs:
 - **`xvar_cutoff`**: Numeric; Minimum genotype variance cutoff. Default is 0.
 - **`imiss_cutoff`**: Numeric; Maximum individual missingness cutoff. Default is 0.
 
-outputs: 
+Outputs: 
+
 - **`region_data`**: List (with `individual_data`, `sumstat_data`); Output of the `load_multitask_regional_data` function. If only individual-level data is loaded, `sumstat_data` will be `NULL`.
 
 
@@ -84,7 +87,6 @@ xvar_cutoff = 0
 imiss_cutoff = 0.9
 
 # More advanced parameters see pecotmr::load_multitask_regional_data()
-
 region_data_individual <- load_multitask_regional_data(
     region = region,
     genotype_list = genotype_list,
@@ -109,7 +111,8 @@ region_data_individual <- load_multitask_regional_data(
 
 ## 1.2. Loading summary statistics from multiple cohorts or datasets
 
-inputs:
+Inputs:
+
 - **`sumstat_path_list`**: Character vector; Paths to the summary statistics.
 - **`column_file_path_list`**: Character vector; Paths to the column mapping files. See below for expected format.
 - **`LD_meta_file_path_list`**: Character vector; Paths to LD metadata files. See below for expected format.
@@ -120,7 +123,8 @@ inputs:
 - **`n_cases`**: Integer vector; Number of cases. Set a 0 if `n_samples` is passed explicitly. If unknown, set as 0 and include `n_cases` column in the column mapping file to retrieve from the sumstat file.
 - **`n_controls`**: Integer vector; Number of controls. Set a 0 if `n_samples` is passed explicitly. If unknown, set as 0 and include `n_controls` column in the column mapping file to retrieve from the sumstat file.
 
-outputs: 
+Outputs: 
+
 - **`region_data`**: List (with `individual_data`, `sumstat_data`); Output of the `load_multitask_regional_data` function. If only summary statistics data is loaded, `individual_data` will be `NULL`.
 
 **Summary statistics loading example**
@@ -143,7 +147,6 @@ n_controls = c(0, 40000)
 
 
 # More advanced parameters see pecotmr::load_multitask_regional_data()
-
 region_data_sumstat <- load_multitask_regional_data(
     sumstat_path_list = sumstat_path_list,
     column_file_path_list = column_file_path_list,
@@ -160,6 +163,7 @@ region_data_sumstat <- load_multitask_regional_data(
 
 
 **Expected format for column mapping file**
+
 The column mapping file is YAML (`.yml`) with key: value pairs mapping your input column names to the standardized names expected by the loader. 
 Required columns are `chrom`, `pos`, `A1`, and `A2`, and either `z` or `beta` and `sebeta`. 
 Either 'n_case' and 'n_control' or 'n_samples' can be passed as part of the column mapping, but will be overwritten by the n_cases and n_controls or n_samples parameterspassed explicitly.
@@ -204,7 +208,8 @@ The colocalization analysis can be run in any one of three modes, or in a combin
 - **`joint GWAS mode`**: Perform colocalization analysis in disease-agnostic mode on the individual-level and summary statistics data together.
 - **`separate GWAS mode`**: Perform colocalization analysis in disease-prioritized mode on the the individual-level data and each summary statistics dataset separately, treating each summary statistics dataset as the focal trait.
 
-inputs:
+Inputs:
+
 - **`region_data`**: List (with `individual_data`, `sumstat_data`); Output of the `load_multitask_regional_data` function.
 - **`focal_trait`**: String; For xQTL-only mode, the name of the trait to perform disease-prioritized ColocBoost, from `conditions_list_individual`. If not provided, xQTL-only mode will be run without disease-prioritized mode.
 - **`event_filters`**: List of character vectors; Patterns for filtering events based on context names. 
@@ -219,11 +224,13 @@ Example: for sQTL, `list(type_pattern = ".*clu_(\\d+_[+-?]).*", valid_pattern = 
 - **`joint_gwas`**: Logical; if TRUE, performs joint GWAS mode, mapping all individual-level and sumstat data together.Default is `FALSE`.
 - **`separate_gwas`**: Logical; if TRUE, runs separate GWAS mode, where each sumstat dataset is analyzed separately with all individual-level data, treating each sumstat as the focal trait in disease-prioritized mode. Default is `FALSE`.
 
-outputs:
+Outputs:
+
 - **`colocboost_results`**: List of colocboost objects (with `xqtl_coloc`, `joint_gwas`, `separate_gwas`); Output of the `colocboost_analysis_pipeline` function. If the mode is not run, the corresponding element will be `NULL`.
 
 ```{r, colocboost-analysis, eval = FALSE}
-# load in individual-level and sumstat data
+#### Please check the example code below ####
+# # load in individual-level and sumstat data
 region_data_combined <- load_multitask_regional_data(
     region = region,
     genotype_list = genotype_list,
