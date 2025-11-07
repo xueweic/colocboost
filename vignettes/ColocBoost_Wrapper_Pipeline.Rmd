@@ -63,7 +63,7 @@ outputs:
 
 The following example demonstrates how to set up input data with 3 phenotypes and 2 cohorts. The first cohort has 2 phenotypes and the second cohort has 1 phenotype. The first phenotype has 2 genes and the second phenotype has 1 gene.
 
-```{r, data-loader-individual}
+```{r, data-loader-individual, eval = FALSE}
 # Example of loading individual-level data
 region = "chr1:1000000-2000000"
 genotype_list = c("plink_cohort1.1", "plink_cohort1.2")
@@ -127,7 +127,7 @@ outputs:
 
 The following example demonstrates how to set up input data with 2 summary statistics and one LD reference.
 
-```{r, data-loader-sumstat}
+```{r, data-loader-sumstat, eval = FALSE}
 # Example of loading summary statistics
 sumstat_path_list = c("sumstat1.tsv.gz", "sumstat2.tsv.gz")
 column_file_path_list = c("column_mapping_sumstat1.yml", "column_mapping_sumstat2.yml")
@@ -222,7 +222,7 @@ Example: for sQTL, `list(type_pattern = ".*clu_(\\d+_[+-?]).*", valid_pattern = 
 outputs:
 - **`colocboost_results`**: List of colocboost objects (with `xqtl_coloc`, `joint_gwas`, `separate_gwas`); Output of the `colocboost_analysis_pipeline` function. If the mode is not run, the corresponding element will be `NULL`.
 
-```{r, colocboost-analysis}
+```{r, colocboost-analysis, eval = FALSE}
 # load in individual-level and sumstat data
 region_data_combined <- load_multitask_regional_data(
     region = region,
