@@ -426,14 +426,19 @@ get_max_profile <- function(cb_obj, check_null_max = 0.025,
 }
 
 
+# ### Function for check cs for each weight
+# w_cs <- function(weights, coverage = 0.95) {
+#   indices <- unlist(get_in_cos(weights, coverage = coverage))
+#   result <- rep(0, length(weights))
+#   result[indices] <- 1
+#   return(result)
+# }
+
 ### Function for check cs for each weight
 w_cs <- function(weights, coverage = 0.95) {
   indices <- unlist(get_in_cos(weights, coverage = coverage))
-  result <- rep(0, length(weights))
-  result[indices] <- 1
-  return(result)
+  return(indices)
 }
-
 
 #' Pure R implementation (fallback)
 #' @noRd
@@ -505,12 +510,14 @@ get_merge_ordered_with_indices <- function(vector_list) {
   # Step 4: Topological sort using Kahn's algorithm
   # Start with nodes that have no incoming edges
   queue <- all_elements[sapply(all_elements, function(elem) in_degree[[elem]] == 0)]
-  result <- character()
+  result <- list()
+  result_idx <- 1
   while (length(queue) > 0) {
     # Take the first element from the queue
     current <- queue[1]
     queue <- queue[-1]
-    result <- c(result, current)
+    result[[result_idx]] <- current  # List assignment is fast
+    result_idx <- result_idx + 1
     # Process all neighbors (elements that must come after current)
     neighbors <- graph[[current]]
     for (next_elem in neighbors) {
@@ -520,6 +527,7 @@ get_merge_ordered_with_indices <- function(vector_list) {
       }
     }
   }
+  result <- unlist(result)
   # Step 5: Check for cycles and use fallback if needed
   if (length(result) != n_elements) {
     # Different variable orders detected - use priority-based fallback
@@ -657,8 +665,6 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL) {
     })
     int_weight <- lapply(cos_weights, get_integrated_weight, weight_fudge_factor = cb_obj$cb_model_para$weight_fudge_factor)
     names(int_weight) <- names(cos_weights) <- colocset_names
-    vcp <- as.vector(1 - apply(1 - do.call(cbind, int_weight), 1, prod))
-    names(vcp) <- data_info$variables
 
     # - resummary results
     cos_re_idx <- lapply(int_weight, function(w) {
@@ -668,7 +674,55 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL) {
       data_info$variables[idx]
     })
     coloc_csets <- list("cos_index" = cos_re_idx, "cos_variables" = cos_re_var)
-
+    
+    # - recalculate purity
+    purity <- vector(mode = "list", length = length(cos_re_idx))
+    for (ee in 1:length(cos_re_idx)) {
+      coloc_t <- coloc_outcome_index[[ee]]
+      p_tmp <- c()
+      for (i3 in coloc_t) {
+        pos <- cos_re_idx[[ee]]
+        X_dict <- cb_obj$cb_data$dict[i3]
+        if (!is.null(cb_obj$cb_data$data[[X_dict]]$XtX)) {
+          pos <- match(pos, setdiff(1:cb_obj$cb_model_para$P, cb_obj$cb_data$data[[i3]]$variable_miss))
+        }
+        tmp <- matrix(get_purity(pos,
+                                 X = cb_obj$cb_data$data[[X_dict]]$X,
+                                 Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
+                                 N = cb_obj$cb_data$data[[i3]]$N, n = cb_obj$cb_model_para$n_purity
+        ), 1, 3)
+        p_tmp <- rbind(p_tmp, tmp)
+      }
+      purity[[ee]] <- matrix(apply(p_tmp, 2, max), 1, 3)
+    }
+    purity_all <- do.call(rbind, purity)
+    purity_all <- as.data.frame(purity_all)
+    colnames(purity_all) <- c("min_abs_corr", "mean_abs_corr", "median_abs_corr")
+    coloc_out$purity <- purity_all
+    if (is.null(cb_obj$cb_model_para$median_abs_corr)) {
+      is_pure <- which(purity_all[, 1] >= cb_obj$cb_model_para$min_abs_corr)
+    } else {
+      is_pure <- which(purity_all[, 1] >= cb_obj$cb_model_para$min_abs_corr | purity_all[, 3] >= cb_obj$cb_model_para$median_abs_corr)
+    }
+    if (length(is_pure)==0){
+      coloc_results <- NULL
+      vcp <- NULL
+      return(list("cos_results" = coloc_results, "vcp" = vcp))
+    } else if (length(is_pure)!=length(cos_re_idx)){
+      int_weight = int_weight[is_pure]
+      coloc_csets <- lapply(coloc_csets, function(cs) cs[is_pure])
+      coloc_outcomes <- lapply(coloc_outcomes, function(cs) cs[is_pure])
+      normalization_evidence <- normalization_evidence[is_pure]
+      npc <- npc[is_pure]
+      cos_min_npc_outcome <- cos_min_npc_outcome[is_pure]
+      cos_weights <- cos_weights[is_pure]
+      coloc_out$purity <- purity_all[is_pure,,drop = FALSE]
+      colocset_names <- colocset_names[is_pure]
+    }
+    vcp <- as.vector(1 - apply(1 - do.call(cbind, int_weight), 1, prod))
+    names(vcp) <- data_info$variables
+    
+    
     # - hits variables in each csets
     coloc_hits <- coloc_hits_variablenames <- coloc_hits_names <- c()
     for (i in 1:length(int_weight)) {
@@ -839,7 +893,7 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
   cb_model_para <- cb_obj$cb_model_para
 
   ## - obtain the order of variables based on the variables names if it has position information
-  if (!is.null(variables)) {
+  if (is.null(variables)) {
     ordered <- 1:length(cb_obj$cb_model_para$variables)
   } else {
     ordered <- match(variables, cb_obj$cb_model_para$variables)
@@ -933,7 +987,7 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
         # - hits variables in each csets
         cs_hits <- sapply(1:length(specific_w), function(jj) {
           inw <- specific_w[[jj]]
-          sample(which(inw == max(inw)), 1)
+          which(inw == max(inw))[1]
         })
         cs_hits_variablenames <- sapply(cs_hits, function(ch) variables[ch])
         specific_cs_hits <- data.frame("top_index" = cs_hits, "top_variables" = cs_hits_variablenames) # save

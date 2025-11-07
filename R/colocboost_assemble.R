@@ -58,7 +58,7 @@ colocboost_assemble <- function(cb_obj,
     )
     # - save model and all coloc and single information for diagnostic
     if (output_level != 1) {
-      tmp <- get_full_output(cb_obj = cb_obj, past_out = NULL, variables = NULL)
+      tmp <- get_full_output(cb_obj = cb_obj, past_out = NULL, variables = data_info$variables)
       if (output_level == 2) {
         cb_output <- c(cb_output, list("ucos_details" = tmp$ucos_detials))
         cb_output <- cb_output[c("cos_summary", "vcp", "cos_details", "data_info", "model_info", "ucos_details")]
@@ -79,6 +79,7 @@ colocboost_assemble <- function(cb_obj,
     } else if (cb_obj$cb_model_para$model_used == "one_causal"){
       # fixme later
       check_null_max <- check_null_max * check_null
+      check_null_max_ucos <- check_null_max_ucos * check_null
     }
     cb_obj <- get_max_profile(cb_obj, check_null_max = check_null_max, 
                               check_null_max_ucos = check_null_max_ucos, 
@@ -209,6 +210,9 @@ colocboost_assemble <- function(cb_obj,
     # - colocalization results
     cb_obj$cb_model_para$weight_fudge_factor <- weight_fudge_factor
     cb_obj$cb_model_para$coverage <- coverage
+    cb_obj$cb_model_para$min_abs_corr <- min_abs_corr
+    cb_obj$cb_model_para$median_abs_corr <- median_abs_corr
+    cb_obj$cb_model_para$n_purity <- n_purity
     cos_results <- get_cos_details(cb_obj, coloc_out = past_out$cos$cos, data_info = data_info)
     cb_output <- list(
       "vcp" = cos_results$vcp,

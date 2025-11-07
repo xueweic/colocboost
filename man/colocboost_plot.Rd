@@ -18,8 +18,9 @@ colocboost_plot(
   plot_focal_cos_outcome_only = FALSE,
   points_color = "grey80",
   cos_color = NULL,
-  add_vertical = FALSE,
-  add_vertical_idx = NULL,
+  add_highlight = FALSE,
+  add_highlight_idx = NULL,
+  add_highlight_style = "vertical_lines",
   outcome_names = NULL,
   plot_cols = 2,
   variant_coord = FALSE,
@@ -62,9 +63,11 @@ colocboost_plot(
 
 \item{cos_color}{Optional custom colors for CoS.}
 
-\item{add_vertical}{Logical, if TRUE adds vertical lines at specified positions, default is FALSE}
+\item{add_highlight}{Logical, if TRUE adds vertical lines at specified positions, default is FALSE}
 
-\item{add_vertical_idx}{Optional indices for vertical lines.}
+\item{add_highlight_idx}{Optional indices for add_highlight variables.}
+
+\item{add_highlight_style}{Optional style of add_highlight variables, default is "vertical_lines", other choice is "star" - red star.}
 
 \item{outcome_names}{Optional vector of outcomes names for the subtitle of each figure. \code{outcome_names=NULL} for the outcome name shown in \code{data_info}.}
 

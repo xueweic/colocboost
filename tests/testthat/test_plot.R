@@ -176,7 +176,9 @@ test_that("colocboost_plot handles layout options", {
 test_that("colocboost_plot handles additional visualization options", {
   
   # Test with vertical line options
-  expect_error(suppressWarnings(colocboost_plot(cb_res, add_vertical = TRUE, add_vertical_idx = c(5, 10))), NA)
+  expect_error(suppressWarnings(colocboost_plot(cb_res, add_highlight = TRUE, add_highlight_idx = c(5, 10))), NA)
+  expect_error(suppressWarnings(colocboost_plot(cb_res, add_highlight = TRUE, add_highlight_idx = c(5, 10), add_highlight_style = "vertical_lines")), NA)
+  expect_error(suppressWarnings(colocboost_plot(cb_res, add_highlight = TRUE, add_highlight_idx = c(5, 10), add_highlight_style = "star")), NA)
   
   # Test with show_top_variables option
   expect_error(suppressWarnings(colocboost_plot(cb_res, show_top_variables = TRUE)), NA)

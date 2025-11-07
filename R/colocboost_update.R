@@ -74,7 +74,8 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data) {
     # weights <- adj_dep * ld_feature / scaling_factor * exp_abs_cor / sum(exp_abs_cor)
     weights <- adj_dep * obj_ld * exp_abs_cor / sum(exp_abs_cor)
     weights <- weights / sum(weights)
-    cb_model[[i]]$weights_path <- rbind(cb_model[[i]]$weights_path, as.vector(weights))
+    # cb_model[[i]]$weights_path <- rbind(cb_model[[i]]$weights_path, as.vector(weights))
+    cb_model[[i]]$weights_path <- c(cb_model[[i]]$weights_path, list(as.vector(weights)))
     ########## END: MAIN CALCULATION ###################
 
 

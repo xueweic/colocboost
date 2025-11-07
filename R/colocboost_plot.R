@@ -14,8 +14,9 @@
 #' @param plot_focal_cos_outcome_only Logical, if TRUE only plots colocalization including at least on colocalized outcome with focal outcome, default is FALSE.
 #' @param points_color Background color for non-colocalized variables, default is "grey80".
 #' @param cos_color Optional custom colors for CoS.
-#' @param add_vertical Logical, if TRUE adds vertical lines at specified positions, default is FALSE
-#' @param add_vertical_idx Optional indices for vertical lines.
+#' @param add_highlight Logical, if TRUE adds vertical lines at specified positions, default is FALSE
+#' @param add_highlight_style Optional style of add_highlight variables, default is "vertical_lines", other choice is "star" - red star.
+#' @param add_highlight_idx Optional indices for add_highlight variables.
 #' @param outcome_names Optional vector of outcomes names for the subtitle of each figure. \code{outcome_names=NULL} for the outcome name shown in \code{data_info}.
 #' @param plot_cols Number of columns in the plot grid, default is 2. If you have many colocalization. please consider increasing this.
 #' @param variant_coord Logical, if TRUE uses variant coordinates on x-axis, default is FALSE. This is required the variable names including position information.
@@ -78,8 +79,9 @@ colocboost_plot <- function(cb_output, y = "log10p",
                             plot_focal_cos_outcome_only = FALSE,
                             points_color = "grey80",
                             cos_color = NULL,
-                            add_vertical = FALSE,
-                            add_vertical_idx = NULL,
+                            add_highlight = FALSE,
+                            add_highlight_idx = NULL,
+                            add_highlight_style = "vertical_lines",
                             outcome_names = NULL,
                             plot_cols = 2,
                             variant_coord = FALSE,
@@ -102,33 +104,34 @@ colocboost_plot <- function(cb_output, y = "log10p",
   if (!inherits(cb_output, "colocboost")) {
     stop("Input of colocboost_plot must be a 'colocboost' object!")
   }
-
+  
   # get cb_plot_input data from colocboost results
   cb_plot_input <- get_input_plot(cb_output,
-    plot_cos_idx = plot_cos_idx,
-    variant_coord = variant_coord,
-    outcome_names = outcome_names,
-    plot_focal_only = plot_focal_only,
-    plot_focal_cos_outcome_only = plot_focal_cos_outcome_only,
-    show_cos_to_uncoloc = show_cos_to_uncoloc,
-    show_cos_to_uncoloc_idx = show_cos_to_uncoloc_idx,
-    show_cos_to_uncoloc_outcome = show_cos_to_uncoloc_outcome,
-    plot_ucos = plot_ucos, plot_ucos_idx = plot_ucos_idx
+                                  plot_cos_idx = plot_cos_idx,
+                                  variant_coord = variant_coord,
+                                  outcome_names = outcome_names,
+                                  plot_focal_only = plot_focal_only,
+                                  plot_focal_cos_outcome_only = plot_focal_cos_outcome_only,
+                                  show_cos_to_uncoloc = show_cos_to_uncoloc,
+                                  show_cos_to_uncoloc_idx = show_cos_to_uncoloc_idx,
+                                  show_cos_to_uncoloc_outcome = show_cos_to_uncoloc_outcome,
+                                  plot_ucos = plot_ucos, plot_ucos_idx = plot_ucos_idx
   )
   # get initial set up of plot
   cb_plot_init <- plot_initial(cb_plot_input,
-    y = y, points_color = points_color, cos_color = cos_color,
-    ylim_each = ylim_each, title_specific = title_specific,
-    outcome_legend_pos = outcome_legend_pos, outcome_legend_size = outcome_legend_size,
-    cos_legend_pos = cos_legend_pos, plot_ucos = plot_ucos,
-    show_variable = show_variable, lab_style = lab_style, axis_style = axis_style,
-    title_style = title_style, ...
+                               y = y, points_color = points_color, cos_color = cos_color,
+                               ylim_each = ylim_each, title_specific = title_specific,
+                               outcome_legend_pos = outcome_legend_pos, outcome_legend_size = outcome_legend_size,
+                               cos_legend_pos = cos_legend_pos, plot_ucos = plot_ucos,
+                               show_variable = show_variable, lab_style = lab_style, axis_style = axis_style,
+                               title_style = title_style, ...
   )
-
+  
   colocboost_plot_basic <- function(cb_plot_input, cb_plot_init,
                                     outcome_idx = NULL, plot_all_outcome = FALSE,
                                     grange = NULL, plot_cols = 2,
-                                    add_vertical = FALSE, add_vertical_idx = NULL,
+                                    add_highlight = FALSE, add_highlight_idx = NULL,
+                                    add_highlight_style = "vertical_lines",
                                     show_top_variables = TRUE,
                                     ...) {
     args <- list(...)
@@ -147,12 +150,12 @@ colocboost_plot <- function(cb_output, y = "log10p",
     args$font.lab <- cb_plot_init$lab_face
     # - change position
     cb_plot_init$outcome_legend_pos <- switch(cb_plot_init$outcome_legend_pos,
-      "right" = 4,
-      "left" = 2,
-      "top" = 3,
-      "bottom" = 1
+                                              "right" = 4,
+                                              "left" = 2,
+                                              "top" = 3,
+                                              "bottom" = 1
     )
-
+    
     # - begin plotting
     coloc_cos <- cb_plot_input$cos
     outcomes <- cb_plot_input$outcomes
@@ -229,12 +232,7 @@ colocboost_plot <- function(cb_output, y = "log10p",
               cex = cb_plot_init$outcome_legend_size, font = 1
         )
       }
-      if (add_vertical) {
-        for (iii in 1:length(add_vertical_idx)) {
-          abline(v = add_vertical_idx[iii], col = "#E31A1C", lwd = 1.5, lty = "dashed")
-        }
-      }
-
+      
       # mark variables in CoS to colocalized outcomes
       if (!is.null(coloc_cos)) {
         n.coloc <- length(coloc_cos)
@@ -242,7 +240,7 @@ colocboost_plot <- function(cb_output, y = "log10p",
         if (length(y)==1){coloc_index = lapply(coloc_index, function(i) 1 )}
         legend_text <- list(col = vector())
         legend_text$col <- head(cb_plot_init$col, n.coloc)
-
+        
         # check which coloc set for this outcome
         p.coloc <- sapply(coloc_index, function(idx) sum(idx == iy) != 0)
         p.coloc <- which(p.coloc)
@@ -261,7 +259,7 @@ colocboost_plot <- function(cb_output, y = "log10p",
             points(x_hits, y_hits, pch = 21, bg = legend_text$col[i.cs], col = "#E31A1C", cex = 3, lwd = 3)
           }
         }
-
+        
         # mark variables in CoS to uncolocalized outcomes
         uncoloc <- cb_plot_input$uncoloc
         if (!is.null(uncoloc)) {
@@ -276,8 +274,8 @@ colocboost_plot <- function(cb_output, y = "log10p",
               x0 <- intersect(args$x, cs)
               y1 <- args$y[match(x0, args$x)]
               points(x0, y1,
-                pch = 4, col = adjustcolor(legend_text$col[uncoloc$cos_idx_to_uncoloc[i.uncoloc]], alpha.f = 0.4),
-                cex = 1.5, lwd = 1.5
+                     pch = 4, col = adjustcolor(legend_text$col[uncoloc$cos_idx_to_uncoloc[i.uncoloc]], alpha.f = 0.4),
+                     cex = 1.5, lwd = 1.5
               )
               shape_col <- c(shape_col, adjustcolor(legend_text$col[uncoloc$cos_idx_to_uncoloc[i.uncoloc]], alpha.f = 1))
               texts_col <- c(texts_col, adjustcolor(legend_text$col[uncoloc$cos_idx_to_uncoloc[i.uncoloc]], alpha.f = 0.8))
@@ -294,35 +292,51 @@ colocboost_plot <- function(cb_output, y = "log10p",
           if (length(texts) == 0) {
             next
           }
-
+          
           # Get current plot area coordinates
           usr <- par("usr")
           x_pos <- usr[1] + cb_plot_init$cos_legend_pos[1] * (usr[2] - usr[1])  # 5% from left edge
           y_pos <- usr[3] + cb_plot_init$cos_legend_pos[2] * (usr[4] - usr[3])  # 50% from bottom edge
           legend(x = x_pos, y = y_pos, texts,
-            bty = "n", col = shape_col, text.col = texts_col,
-            cex = 1.5, pt.cex = 1.5, pch = 4, x.intersp = cos_legend_pos[3], y.intersp = cos_legend_pos[4]
+                 bty = "n", col = shape_col, text.col = texts_col,
+                 cex = 1.5, pt.cex = 1.5, pch = 4, x.intersp = cos_legend_pos[3], y.intersp = cos_legend_pos[4]
           )
+        }
+      }
+      if (add_highlight) {
+        for (iii in 1:length(add_highlight_idx)) {
+          if ( !(add_highlight_style %in% c("vertical_lines", "star")) ){
+            message("add_highlight_style is not 'vertical_lines' and 'star', defaulting to 'vertical_lines'")
+            add_highlight_style = "vertical_lines"
+          }
+          if (add_highlight_style == "vertical_lines"){
+            abline(v = add_highlight_idx[iii], col = "#E31A1C", lwd = 1.5, lty = "dashed")
+          } else if (add_highlight_style == "star") {
+            points(add_highlight_idx[iii], args$y[match(add_highlight_idx[iii],args$x)], 
+                   pch = 8, col = "#E31A1C", lwd = 2, lty = "dashed", cex = 2.5)
+          } 
+          
         }
       }
     }
     if (!is.null(cb_plot_init$title)) {
       mtext(cb_plot_init$title,
-        side = 3, line = 0, outer = TRUE,
-        cex = cb_plot_init$title_size, font = cb_plot_init$title_face
+            side = 3, line = 0, outer = TRUE,
+            cex = cb_plot_init$title_size, font = cb_plot_init$title_face
       )
     }
     return(invisible())
   }
-
+  
   colocboost_plot_basic(cb_plot_input, cb_plot_init,
-    grange = grange,
-    outcome_idx = outcome_idx, 
-    plot_all_outcome = plot_all_outcome,
-    plot_cols = plot_cols,
-    add_vertical = add_vertical, add_vertical_idx = add_vertical_idx,
-    show_top_variables = show_top_variables,
-    ...
+                        grange = grange,
+                        outcome_idx = outcome_idx, 
+                        plot_all_outcome = plot_all_outcome,
+                        plot_cols = plot_cols,
+                        add_highlight = add_highlight, add_highlight_idx = add_highlight_idx,
+                        add_highlight_style = add_highlight_style,
+                        show_top_variables = show_top_variables,
+                        ...
   )
 }
 
@@ -339,7 +353,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
                            show_cos_to_uncoloc_outcome = NULL,
                            plot_ucos = FALSE,
                            plot_ucos_idx = NULL) {
-
+  
   # check ucos exists
   if (plot_ucos && !"ucos_details" %in% names(cb_output)) {
     warning(
@@ -354,7 +368,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
     cb_output$data_info$outcome_info$outcome_names <- outcome_names
     names(cb_output$data_info$z) <- outcome_names
   }
-
+  
   # extract results from colocboost
   analysis_outcome <- cb_output$data_info$outcome_info$outcome_names
   focal_outcome_idx <- which(cb_output$data_info$outcome_info$is_focal)
@@ -371,7 +385,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
   Z <- cb_output$data_info$z
   coef <- cb_output$data_info$coef
   vcp <- list(as.numeric(cb_output$vcp))
-
+  
   # if finemapping
   if (cb_output$data_info$n_outcomes == 1) {
     cb_output$cos_details$cos$cos_variables <- cb_output$ucos_details$ucos$ucos_variables
@@ -406,7 +420,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
       }
     })
     ncos <- length(cb_output$cos_details$cos$cos_index)
-
+    
     select_cs <- 1:ncos
     if (!is.null(plot_cos_idx)) {
       if (length(setdiff(plot_cos_idx, c(1:ncos))) != 0) {
@@ -477,7 +491,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
     "coloc_index" = coloc_index,
     "select_cos" = select_cs
   )
-
+  
   # check plot uncolocalizaed confidence sets from ucos_details
   if (plot_ucos & cb_output$data_info$n_outcomes > 1){
     ucos_details <- cb_output$ucos_details
@@ -528,7 +542,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
       plot_input$ucos_cos_int_weights <- combined
     }
   }
-
+  
   # check if plot cos to uncolocalized outcome
   # use the updated coloc_cos and related components from plot_input if available
   coloc_cos <- plot_input$cos
@@ -613,7 +627,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
     )
     plot_input$uncoloc <- uncoloc
   }
-
+  
   class(plot_input) <- "colocboost"
   return(plot_input)
 }
@@ -634,11 +648,11 @@ plot_initial <- function(cb_plot_input, y = "log10p",
                          ...) {
   args <- list(...)
   if (!exists("pch", args)) args$pch <- 16
-
+  
   # - set background point color and cos color pools
   args$bg <- points_color
   if (is.null(cos_color)) {
-
+    
     # cos_color <- c(
     #   "#377EB8", "#E69F00", "#33A02C", "#984EA3", "#F46D43",
     #   "#A65628", "#1F4E79", "#B2182B", "#D73027", "#F781BF",
@@ -688,12 +702,12 @@ plot_initial <- function(cb_plot_input, y = "log10p",
       "#D5D8DC", "#BDC3C7", "#95A5A6", "#7F8C8D", "#17202A",
       "#808080", "#A9A9A9", "#C0C0C0", "#696969", "#778899"
     )
-
-
+    
+    
     # cos_color <- c("#1F70A9", "#33A02C", "#CAB2D6", "#EA7827")
   }
   args$col <- cos_color[cb_plot_input$select_cos]
-
+  
   # - set data and x-lab and y-lab
   if (y == "log10p") {
     plot_data <- lapply(cb_plot_input$Zscores, function(z) {
@@ -729,12 +743,12 @@ plot_initial <- function(cb_plot_input, y = "log10p",
   if (!exists("ylab", args)) args$ylab <- ylab
   args$lab_size <- as.numeric(lab_style[1])
   args$lab_face <- lab_style[2]
-
+  
   # - set title format
   args$title <- title_specific
   args$title_size <- as.numeric(title_style[1])
   args$title_face <- title_style[2]
-
+  
   # - set x-axis and y-axis
   args$x <- cb_plot_input$x$pos
   args$y <- plot_data
@@ -744,7 +758,7 @@ plot_initial <- function(cb_plot_input, y = "log10p",
   }
   args$axis_size <- as.numeric(axis_style[1])
   args$axis_face <- axis_style[2]
-
+  
   # - set ylim for each subfigure
   if (exists("ylim", args)) {
     ymax <- rep(args$ylim[2], length(args$y))
@@ -776,7 +790,7 @@ plot_initial <- function(cb_plot_input, y = "log10p",
   }
   args$ymax <- ymax
   args$ymin <- ymin
-
+  
   # - set legend text position and format
   args$outcome_legend_pos <- outcome_legend_pos
   args$outcome_legend_size <- outcome_legend_size
@@ -788,7 +802,7 @@ plot_initial <- function(cb_plot_input, y = "log10p",
     args$outcome_legend_angle <- 0
   }
   args$cos_legend_pos <- cos_legend_pos
-
+  
   return(args)
 }
 

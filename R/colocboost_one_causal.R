@@ -79,9 +79,8 @@ colocboost_one_iteration <- function(cb_model, cb_model_para, cb_data) {
   cb_model_para[rm_elements] <- NULL
   for (i in 1:length(cb_model)) {
     cb_model[[i]]$obj_path <- as.numeric(unlist(cb_model[[i]]$obj_path[-1]))
-  }
-  for (i in 1:length(cb_model)) {
     cb_model[[i]]$obj_single <- as.numeric(unlist(cb_model[[i]]$obj_single[-1]))
+    cb_model[[i]]$weights_path <- do.call(rbind, cb_model[[i]]$weights_path)
   }
 
   cb_obj <- list("cb_data" = cb_data, "cb_model" = cb_model, "cb_model_para" = cb_model_para)
@@ -238,7 +237,7 @@ colocboost_diagLD <- function(cb_model, cb_model_para, cb_data) {
         cb_model_para, 
         cb_data
       )
-      weights <- rbind(weights, cb_model_tmp[[iy]]$weights_path)
+      weights <- rbind(weights, unlist(cb_model_tmp[[iy]]$weights_path))
     }
     ###### overlap weights
     overlap_pair <- check_pair_overlap(weights, coverage = 0.95)
@@ -307,11 +306,10 @@ colocboost_diagLD <- function(cb_model, cb_model_para, cb_data) {
   cb_model_para[rm_elements] <- NULL
   for (i in 1:length(cb_model)) {
     cb_model[[i]]$obj_path <- as.numeric(unlist(cb_model[[i]]$obj_path[-1]))
-  }
-  for (i in 1:length(cb_model)) {
     cb_model[[i]]$obj_single <- as.numeric(unlist(cb_model[[i]]$obj_single[-1]))
+    cb_model[[i]]$weights_path <- do.call(rbind, cb_model[[i]]$weights_path)
   }
-
+  
   cb_obj <- list("cb_data" = cb_data, "cb_model" = cb_model, "cb_model_para" = cb_model_para)
   class(cb_obj) <- "colocboost"
   return(cb_obj)

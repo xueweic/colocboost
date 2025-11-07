@@ -66,15 +66,15 @@ boost_check_update_jk_nofocal <- function(cb_model, cb_model_para, cb_data) {
 
     # -- define jk and jk_each
     cor_vals_each <- do.call(cbind, lapply(model_update, function(cc) cc$correlation))
-    abs_cor_vals_each <- sweep(abs(cor_vals_each), 2, adj_dep, `*`)
+    # abs_cor_vals_each <- sweep(abs(cor_vals_each), 2, adj_dep, `*`)
+    abs_cor_vals_each <- abs(cor_vals_each) * rep(adj_dep, each = nrow(cor_vals_each))
     abs_cor_vals <- rowSums(abs_cor_vals_each)
 
-    jk <- which(abs_cor_vals == max(abs_cor_vals))
-    jk <- ifelse(length(jk) == 1, jk, sample(jk, 1))
-    jk_each <- apply(abs_cor_vals_each, 2, function(temp) {
-      jk_temp <- which(temp == max(temp))
-      return(ifelse(length(jk_temp) == 1, jk_temp, sample(jk_temp, 1)))
-    })
+    # jk <- which(abs_cor_vals == max(abs_cor_vals))
+    # jk <- ifelse(length(jk) == 1, jk, sample(jk, 1))
+    # jk_each <- apply(abs_cor_vals_each, 2, which.max)
+    jk <- which.max(abs_cor_vals)
+    jk_each <- sapply(1:ncol(abs_cor_vals_each), function(j) which.max(abs_cor_vals_each[, j]))
     update_jk[c(1, pos.update + 1)] <- c(jk, jk_each)
 
     
@@ -142,7 +142,7 @@ boost_check_update_jk_nofocal <- function(cb_model, cb_model_para, cb_data) {
         update_status[pos.update[true_update]] <- 1
         # - re-define jk_star
         abs_cor_vals_redefine <- rowSums(abs_cor_vals_each[, true_update, drop = FALSE])
-        jk_redefine <- which(abs_cor_vals_redefine == max(abs_cor_vals_redefine))
+        jk_redefine <- which.max(abs_cor_vals_redefine == max(abs_cor_vals_redefine))
         jk_redefine <- ifelse(length(jk_redefine) == 1, jk_redefine, sample(jk_redefine, 1))
         real_update_jk[pos.update[true_update]] <- jk_redefine
       } else {
@@ -351,11 +351,10 @@ boost_check_update_jk_focal <- function(cb_model, cb_model_para, cb_data,
 
     # -- define jk and jk_each
     cor_vals_each <- do.call(cbind, lapply(model_update, function(cc) as.vector(cc$correlation)))
-    abs_cor_vals_each <- sweep(abs(cor_vals_each), 2, adj_dep, `*`)
-    jk_each <- apply(abs_cor_vals_each, 2, function(temp) {
-      jk_temp <- which(temp == max(temp))
-      return(ifelse(length(jk_temp) == 1, jk_temp, sample(jk_temp, 1)))
-    })
+    # abs_cor_vals_each <- sweep(abs(cor_vals_each), 2, adj_dep, `*`)
+    abs_cor_vals_each <- abs(cor_vals_each) * rep(adj_dep, each = nrow(cor_vals_each))
+    # jk_each <- apply(abs_cor_vals_each, 2, which.max)
+    jk_each <- sapply(1:ncol(abs_cor_vals_each), function(j) which.max(abs_cor_vals_each[, j]))
     pp_focal <- which(pos.update == focal_outcome_idx)
     jk_focal <- jk_each[pp_focal]
 
@@ -503,8 +502,8 @@ get_LD_jk1_jk2 <- function(jk1, jk2,
     if (length(XtX) == 1){
       LD_temp <- 0
     } else {
-      jk1.remain <- which(remain_jk == jk1)
-      jk2.remain <- which(remain_jk == jk2)
+      jk1.remain <- match(jk1, remain_jk)
+      jk2.remain <- match(jk2, remain_jk)
       LD_temp <- XtX[jk1.remain, jk2.remain]
     }
   }
@@ -545,29 +544,59 @@ check_pair_jkeach <- function(jk_each,
                               cb_data, X_dict,
                               jk_equiv_corr = 0.8,
                               jk_equiv_loglik = 0.001) {
+
+
+  #' @importFrom stats cor
+  get_LD_jk_each <- function(jk_each,
+                             X = NULL, XtX = NULL, N = NULL,
+                             remain_jk = NULL) {
+    if (!is.null(X)) {
+      LD_temp <- suppressWarnings({
+        get_cormat(X[, jk_each])
+      })
+      LD_temp[which(is.na(LD_temp))] <- 0
+      # LD_temp <- LD_temp[1, 2]
+    } else if (!is.null(XtX)) {
+      if (length(XtX) == 1){
+        LD_temp <- matrix(0, length(jk_each), length(jk_each))
+      } else {
+        jk.remain <- match(jk_each, remain_jk)
+        LD_temp <- XtX[jk.remain, jk.remain]
+        LD_temp[which(is.na(LD_temp))] <- 0
+      }
+    }
+    return(LD_temp)
+  }
+
+  detect_func <- function(idx, LD_all, jk_i, jk_j, i, j){
+    change_log_jk_i <- model_update[[idx]]$change_loglike[jk_i]
+    change_log_jk_j <- model_update[[idx]]$change_loglike[jk_j]
+    change_each <- abs(change_log_jk_i - change_log_jk_j)
+    LD_temp <- LD_all[[idx]][i, j]
+    return((change_each <= jk_equiv_loglik) & (abs(LD_temp) >= jk_equiv_corr))
+  }
+
   data_update <- cb_data$data[pos.update]
+  LD_all <- lapply(1:length(jk_each), function(idx){
+    get_LD_jk_each(jk_each,
+                   X = cb_data$data[[X_dict[idx]]]$X,
+                   XtX = cb_data$data[[X_dict[idx]]]$XtX,
+                   N = data_update[[idx]]$N,
+                   remain_jk = setdiff(1:length(model_update[[idx]]$res), data_update[[idx]]$variable_miss)
+    )
+  })
+
   # -- check if jk_i ~ jk_j
   change_each_pair <- matrix(FALSE, nrow = length(jk_each), ncol = length(jk_each))
   for (i in 1:length(jk_each)) {
-    
     jk_i <- jk_each[i]
-    change_log_jk_i <- model_update[[i]]$change_loglike[jk_i]
-    for (j in 1:length(jk_each)) {
+    for (j in i:length(jk_each)) {
       if (j != i) {
         jk_j <- jk_each[j]
-
-        if (!(jk_i %in% data_update[[i]]$variable_miss) & !(jk_j %in% data_update[[i]]$variable_miss)) {
-          change_log_jk_j <- model_update[[i]]$change_loglike[jk_j]
-          change_each <- abs(change_log_jk_i - change_log_jk_j)
-          LD_temp <- get_LD_jk1_jk2(jk_i, jk_j,
-            X = cb_data$data[[X_dict[i]]]$X,
-            XtX = cb_data$data[[X_dict[i]]]$XtX,
-            N = data_update[[i]]$N,
-            remain_jk = setdiff(1:length(model_update[[i]]$res), data_update[[i]]$variable_miss)
-          )
-          change_each_pair[i, j] <- (change_each <= jk_equiv_loglik) & (abs(LD_temp) >= jk_equiv_corr)
-        } else {
-          change_each_pair[i, j] <- FALSE
+        change_each_pair[i, j] <- detect_func(idx = i, LD_all, jk_i, jk_j, i, j)
+        # if jk_i and jk_j are equivalent on dataset i, then we don't need to check dataset j
+        if ( !change_each_pair[i, j] ){
+          change_each_pair[j, i] <- detect_func(idx = j, LD_all, jk_i, jk_j, i, j)
         }
       } else {
         change_each_pair[i, j] <- FALSE
