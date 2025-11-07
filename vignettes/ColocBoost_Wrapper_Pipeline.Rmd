@@ -21,6 +21,7 @@ This vignette demonstrates how to use the bioinformatics pipeline for ColocBoost
 `colocboost_pipeline` with [link](https://github.com/StatFunGen/pecotmr/blob/main/R/colocboost_pipeline.R). 
 - See more details about input data preparation in `xqtl_protocol` with [link](https://statfungen.github.io/xqtl-protocol/code/mnm_analysis/mnm_methods/colocboost.html).
 
+Acknowledgements: Thanks to Kate (Kathryn) Lawrence (GitHub:@kal26) for her contributions to this vignette.
 
 # 1. Loading Data using `colocboost_analysis_pipeline` function
 
