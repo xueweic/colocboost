@@ -646,20 +646,26 @@ colocboost_validate_input_data <- function(X = NULL, Y = NULL,
           warning('Error: Please provide dict_sumstatLD: you have ', length(sumstat), 
                   ' sumstats but only ', length(LD), ' LD matrices')
           return(NULL)
+        } else {
+          # - dict for sumstat to LD mapping
+          sumstatLD_dict <- rep(NA, length(sumstat))
+          for (i in 1:length(sumstat)) {
+            tmp <- unique(dict_sumstatLD[dict_sumstatLD[, 1] == i, 2])
+            if (length(tmp) == 0) {
+              warning(paste("Error: You don't provide matched LD for sumstat", i))
+              return(NULL)
+            } else if (length(tmp) != 1) {
+              warning(paste("Error: You provide multiple matched LD for sumstat", i))
+              return(NULL)
+            } else {
+              sumstatLD_dict[i] <- tmp
+            }
+          }
+          if (max(sumstatLD_dict) > length(LD)) {
+            warning("Error: You don't provide enough LD matrices!")
+            return(NULL)
+          }
         }
-        if (length(dict_sumstatLD) != length(sumstat)) {
-          warning('Error: dict_sumstatLD must have length ', length(sumstat))
-          return(NULL)
-        }
-        if (any(is.na(dict_sumstatLD))) {
-          warning('Error: dict_sumstatLD contains NA values')
-          return(NULL)
-        }
-        if (any(dict_sumstatLD < 1) || any(dict_sumstatLD > length(LD))) {
-          warning('Error: dict_sumstatLD values must be between 1 and ', length(LD))
-          return(NULL)
-        }
-        sumstatLD_dict <- as.integer(dict_sumstatLD)
       }
       
       # === Filter variants for each sumstat ===
