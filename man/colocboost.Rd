@@ -62,7 +62,10 @@ colocboost(
   check_null_max_ucos = 0.015,
   weaker_effect = TRUE,
   LD_free = FALSE,
-  output_level = 1
+  output_level = 1,
+  cos_npc_cutoff = 0.2,
+  npc_outcome_cutoff = 0.2,
+  pvalue_cutoff = 0.001
 )
 }
 \arguments{
@@ -194,6 +197,12 @@ to merge colocalized sets, which may resulting in a huge set.}
 \item{output_level}{When \code{output_level = 1}, return basic cos details for colocalization results
 When \code{output_level = 2}, return the ucos details for the single specific effects.
 When \code{output_level = 3}, return the entire Colocboost model to diagnostic results (more space).}
+
+\item{cos_npc_cutoff}{Minimum threshold of normalized probability of colocalization (NPC) for CoS.}
+
+\item{npc_outcome_cutoff}{Minimum threshold of normalized probability of colocalized traits in each CoS.}
+
+\item{pvalue_cutoff}{Maximum threshold of marginal p-values of colocalized variants on colocalized traits in each CoS.}
 }
 \value{
 A \code{"colocboost"} object with some or all of the following elements:
