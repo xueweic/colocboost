@@ -19,12 +19,12 @@ generate_test_result <- function(n = 100, p = 20, L = 2, seed = 42) {
   
   if (L == 1) {
     # Single trait case
-    true_beta[5, 1] <- 0.7  # SNP5 affects the trait
-    true_beta[10, 1] <- 0.6 # SNP10 also affects the trait
+    true_beta[5, 1] <- 1  # SNP5 affects the trait
+    true_beta[10, 1] <- 1 # SNP10 also affects the trait
   } else {
     # Multi-trait case
-    true_beta[5, 1] <- 0.7  # SNP5 affects trait 1
-    true_beta[5, 2] <- 0.6  # SNP5 also affects trait 2 (colocalized)
+    true_beta[5, 1] <- 1  # SNP5 affects trait 1
+    true_beta[5, 2] <- 1  # SNP5 also affects trait 2 (colocalized)
     true_beta[10, 2] <- 0.5 # SNP10 only affects trait 2
   }
   

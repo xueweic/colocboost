@@ -89,6 +89,9 @@
 #' @param output_level When \code{output_level = 1}, return basic cos details for colocalization results
 #'                     When \code{output_level = 2}, return the ucos details for the single specific effects.
 #'                     When \code{output_level = 3}, return the entire Colocboost model to diagnostic results (more space).
+#' @param cos_npc_cutoff Minimum threshold of normalized probability of colocalization (NPC) for CoS.
+#' @param npc_outcome_cutoff Minimum threshold of normalized probability of colocalized traits in each CoS.
+#' @param pvalue_cutoff Maximum threshold of marginal p-values of colocalized variants on colocalized traits in each CoS.
 #'
 #' @return A \code{"colocboost"} object with some or all of the following elements:
 #'
@@ -184,7 +187,12 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                        check_null_max_ucos = 0.015, # the smallest value of change of profile loglikelihood for each outcome in uCoS.
                        weaker_effect = TRUE,
                        LD_free = FALSE,
-                       output_level = 1) {
+                       output_level = 1,
+                       ###### - Post filtering parameters
+                       cos_npc_cutoff = 0.2, # remove the CoS with cos_npc less than this cutoff
+                       npc_outcome_cutoff = 0.2, # remove the colocalized outcome in CoS if npc_outcome less than this cutoff
+                       pvalue_cutoff = 1e-3 # remove the colocalized outcome in CoS if pvalue greater than this cutoff
+                       ) {
   ###################### ---- one module for data object
   message("Validating input data.")
   # - check if all missing
@@ -320,6 +328,17 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
     output_level = output_level
   )
   class(cb_output) <- "colocboost"
+
+  # ---- post filtering of the colocboost results (get robust colocalization events)
+  cb_output <- get_robust_colocalization(
+    cb_output = cb_output,
+    cos_npc_cutoff = cos_npc_cutoff,
+    npc_outcome_cutoff = npc_outcome_cutoff,
+    pvalue_cutoff = pvalue_cutoff,
+    weight_fudge_factor = weight_fudge_factor,
+    coverage = coverage
+  )
+
   return(cb_output)
 }
 
