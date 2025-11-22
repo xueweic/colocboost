@@ -11,7 +11,7 @@ vignette: >
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  dpi = 80
+  dpi = 70
 )
 ```
 
@@ -69,7 +69,7 @@ There are several advanced options available for customizing the plot by deepeni
 You can specify a zoom-in region by providing a `grange` argument, which is a vector indicating the indices of the region to be zoomed in.
 
 ```{r zoomin-plot}
-colocboost_plot(res, grange = c(1:400))
+colocboost_plot(res, grange = c(1:400), outcome_idx = c(1:4))
 ```
 
 
@@ -97,7 +97,7 @@ colocboost_plot(res, show_cos_to_uncoloc = TRUE)
 ### 2.4. Plot with added highlight points
 
 You can highlight specific variants in the plot by setting `add_highlight = TRUE` and `add_highlight_idx = **`. 
-This will add red dashed vertical lines (defult `add_highlight_style = "vertical_lines"`) at the specified index you want to highlight. 
+This will add red dashed vertical lines (default `add_highlight_style = "vertical_lines"`) at the specified index you want to highlight. 
 Alternatively, you can use `add_highlight_style = "star"` to change the highlight style to the red star for the specified variants.
 For example, to add a vertical line at true causal variants, you can set `add_vertical_idx = unique(unlist(Ind_5traits$true_effect_variants))`.
 Following plot also shows the top variants.
