@@ -949,7 +949,7 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
       names(specific_cs_variableidx) <- names(specific_cs_variablenames) <- specific_cs_names
       specific_css <- list("ucos_index" = specific_cs_variableidx, "ucos_variables" = specific_cs_variablenames)
 
-      # - specific set cs_change
+      # - specific set cs_change 
       cs_change <- out_ucos$change_obj_each
       rownames(cs_change) <- specific_cs_names
       colnames(cs_change) <- analysis_outcome
@@ -992,6 +992,14 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
         cs_hits_variablenames <- sapply(cs_hits, function(ch) variables[ch])
         specific_cs_hits <- data.frame("top_index" = cs_hits, "top_variables" = cs_hits_variablenames) # save
         rownames(specific_cs_hits) <- specific_cs_names
+
+        # - add npc_outcome for ucos (Dec 08, 2025)
+        ucoloc_info <- list(
+            ucos = specific_css$ucos_index,
+            outcome = specific_outcomes$outcome_index,
+            outcome_name = specific_outcomes$outcome_name
+        )
+        npc_outcome <- get_ucos_evidence(cb_obj, ucoloc_info)
 
         # - purity
         nucos <- length(specific_css$ucos_index)
@@ -1082,7 +1090,7 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
           "ucos_top_variables" = specific_cs_hits,
           "ucos_purity" = specific_cs_purity,
           "cos_ucos_purity" = cos_ucos_purity,
-          "ucos_outcomes_delta" = cs_change
+          "ucos_outcomes_npc" = npc_outcome
         )
       }
     } else {
