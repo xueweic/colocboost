@@ -210,7 +210,12 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
     dict_YX = dict_YX, dict_sumstatLD = dict_sumstatLD,
     effect_est = effect_est, effect_se = effect_se, effect_n = effect_n,
     overlap_variables = overlap_variables,
-    M = M, min_abs_corr = min_abs_corr
+    M = M, min_abs_corr = min_abs_corr,
+    jk_equiv_corr = jk_equiv_corr, 
+    jk_equiv_loglik = jk_equiv_loglik,
+    func_simplex = func_simplex,
+    cos_npc_cutoff = cos_npc_cutoff,
+    npc_outcome_cutoff = npc_outcome_cutoff
   )
   if (is.null(validated_data)) {
     return(NULL)
@@ -235,6 +240,12 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
   jk_equiv_corr <- validated_data$jk_equiv_corr
   jk_equiv_loglik <- validated_data$jk_equiv_loglik
   func_simplex <- validated_data$func_simplex
+  cos_npc_cutoff <- validated_data$cos_npc_cutoff
+  npc_outcome_cutoff <- validated_data$npc_outcome_cutoff
+  if (M == 1){
+      cos_npc_cutoff <- 0
+      npc_outcome_cutoff <- 0
+  }
   
   # - initial colocboost object
   keep_variables <- c(keep_variable_individual, keep_variable_sumstat)
@@ -338,6 +349,20 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
     weight_fudge_factor = weight_fudge_factor,
     coverage = coverage
   )
+  # ---- post filtering of the colocboost results (get robust trait-specific events)
+  if ("ucos_details" %in% names(cb_output)) {
+    if (is.null(pvalue_cutoff)){
+        pvalue_cutoff_ucos <- NULL
+    } else {
+        # only keep the suggestive significant results
+        pvalue_cutoff_ucos <- ifelse(pvalue_cutoff > 1e-5, 1e-5, pvalue_cutoff)
+    }
+    cb_output <- get_robust_ucos(
+        cb_output, 
+        npc_outcome_cutoff = npc_outcome_cutoff, 
+        pvalue_cutoff = pvalue_cutoff_ucos
+    )
+  }
 
   return(cb_output)
 }
@@ -387,7 +412,11 @@ colocboost_validate_input_data <- function(X = NULL, Y = NULL,
                                            dict_YX = NULL, dict_sumstatLD = NULL,
                                            effect_est = NULL, effect_se = NULL, effect_n = NULL,
                                            overlap_variables = FALSE,
-                                           M = 500, min_abs_corr = 0.5) {
+                                           M = 500, min_abs_corr = 0.5,
+                                           jk_equiv_corr = 0.8, jk_equiv_loglik = 1,
+                                           func_simplex = "LD_z2z", 
+                                           cos_npc_cutoff = 0.2,
+                                           npc_outcome_cutoff = 0.2) {
   
   # - check individual level data
   if (!is.null(X) & !is.null(Y)) {
@@ -624,9 +653,11 @@ colocboost_validate_input_data <- function(X = NULL, Y = NULL,
     # --- check input of LD
     M_updated <- M
     min_abs_corr_updated <- min_abs_corr
-    jk_equiv_corr_updated <- 0.8
-    jk_equiv_loglik_updated <- 1
-    func_simplex_updated <- "LD_z2z"
+    jk_equiv_corr_updated <- jk_equiv_corr
+    jk_equiv_loglik_updated <- jk_equiv_loglik
+    func_simplex_updated <- func_simplex
+    cos_npc_cutoff_updated <- cos_npc_cutoff
+    npc_outcome_cutoff_updated <- npc_outcome_cutoff
     
     if (is.null(LD)) {
       # if no LD input, set diagonal matrix to LD
@@ -644,6 +675,8 @@ colocboost_validate_input_data <- function(X = NULL, Y = NULL,
       jk_equiv_corr_updated <- 0
       jk_equiv_loglik_updated <- 0.1
       func_simplex_updated <- "only_z2z"
+      cos_npc_cutoff_updated <- 0
+      npc_outcome_cutoff_updated <- 0
       
     } else {
       
@@ -804,9 +837,11 @@ colocboost_validate_input_data <- function(X = NULL, Y = NULL,
     Z <- N_sumstat <- Var_y <- SeBhat <- sumstatLD_dict <- keep_variable_sumstat <- NULL
     M_updated <- M
     min_abs_corr_updated <- min_abs_corr
-    jk_equiv_corr_updated <- 0.8
-    jk_equiv_loglik_updated <- 1
-    func_simplex_updated <- "LD_z2z"
+    jk_equiv_corr_updated <- jk_equiv_corr
+    jk_equiv_loglik_updated <- jk_equiv_loglik
+    func_simplex_updated <- func_simplex
+    cos_npc_cutoff_updated = cos_npc_cutoff
+    npc_outcome_cutoff_updated = npc_outcome_cutoff
   }
   
   return(list(
@@ -826,7 +861,9 @@ colocboost_validate_input_data <- function(X = NULL, Y = NULL,
     min_abs_corr = min_abs_corr_updated,
     jk_equiv_corr = jk_equiv_corr_updated,
     jk_equiv_loglik = jk_equiv_loglik_updated,
-    func_simplex = func_simplex_updated
+    func_simplex = func_simplex_updated,
+    cos_npc_cutoff = cos_npc_cutoff_updated,
+    npc_outcome_cutoff = npc_outcome_cutoff_updated
   ))
 }
 

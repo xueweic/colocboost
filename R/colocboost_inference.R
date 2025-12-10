@@ -269,7 +269,7 @@ check_null_post <- function(cb_obj,
     ld_feature <- sqrt(abs(ld_jk))
     # - calculate delta
     delta <- boost_KL_delta(
-      z = z, ld_feature = ld_feature, adj_dep = adj_dep,
+      z = z, ld_feature = ld_feature, adj_dep = adj_dep, 
       func_simplex = func_simplex, lambda = lambda
     )
     scaling_factor <- if (!is.null(N)) (N - 1) else 1
@@ -575,7 +575,6 @@ get_cos_evidence <- function(cb_obj, coloc_out, data_info) {
   }
 
   avWeight <- coloc_out$avWeight
-  cs_change <- coloc_out$cs_change
   check_null_max <- sapply(cb_obj$cb_model, function(cb) cb$check_null_max)
   outcome_names <- data_info$outcome_info$outcome_names
   n_cos <- length(avWeight)
@@ -603,3 +602,99 @@ get_cos_evidence <- function(cb_obj, coloc_out, data_info) {
   return(list(normalization_evidence = normalization_evidence, npc = npc))
 }
 
+
+
+#' Function to get the evidence of trait-specific ucos
+#' @keywords cb_post_inference
+#' @noRd
+#' @importFrom stats var
+#' @importFrom utils tail
+get_ucos_evidence <- function(cb_obj, ucoloc_info) {
+    
+  get_ucos_profile <- function(cs_beta, outcome_idx, X = NULL, Y = NULL, N = NULL,
+                              XtX = NULL, YtY = NULL, XtY = NULL, miss_idx = NULL, adj_dep = 1) {
+    if (!is.null(X)) {
+      cos_profile <- mean((Y - X %*% as.matrix(cs_beta))^2) * N / (N - 1)
+      yty <- var(Y)
+    } else if (!is.null(XtY)) {
+      scaling_factor <- if (!is.null(N)) (N - 1) else 1
+      beta_scaling <- if (!is.null(N)) 1 else 100
+      cs_beta <- cs_beta / beta_scaling
+      yty <- YtY / scaling_factor
+      xtx <- XtX
+      if (length(miss_idx) != 0) {
+        xty <- XtY[-miss_idx] / scaling_factor
+        cs_beta <- cs_beta[-miss_idx]
+      } else {
+        xty <- XtY / scaling_factor
+      }
+      if (length(xtx) == 1){
+        cos_profile <- (yty - 2 * sum(cs_beta * xty) + sum(cs_beta^2)) * adj_dep
+      } else {
+        cos_profile <- (yty - 2 * sum(cs_beta * xty) + sum((xtx %*% as.matrix(cs_beta)) * cs_beta)) * adj_dep
+      }
+    }
+    delta <- yty - cos_profile
+    if (delta <= 0) {
+      warning(paste(
+        "Warning message: potential sumstat & LD mismatch may happens for outcome", outcome_idx,
+        ". Using logLR  = uCoS(profile) - max(profile). Please check our website https://statfungen.github.io/colocboost/articles/."
+      ))
+    }
+    cos_profile
+  }
+
+  get_outcome_profile_change <- function(outcome_idx, ucos, cb_obj) {
+    extract_last <- function(lst) {
+      tail(lst, n = 1)
+    }
+    cb_data <- cb_obj$cb_data
+    cs_beta <- rep(0, cb_obj$cb_model_para$P)
+    cs_beta[ucos] <- cb_obj$cb_model[[outcome_idx]]$beta[ucos]
+    X_dict <- cb_data$dict[outcome_idx]
+    cos_profile <- get_ucos_profile(cs_beta, outcome_idx,
+      X = cb_data$data[[X_dict]]$X, Y = cb_data$data[[outcome_idx]]$Y,
+      XtX = cb_data$data[[X_dict]]$XtX, XtY = cb_data$data[[outcome_idx]]$XtY,
+      YtY = cb_data$data[[outcome_idx]]$YtY, N = cb_data$data[[outcome_idx]]$N,
+      miss_idx = cb_data$data[[outcome_idx]]$variable_miss,
+      adj_dep = cb_data$data[[outcome_idx]]$dependency
+    )
+    max_profile <- max(cb_obj$cb_model[[outcome_idx]]$profile_loglike_each)
+    ifelse(max_profile < cos_profile, 0, max_profile - cos_profile)
+  }
+
+  # - Calculate best configuration likelihood explained by minimal configuration
+  get_normalization_evidence <- function(profile_change, null_max, outcomes, outcome_names) {
+    # Define the exponential likelihood ratio normalization (ELRN)
+    logLR_normalization <- function(ratio) {
+      1 - exp(-2 * ratio)
+    }
+
+    ratio <- profile_change / null_max
+    prob <- logLR_normalization(ratio)
+    df <- data.frame(outcome = outcome_names, outcomes_index = outcomes, relative_logLR = ratio, npc_outcome = prob)
+    return(df)
+  }
+
+  check_null_max_ucos <- sapply(cb_obj$cb_model, function(cb) cb$check_null_max_ucos)
+  n_ucos <- length(ucoloc_info$ucos)
+  normalization_evidence <- list()
+  for (i in 1:n_ucos) {
+    outcome_idx <- ucoloc_info$outcome[[i]]
+    outcome_name <- ucoloc_info$outcome_name[[i]]
+    # most likely cos
+    ucos <- ucoloc_info$ucos[[i]]
+    profile_change_outcome <- get_outcome_profile_change(outcome_idx, ucos, cb_obj)
+    normalization_evidence[[i]] <- get_normalization_evidence(
+      profile_change = profile_change_outcome,
+      null_max = check_null_max_ucos[outcome_idx],
+      outcome_idx, outcome_name
+    )
+  }
+  normalization_evidence <- do.call(rbind, normalization_evidence)
+  rownames(normalization_evidence) <- names(ucoloc_info$ucos)
+  return(normalization_evidence)
+}
+
+
+                                

@@ -41,6 +41,7 @@ names(res$ambiguous_cos)
 \seealso{
 Other colocboost_inference: 
 \code{\link{get_colocboost_summary}()},
-\code{\link{get_robust_colocalization}()}
+\code{\link{get_robust_colocalization}()},
+\code{\link{get_robust_ucos}()}
 }
 \concept{colocboost_inference}

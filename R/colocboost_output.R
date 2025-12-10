@@ -134,7 +134,7 @@ get_colocboost_summary <- function(cb_output,
 #' \item{cos_details}{A object with all information for colocalization results.}
 #' \item{data_info}{A object with detailed information from input data}
 #' \item{model_info}{A object with detailed information for colocboost model}
-#' \item{ucos_from_cos}{A object with information for trait-specific effects if exists after removing weaker signals.}
+#' \item{ucos_details}{A object with information for trait-specific effects if exists after removing weaker signals.}
 #'
 #' @examples
 #' # colocboost example
@@ -176,7 +176,7 @@ get_robust_colocalization <- function(cb_output,
   }
 
   if (is.null(cb_output$cos_details)) {
-    warning("No colocalization results in this region!")
+    message("No colocalization results in this region!")
     return(cb_output)
   }
 
@@ -289,7 +289,12 @@ get_robust_colocalization <- function(cb_output,
       }
     }
   }
-  names(coloc_outcome) <- names(coloc_outcome_index) <- names(cos_min_npc_outcome) <- names(cos_npc) <- colocset_names
+  names(coloc_outcome) <- names(coloc_outcome_index) <- names(cos_min_npc_outcome) <- 
+    names(cos_npc) <- names(cos_details$cos_weights) <- colocset_names
+  cos_details$cos_purity <- lapply(cos_details$cos_purity, function(pp){
+      colnames(pp) <- rownames(pp) <- colocset_names
+      pp
+  })
   cos_details$cos_outcomes <- list("outcome_index" = coloc_outcome_index, "outcome_name" = coloc_outcome)
   cos_details$cos_min_npc_outcome <- cos_min_npc_outcome
   cos_details$cos_npc <- cos_npc
@@ -355,11 +360,6 @@ get_robust_colocalization <- function(cb_output,
   cb_output <- remove_cos(cb_output, remove_idx = remove)
   cos_details <- cb_output$cos_details
 
-  # remove CoS does not pass cos_npc_cutoff
-  remove <- which(cos_details$cos_npc < cos_npc_cutoff)
-  cb_output <- remove_cos(cb_output, remove_idx = remove)
-  cos_details <- cb_output$cos_details
-
   # remove CoS only with one trait
   n_outcome <- sapply(cos_details$cos_outcomes$outcome_index, length)
   single <- which(n_outcome == 1)
@@ -369,26 +369,58 @@ get_robust_colocalization <- function(cb_output,
     cb_output <- c(cb_output, list(vcp = NULL, cos_details = NULL))
   } else if (length(single) != 0 & length(single) != length(n_outcome)) {
     # - partial remaining the single outcome
+    ucos_outcomes_npc <- data.frame(
+          outcome = unlist(cos_details$cos_outcomes$outcome_name[single]),
+          outcomes_index = unlist(cos_details$cos_outcomes$outcome_index[single]),
+          relative_logLR = sapply(single, function(ss){
+              cos_details$cos_outcomes_npc[[ss]]$relative_logLR[1]
+          }),
+          npc_outcome = sapply(single, function(ss){
+              cos_details$cos_outcomes_npc[[ss]]$npc_outcome[1]
+          })
+      )
+      rownames(ucos_outcomes_npc) <- names(cos_details$cos$cos_index[single])
+      ww <- cos_details$cos_weights[single]
+      names(ww) <- names(cos_details$cos$cos_index[single])
     ucos_from_cos <- list(
       "ucos" = list(
         "ucos_index" = cos_details$cos$cos_index[single],
         "ucos_variables" = cos_details$cos$cos_variables[single]
       ),
       "ucos_outcomes" = list(
-        "outcome_idx" = cos_details$cos_outcomes$outcome_index[single],
+        "outcome_index" = cos_details$cos_outcomes$outcome_index[single],
         "outcome_name" = cos_details$cos_outcomes$outcome_name[single]
       ),
-      "ucos_weight" = cos_details$cos_weights[single],
+      "ucos_weight" = ww,
+      "ucos_top_variables" = cos_details$cos_top_variables[single, , drop = FALSE],
       "ucos_purity" = list(
         "min_abs_cor" = as.matrix(cos_details$cos_purity$min_abs_cor)[single, single, drop = FALSE],
         "median_abs_cor" = as.matrix(cos_details$cos_purity$median_abs_cor)[single, single, drop = FALSE],
         "max_abs_cor" = as.matrix(cos_details$cos_purity$max_abs_cor)[single, single, drop = FALSE]
       ),
-      "ucos_top_variables" = cos_details$cos_top_variables[single, , drop = FALSE]
+      "cos_ucos_purity" = list(
+        "min_abs_cor" = as.matrix(cos_details$cos_purity$min_abs_cor)[-single, single, drop = FALSE],
+        "median_abs_cor" = as.matrix(cos_details$cos_purity$median_abs_cor)[-single, single, drop = FALSE],
+        "max_abs_cor" = as.matrix(cos_details$cos_purity$max_abs_cor)[-single, single, drop = FALSE]
+      ),
+      "ucos_outcomes_npc" = ucos_outcomes_npc
     )
-    cb_output$ucos_from_cos <- ucos_from_cos
     cb_output <- remove_cos(cb_output, remove_idx = single)
+
+    # merge ucos_from_cos to ucos_details if appliable
+    message("There are ", length(single), " uCoS generated after filtering the robust colocalization.")
+    if (!("ucos_details" %in% names(cb_output))) {
+      cb_output$ucos_details <- ucos_from_cos
+    } else {
+      cb_output$ucos_details <- merge_ucos_details(cb_output$ucos_details, ucos_from_cos)
+    }
   }
+
+    
+  # remove CoS does not pass cos_npc_cutoff
+  remove <- which(cb_output$cos_details$cos_npc < cos_npc_cutoff)
+  cb_output <- remove_cos(cb_output, remove_idx = remove)
+  cos_details <- cb_output$cos_details
 
   # - refine and output
   class(cb_output) <- "colocboost"
@@ -396,6 +428,183 @@ get_robust_colocalization <- function(cb_output,
 
   return(cb_output)
 }
+
+
+#' @rdname get_robust_ucos
+#'
+#' @title Recalibrate and summarize robust uncolocalized events.
+#'
+#' @description `get_robust_ucos` get the uncolocalized events by discarding the weaker signals if "ucos_details" with "output_level = 2" exist.
+#'
+#' @param cb_output Output object from `colocboost` analysis
+#' @param npc_outcome_cutoff Minimum threshold of normalized probability of colocalized traits in each CoS.
+#' @param pvalue_cutoff Maximum threshold of marginal p-values of colocalized variants on colocalized traits in each CoS.
+#'
+#' @return A \code{"colocboost"} object with some or all of the following elements:
+#'
+#' \item{cos_summary}{A summary table for colocalization events.}
+#' \item{vcp}{The variable colocalized probability for each variable.}
+#' \item{cos_details}{A object with all information for colocalization results.}
+#' \item{data_info}{A object with detailed information from input data}
+#' \item{model_info}{A object with detailed information for colocboost model}
+#' \item{ucos_details}{A object with information for trait-specific effects if exists after removing weaker signals.}
+#'
+#' @examples
+#' # colocboost example
+#' set.seed(1)
+#' N <- 1000
+#' P <- 100
+#' # Generate X with LD structure
+#' sigma <- 0.9^abs(outer(1:P, 1:P, "-"))
+#' X <- MASS::mvrnorm(N, rep(0, P), sigma)
+#' colnames(X) <- paste0("SNP", 1:P)
+#' L <- 3
+#' true_beta <- matrix(0, P, L)
+#' true_beta[10, 1] <- 0.5 # SNP10 affects trait 1
+#' true_beta[10, 2] <- 0.4 # SNP10 also affects trait 2 (colocalized)
+#' true_beta[50, 2] <- 0.3 # SNP50 only affects trait 2
+#' true_beta[80, 3] <- 0.6 # SNP80 only affects trait 3
+#' Y <- matrix(0, N, L)
+#' for (l in 1:L) {
+#'   Y[, l] <- X %*% true_beta[, l] + rnorm(N, 0, 1)
+#' }
+#' res <- colocboost(X = X, Y = Y, output_level = 2)
+#' res$ucos_details$ucos$ucos_index
+#' filter_res <- get_robust_ucos(res, npc_outcome_cutoff = 0.2, pvalue_cutoff = 1e-6)
+#' filter_res$ucos_details$ucos$ucos_index
+#' 
+#' @source See detailed instructions in our tutorial portal: 
+#' \url{https://statfungen.github.io/colocboost/articles/Interpret_ColocBoost_Output.html}
+#'
+#' @family colocboost_inference
+#' @export
+get_robust_ucos <- function(cb_output,
+                            npc_outcome_cutoff = 0.2,
+                            pvalue_cutoff = NULL) {
+  if (!inherits(cb_output, "colocboost")) {
+    stop("Input must from colocboost object!")
+  }
+    
+  if (!("ucos_details" %in% names(cb_output))) {
+      warning(
+        "Since you want to extract robust outcome-specific (uncolocalized) events from trait-specific (uncolocalized) sets,",
+        " but there is no output of ucos_details from colocboost.\n",
+        " Please run colocboost model with output_level=2!"
+      )
+      return(cb_output)
+  }
+
+  if (is.null(cb_output$ucos_details)) {
+    message("No uncolocalized results in this region!")
+    return(cb_output)
+  }
+
+  if (npc_outcome_cutoff == 0 && is.null(pvalue_cutoff)) {
+    message("All possible uncolocalized events are reported regardless of their relative evidence (npc_outcome_cutoff = 0).")
+    return(cb_output)
+  } else {
+    if (is.null(pvalue_cutoff)) {
+      message(paste0(
+        "Extracting outcome-specific (uncolocalized) results with npc_outcome_cutoff = ", npc_outcome_cutoff, ".\n",
+        "Keep only uCoS with npc_outcome_cutoff >= ", npc_outcome_cutoff, ". "
+      ))
+    } else {
+      if (pvalue_cutoff > 1 | pvalue_cutoff < 0) {
+        warning("Please check the pvalue cutoff in [0,1].")
+        return(cb_output)
+      }
+      if (npc_outcome_cutoff == 0) {
+        message(paste0(
+          "Extracting outcome-specific (uncolocalized) results with pvalue_cutoff = ", pvalue_cutoff, ".\n",
+          "Keep only uCoS with pvalue of variants for the outcome < ", pvalue_cutoff, "."
+        ))
+      } else {
+        message(paste0(
+          "Extracting outcome-specific (uncolocalized) results with pvalue_cutoff = ", pvalue_cutoff, ", and npc_outcome_cutoff = ", npc_outcome_cutoff, ".\n",
+          "For each uCoS, keep the outcome-specific (uncolocalized) events that pvalue of variants for the outcome < ", 
+            pvalue_cutoff, " and npc_outcome >", npc_outcome_cutoff, "."
+        ))
+      }
+    }
+  }
+
+  remove_ucos <- function(cb_output, remove_idx = NULL) {
+    if (length(remove_idx) == 0) {
+      return(cb_output)
+    }
+    ncos <- length(cb_output$ucos_details$ucos$ucos_index)
+    if (ncos == 0 | length(remove_idx) == ncos) {
+      cb_output$ucos_details <- NULL
+      cb_output <- c(cb_output, list(ucos_details = NULL))
+      return(cb_output)
+    }
+    ucos_details <- cb_output$ucos_details
+    ucos_details$ucos_top_variables <- ucos_details$ucos_top_variables[-remove_idx, , drop = FALSE]
+    ucos_details$ucos$ucos_index <- ucos_details$ucos$ucos_index[-remove_idx]
+    ucos_details$ucos$ucos_variables <- ucos_details$ucos$ucos_variables[-remove_idx]
+    ucos_details$ucos_outcomes$outcome_index <- ucos_details$ucos_outcomes$outcome_index[-remove_idx]
+    ucos_details$ucos_outcomes$outcome_name <- ucos_details$ucos_outcomes$outcome_name[-remove_idx]
+    ucos_details$ucos_weight <- ucos_details$ucos_weight[-remove_idx]
+    ucos_details$ucos_outcomes_npc <- ucos_details$ucos_outcomes_npc[-remove_idx, , drop = FALSE]
+    ucos_details$ucos_purity$min_abs_cor <- as.matrix(ucos_details$ucos_purity$min_abs_cor)[-remove_idx, -remove_idx, drop = FALSE]
+    ucos_details$ucos_purity$median_abs_cor <- as.matrix(ucos_details$ucos_purity$median_abs_cor)[-remove_idx, -remove_idx, drop = FALSE]
+    ucos_details$ucos_purity$max_abs_cor <- as.matrix(ucos_details$ucos_purity$max_abs_cor)[-remove_idx, -remove_idx, drop = FALSE]
+    if (!is.null(ucos_details$cos_ucos_purity)){
+        ucos_details$cos_ucos_purity$min_abs_cor <- as.matrix(ucos_details$cos_ucos_purity$min_abs_cor)[, -remove_idx, drop = FALSE]
+        ucos_details$cos_ucos_purity$median_abs_cor <- as.matrix(ucos_details$cos_ucos_purity$median_abs_cor)[, -remove_idx, drop = FALSE]
+        ucos_details$cos_ucos_purity$max_abs_cor <- as.matrix(ucos_details$cos_ucos_purity$max_abs_cor)[, -remove_idx, drop = FALSE]
+    }
+    cb_output$ucos_details <- ucos_details
+    return(cb_output)
+  }
+  
+  ucos_details <- cb_output$ucos_details
+  ucoloc_outcome_index <- ucoloc_outcome <- list()
+  ucolocset_names <- ucos_min_npc_outcome <- c()
+  for (i in 1:length(ucos_details$ucos$ucos_index)) {
+    npc_outcome <- ucos_details$ucos_outcomes_npc$npc_outcome[i]
+    pos_pass <- which(npc_outcome >= npc_outcome_cutoff)
+    if (!is.null(pvalue_cutoff)) {
+      ucos_tmp <- ucos_details$ucos$ucos_index[[i]]
+      ucos_trait <- ucos_details$ucos_outcomes$outcome_index[[i]]
+      minPV <- sapply(ucos_trait, function(tmp) {
+        z <- cb_output$data_info$z[[tmp]][ucos_tmp]
+        pv <- pchisq(z^2, 1, lower.tail = FALSE)
+        min(pv)
+      })
+      pos_pass_pvalue <- which(minPV <= pvalue_cutoff)
+      if (length(pos_pass_pvalue) == 0) {
+        pos_pass <- NULL
+      } else {
+        pos_pass <- 1
+      }
+    }
+    if (length(pos_pass) == 0) {
+      ucoloc_outcome_index[[i]] <- 0
+      ucoloc_outcome[[i]] <- 0
+      ucos_min_npc_outcome[i] <- 0
+      ucolocset_names[i] <- paste0("remove", i)
+    } else {
+      ucos_min_npc_outcome[i] <- npc_outcome
+      ucoloc_outcome_index[[i]] <- ucos_details$ucos_outcomes$outcome_index[[i]]
+      ucoloc_outcome[[i]] <- ucos_details$ucos_outcomes_npc$outcome[i]
+      ucolocset_names[i] <- paste0("ucos", i, ":", paste0("y", ucoloc_outcome_index[[i]]))
+    }
+  }
+  names(ucoloc_outcome) <- names(ucoloc_outcome_index) <- names(ucos_min_npc_outcome) <- ucolocset_names
+  ucos_details$ucos_outcomes <- list("outcome_index" = ucoloc_outcome_index, "outcome_name" = ucoloc_outcome)
+  ucos_details$ucos_outcomes_npc$npc_outcome <- ucos_min_npc_outcome
+
+  # remove CoS does not include outcomes pass npc_outcome_cutoff
+  remove <- grep("remove", ucolocset_names)
+  cb_output <- remove_ucos(cb_output, remove_idx = remove)
+  # - refine and output
+  class(cb_output) <- "colocboost"
+
+  return(cb_output)
+}
+
+
 
 #' @rdname get_ambiguous_colocalization
 #'
@@ -1063,3 +1272,71 @@ get_cos_purity <- function(cos, X = NULL, Xcorr = NULL, n_purity = 100) {
   return(cos_purity)
 }
 
+
+#' Function to organize and merge ucos
+#' @keywords cb_get_functions
+#' @noRd
+merge_ucos_details <- function(ucos_details, ucos_from_cos) {
+  
+  get_cos_ucos_purity <- function(from_ucos, from_cos){
+    cos <- intersect(rownames(from_ucos), rownames(from_ucos))
+    tmp_from_ucos <- from_ucos[match(cos, rownames(from_ucos)), , drop = FALSE]
+    tmp_from_cos <- from_cos[match(cos, rownames(from_cos)), , drop = FALSE]
+    cbind(tmp_from_ucos, tmp_from_cos)
+  }
+  
+  get_ucos_purity <- function(from_ucos, from_cos, cross_from_ucos, cross_from_cos) {
+    for (id in unique(sub(":.*", "", rownames(from_cos)))) {
+      old <- grep(paste0("^", id, ":"), rownames(cross_from_ucos), value = TRUE)[1]
+      new <- grep(paste0("^", id, ":"), rownames(from_cos), value = TRUE)[1]
+      if (!is.na(old) && !is.na(new)) {
+        rownames(cross_from_ucos) <- sub(old, new, rownames(cross_from_ucos), fixed = TRUE)
+        colnames(cross_from_ucos) <- sub(old, new, colnames(cross_from_ucos), fixed = TRUE)
+        rownames(cross_from_cos) <- sub(old, new, rownames(cross_from_cos), fixed = TRUE)
+        colnames(cross_from_cos) <- sub(old, new, colnames(cross_from_cos), fixed = TRUE)
+      }
+    }
+    all_ucos <- c(rownames(from_ucos), rownames(from_cos))
+    n <- length(all_ucos)
+    result <- matrix(NA_real_, n, n, dimnames = list(all_ucos, all_ucos))
+    mats <- list(from_ucos, from_cos, cross_from_ucos, cross_from_cos)
+    for (i in 1:n) {
+      for (j in 1:n) {
+        for (m in mats) {
+          if (all_ucos[i] %in% rownames(m) && all_ucos[j] %in% colnames(m)) {
+            result[i, j] <- result[j, i] <- m[all_ucos[i], all_ucos[j]]
+            break
+          }
+        }
+      }
+    }
+    result
+  }
+  
+  list(
+    "ucos" = list(
+      "ucos_index" = c(ucos_details$ucos$ucos_index, ucos_from_cos$ucos$ucos_index),
+      "ucos_variables" = c(ucos_details$ucos$ucos_variables, ucos_from_cos$ucos$ucos_variables)
+    ),
+    "ucos_outcomes" = list(
+      "outcome_index" = c(ucos_details$ucos_outcomes$outcome_index, ucos_from_cos$ucos_outcomes$outcome_index),
+      "outcome_name" = c(ucos_details$ucos_outcomes$outcome_name, ucos_from_cos$ucos_outcomes$outcome_name)
+    ),
+    "ucos_weight" = c(ucos_details$ucos_weight, ucos_from_cos$ucos_weight),
+    "ucos_top_variables" = rbind(ucos_details$ucos_top_variables, ucos_from_cos$ucos_top_variables),
+    "ucos_purity" = list(
+      "min_abs_cor" = get_ucos_purity(ucos_details$ucos_purity$min_abs_cor, ucos_from_cos$ucos_purity$min_abs_cor, 
+                                      ucos_details$cos_ucos_purity$min_abs_cor, ucos_from_cos$cos_ucos_purity$min_abs_cor),
+      "median_abs_cor" = get_ucos_purity(ucos_details$ucos_purity$median_abs_cor, ucos_from_cos$ucos_purity$median_abs_cor, 
+                                         ucos_details$cos_ucos_purity$median_abs_cor, ucos_from_cos$cos_ucos_purity$median_abs_cor),
+      "max_abs_cor" = get_ucos_purity(ucos_details$ucos_purity$max_abs_cor, ucos_from_cos$ucos_purity$max_abs_cor, 
+                                      ucos_details$cos_ucos_purity$max_abs_cor, ucos_from_cos$cos_ucos_purity$max_abs_cor)
+    ),
+    "cos_ucos_purity" = list(
+      "min_abs_cor" = get_cos_ucos_purity(ucos_from_cos$cos_ucos_purity$min_abs_cor, ucos_details$cos_ucos_purity$min_abs_cor),
+      "median_abs_cor" = get_cos_ucos_purity(ucos_from_cos$cos_ucos_purity$median_abs_cor, ucos_details$cos_ucos_purity$median_abs_cor),
+      "max_abs_cor" = get_cos_ucos_purity(ucos_from_cos$cos_ucos_purity$max_abs_cor, ucos_details$cos_ucos_purity$max_abs_cor)
+    ),
+    "ucos_outcomes_npc" = rbind(ucos_details$ucos_outcomes_npc, ucos_from_cos$ucos_outcomes_npc)
+  )
+}
