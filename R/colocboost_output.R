@@ -176,7 +176,7 @@ get_robust_colocalization <- function(cb_output,
   }
 
   if (is.null(cb_output$cos_details)) {
-    warning("No colocalization results in this region!")
+    message("No colocalization results in this region!")
     return(cb_output)
   }
 
@@ -468,9 +468,9 @@ get_robust_colocalization <- function(cb_output,
 #' for (l in 1:L) {
 #'   Y[, l] <- X %*% true_beta[, l] + rnorm(N, 0, 1)
 #' }
-#' res <- colocboost(X = X, Y = Y)
-#' res$ucos_details$cuos$ucos_index
-#' filter_res <- get_robust_ucos(res, npc_outcome_cutoff = 0.2, pvalue_cutoff = 1e-4)
+#' res <- colocboost(X = X, Y = Y, output_level = 2)
+#' res$ucos_details$ucos$ucos_index
+#' filter_res <- get_robust_ucos(res, npc_outcome_cutoff = 0.2, pvalue_cutoff = 1e-6)
 #' filter_res$ucos_details$ucos$ucos_index
 #' 
 #' @source See detailed instructions in our tutorial portal: 
@@ -495,7 +495,7 @@ get_robust_ucos <- function(cb_output,
   }
 
   if (is.null(cb_output$ucos_details)) {
-    warning("No uncolocalized results in this region!")
+    message("No uncolocalized results in this region!")
     return(cb_output)
   }
 

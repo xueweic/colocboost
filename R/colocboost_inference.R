@@ -611,7 +611,7 @@ get_cos_evidence <- function(cb_obj, coloc_out, data_info) {
 #' @importFrom utils tail
 get_ucos_evidence <- function(cb_obj, ucoloc_info) {
     
-  get_cos_profile <- function(cs_beta, outcome_idx, X = NULL, Y = NULL, N = NULL,
+  get_ucos_profile <- function(cs_beta, outcome_idx, X = NULL, Y = NULL, N = NULL,
                               XtX = NULL, YtY = NULL, XtY = NULL, miss_idx = NULL, adj_dep = 1) {
     if (!is.null(X)) {
       cos_profile <- mean((Y - X %*% as.matrix(cs_beta))^2) * N / (N - 1)
@@ -652,7 +652,7 @@ get_ucos_evidence <- function(cb_obj, ucoloc_info) {
     cs_beta <- rep(0, cb_obj$cb_model_para$P)
     cs_beta[ucos] <- cb_obj$cb_model[[outcome_idx]]$beta[ucos]
     X_dict <- cb_data$dict[outcome_idx]
-    cos_profile <- get_cos_profile(cs_beta, outcome_idx,
+    cos_profile <- get_ucos_profile(cs_beta, outcome_idx,
       X = cb_data$data[[X_dict]]$X, Y = cb_data$data[[outcome_idx]]$Y,
       XtX = cb_data$data[[X_dict]]$XtX, XtY = cb_data$data[[outcome_idx]]$XtY,
       YtY = cb_data$data[[outcome_idx]]$YtY, N = cb_data$data[[outcome_idx]]$N,
