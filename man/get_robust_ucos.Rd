@@ -51,7 +51,7 @@ for (l in 1:L) {
 }
 res <- colocboost(X = X, Y = Y, output_level = 2)
 res$ucos_details$ucos$ucos_index
-filter_res <- get_robust_ucos(res, npc_outcome_cutoff = 0.2, pvalue_cutoff = 1e-4)
+filter_res <- get_robust_ucos(res, npc_outcome_cutoff = 0.2, pvalue_cutoff = 1e-6)
 filter_res$ucos_details$ucos$ucos_index
 
 }
