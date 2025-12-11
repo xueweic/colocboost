@@ -1038,8 +1038,12 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
           }
           names(specific_cs_purity) <- c("min_abs_cor", "max_abs_cor", "median_abs_cor")
         } else {
-          specific_cs_purity <- out_ucos$purity_each
-          rownames(specific_cs_purity) <- specific_cs_names
+          specific_cs_purity <- lapply(1:3, function(ii) {
+            mm <- as.matrix(out_ucos$purity_each[,ii])
+            rownames(mm) <- colnames(mm) <- specific_cs_names
+            return(mm)
+          })
+          names(specific_cs_purity) <- c("min_abs_cor", "max_abs_cor", "median_abs_cor")
         }
 
         # - cos&ucos purity
