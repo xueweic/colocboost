@@ -363,25 +363,38 @@ get_robust_colocalization <- function(cb_output,
   # remove CoS only with one trait
   n_outcome <- sapply(cos_details$cos_outcomes$outcome_index, length)
   single <- which(n_outcome == 1)
-  if (length(single) == length(n_outcome)) {
-    # - all remaining the single outcome
-    cb_output$cos_details <- cb_output$vcp <- NULL
-    cb_output <- c(cb_output, list(vcp = NULL, cos_details = NULL))
-  } else if (length(single) != 0 & length(single) != length(n_outcome)) {
-    # - partial remaining the single outcome
+  if (length(single)!=0){
+    # organize results
     ucos_outcomes_npc <- data.frame(
-          outcome = unlist(cos_details$cos_outcomes$outcome_name[single]),
-          outcomes_index = unlist(cos_details$cos_outcomes$outcome_index[single]),
-          relative_logLR = sapply(single, function(ss){
-              cos_details$cos_outcomes_npc[[ss]]$relative_logLR[1]
-          }),
-          npc_outcome = sapply(single, function(ss){
-              cos_details$cos_outcomes_npc[[ss]]$npc_outcome[1]
-          })
+      outcome = unlist(cos_details$cos_outcomes$outcome_name[single]),
+      outcomes_index = unlist(cos_details$cos_outcomes$outcome_index[single]),
+      relative_logLR = sapply(single, function(ss){
+        cos_details$cos_outcomes_npc[[ss]]$relative_logLR[1]
+      }),
+      npc_outcome = sapply(single, function(ss){
+        cos_details$cos_outcomes_npc[[ss]]$npc_outcome[1]
+      })
+    )
+    rownames(ucos_outcomes_npc) <- names(cos_details$cos$cos_index[single])
+    ww <- cos_details$cos_weights[single]
+    names(ww) <- names(cos_details$cos$cos_index[single])
+    
+    if (length(single) == length(n_outcome)){
+      # - all remaining the single outcome
+      cos_ucos_purity = list(
+        "min_abs_cor" = NULL,
+        "median_abs_cor" = NULL,
+        "max_abs_cor" = NULL
       )
-      rownames(ucos_outcomes_npc) <- names(cos_details$cos$cos_index[single])
-      ww <- cos_details$cos_weights[single]
-      names(ww) <- names(cos_details$cos$cos_index[single])
+    } else {
+      # - partial remaining the single outcome
+      cos_ucos_purity = list(
+        "min_abs_cor" = as.matrix(cos_details$cos_purity$min_abs_cor)[-single, single, drop = FALSE],
+        "median_abs_cor" = as.matrix(cos_details$cos_purity$median_abs_cor)[-single, single, drop = FALSE],
+        "max_abs_cor" = as.matrix(cos_details$cos_purity$max_abs_cor)[-single, single, drop = FALSE]
+      )
+    }
+    
     ucos_from_cos <- list(
       "ucos" = list(
         "ucos_index" = cos_details$cos$cos_index[single],
@@ -398,29 +411,26 @@ get_robust_colocalization <- function(cb_output,
         "median_abs_cor" = as.matrix(cos_details$cos_purity$median_abs_cor)[single, single, drop = FALSE],
         "max_abs_cor" = as.matrix(cos_details$cos_purity$max_abs_cor)[single, single, drop = FALSE]
       ),
-      "cos_ucos_purity" = list(
-        "min_abs_cor" = as.matrix(cos_details$cos_purity$min_abs_cor)[-single, single, drop = FALSE],
-        "median_abs_cor" = as.matrix(cos_details$cos_purity$median_abs_cor)[-single, single, drop = FALSE],
-        "max_abs_cor" = as.matrix(cos_details$cos_purity$max_abs_cor)[-single, single, drop = FALSE]
-      ),
+      "cos_ucos_purity" = cos_ucos_purity,
       "ucos_outcomes_npc" = ucos_outcomes_npc
     )
     cb_output <- remove_cos(cb_output, remove_idx = single)
-
     # merge ucos_from_cos to ucos_details if appliable
     message("There are ", length(single), " uCoS generated after filtering the robust colocalization.")
     if (!("ucos_details" %in% names(cb_output))) {
       cb_output$ucos_details <- ucos_from_cos
     } else {
-      cb_output$ucos_details <- merge_ucos_details(cb_output$ucos_details, ucos_from_cos)
+      if (is.null(cb_output$ucos_details)){
+        cb_output$ucos_details <- ucos_from_cos
+      } else {
+        cb_output$ucos_details <- merge_ucos_details(cb_output$ucos_details, ucos_from_cos)
+      }
     }
   }
-
     
   # remove CoS does not pass cos_npc_cutoff
   remove <- which(cb_output$cos_details$cos_npc < cos_npc_cutoff)
   cb_output <- remove_cos(cb_output, remove_idx = remove)
-  cos_details <- cb_output$cos_details
 
   # - refine and output
   class(cb_output) <- "colocboost"
@@ -1279,10 +1289,14 @@ get_cos_purity <- function(cos, X = NULL, Xcorr = NULL, n_purity = 100) {
 merge_ucos_details <- function(ucos_details, ucos_from_cos) {
   
   get_cos_ucos_purity <- function(from_ucos, from_cos){
-    cos <- intersect(rownames(from_ucos), rownames(from_ucos))
-    tmp_from_ucos <- from_ucos[match(cos, rownames(from_ucos)), , drop = FALSE]
-    tmp_from_cos <- from_cos[match(cos, rownames(from_cos)), , drop = FALSE]
-    cbind(tmp_from_ucos, tmp_from_cos)
+    if (is.null(from_cos)){
+      return(from_ucos)
+    } else {
+      cos <- intersect(rownames(from_ucos), rownames(from_cos))
+      tmp_from_ucos <- from_ucos[match(cos, rownames(from_ucos)), , drop = FALSE]
+      tmp_from_cos <- from_cos[match(cos, rownames(from_cos)), , drop = FALSE]
+      cbind(tmp_from_ucos, tmp_from_cos)
+    }
   }
   
   get_ucos_purity <- function(from_ucos, from_cos, cross_from_ucos, cross_from_cos) {
