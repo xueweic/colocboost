@@ -1300,14 +1300,23 @@ merge_ucos_details <- function(ucos_details, ucos_from_cos) {
   }
   
   get_ucos_purity <- function(from_ucos, from_cos, cross_from_ucos, cross_from_cos) {
+    
+    from_ucos = ucos_details$ucos_purity$min_abs_cor
+    from_cos = ucos_from_cos$ucos_purity$min_abs_cor
+    cross_from_ucos = ucos_details$cos_ucos_purity$min_abs_cor
+    cross_from_cos = ucos_from_cos$cos_ucos_purity$min_abs_cor
+    
+    
     for (id in unique(sub(":.*", "", rownames(from_cos)))) {
       old <- grep(paste0("^", id, ":"), rownames(cross_from_ucos), value = TRUE)[1]
       new <- grep(paste0("^", id, ":"), rownames(from_cos), value = TRUE)[1]
       if (!is.na(old) && !is.na(new)) {
         rownames(cross_from_ucos) <- sub(old, new, rownames(cross_from_ucos), fixed = TRUE)
         colnames(cross_from_ucos) <- sub(old, new, colnames(cross_from_ucos), fixed = TRUE)
-        rownames(cross_from_cos) <- sub(old, new, rownames(cross_from_cos), fixed = TRUE)
-        colnames(cross_from_cos) <- sub(old, new, colnames(cross_from_cos), fixed = TRUE)
+        if (!is.null(cross_from_cos)){
+          rownames(cross_from_cos) <- sub(old, new, rownames(cross_from_cos), fixed = TRUE)
+          colnames(cross_from_cos) <- sub(old, new, colnames(cross_from_cos), fixed = TRUE)
+        }
       }
     }
     all_ucos <- c(rownames(from_ucos), rownames(from_cos))
