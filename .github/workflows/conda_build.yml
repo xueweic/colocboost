@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: ["r43", "r44"]
+        variant: ["r44", "r45"]
 
     env:
       ANACONDA_API_KEY: ${{ secrets.ANACONDA_API_TOKEN }}
