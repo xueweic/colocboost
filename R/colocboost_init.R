@@ -174,7 +174,9 @@ colocboost_init_model <- function(cb_data,
       "learning_rate_init" = learning_rate_init,
       "stop_thresh" = stop_thresh,
       "ld_jk" = c(),
-      "jk" = c()
+      "jk" = c(),
+      "scaling_factor" = if (!is.null(cb_data$data[[i]]$N)) (cb_data$data[[i]]$N - 1) else 1,
+      "beta_scaling" = if (!is.null(cb_data$data[[i]]$N)) 1 else 100
     )
 
     data_each <- cb_data$data[[i]]
@@ -375,7 +377,8 @@ inital_residual <- function(Y = NULL, XtY = NULL) {
 
 # - Calculate correlation between X and res
 get_correlation <- function(X = NULL, res = NULL, XtY = NULL, N = NULL,
-                            YtY = NULL, XtX = NULL, beta_k = NULL, miss_idx = NULL) {
+                            YtY = NULL, XtX = NULL, beta_k = NULL, miss_idx = NULL,
+                            XtX_beta_cache = NULL) {
   if (!is.null(X)) {
     corr <- suppressWarnings({
       Rfast::correls(res, X)[, "correlation"]
@@ -399,6 +402,8 @@ get_correlation <- function(X = NULL, res = NULL, XtY = NULL, N = NULL,
     }
     if (length(XtX) == 1){
       var_r <- YtY - 2 * sum(beta_k * XtY) + sum(beta_k^2)
+    } else if (!is.null(XtX_beta_cache)) {
+      var_r <- YtY - 2 * sum(beta_k * XtY) + sum(XtX_beta_cache * beta_k)
     } else {
       var_r <- YtY - 2 * sum(beta_k * XtY) + sum((XtX %*% as.matrix(beta_k)) * beta_k)
     }

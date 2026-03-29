@@ -283,7 +283,8 @@ cb_model_update <- function(cb_data, cb_model, cb_model_para) {
       N = data_each$N, YtY = data_each$YtY,
       XtX = cb_data$data[[X_dict]]$XtX,
       beta_k = model_each$beta,
-      miss_idx = data_each$variable_miss
+      miss_idx = data_each$variable_miss,
+      XtX_beta_cache = model_each$XtX_beta_cache
     )
     cb_model[[i]]$correlation <- tmp
     cb_model[[i]]$z <- get_z(tmp, n = data_each$N, model_each$res)
