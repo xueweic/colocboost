@@ -122,7 +122,9 @@ boost_check_update_jk_nofocal <- function(cb_model, cb_model_para, cb_data) {
             YtY = data_update[[ii]]$YtY,
             XtY = data_update[[ii]]$XtY,
             beta_k = model_update[[ii]]$beta,
-            miss_idx = data_update[[ii]]$variable_miss
+            miss_idx = data_update[[ii]]$variable_miss,
+            ref_label = cb_data$data[[X_dict[ii]]]$ref_label,
+            XtX_beta_cache = model_update[[ii]]$XtX_beta_cache
           )
         })
         change_res_each <- as.numeric(unlist(change_res_each))
@@ -197,7 +199,9 @@ boost_check_update_jk_nofocal <- function(cb_model, cb_model_para, cb_data) {
             YtY = data_update[[ii]]$YtY,
             XtY = data_update[[ii]]$XtY,
             beta_k = model_update[[ii]]$beta,
-            miss_idx = data_update[[ii]]$variable_miss
+            miss_idx = data_update[[ii]]$variable_miss,
+            ref_label = cb_data$data[[X_dict[ii]]]$ref_label,
+            XtX_beta_cache = model_update[[ii]]$XtX_beta_cache
           )
         })
         change_res_each <- as.numeric(unlist(change_res_each))
@@ -241,7 +245,9 @@ boost_check_update_jk_nofocal <- function(cb_model, cb_model_para, cb_data) {
             YtY = data_update[[ii]]$YtY,
             XtY = data_update[[ii]]$XtY,
             beta_k = model_update[[ii]]$beta,
-            miss_idx = data_update[[ii]]$variable_miss
+            miss_idx = data_update[[ii]]$variable_miss,
+            ref_label = cb_data$data[[X_dict[ii]]]$ref_label,
+            XtX_beta_cache = model_update[[ii]]$XtX_beta_cache
           )
         })
         change_res_each <- as.numeric(unlist(change_res_each))
@@ -368,7 +374,8 @@ boost_check_update_jk_focal <- function(cb_model, cb_model_para, cb_data,
           X = cb_data$data[[X_dict[pp_focal]]]$X,
           XtX = cb_data$data[[X_dict[pp_focal]]]$XtX,
           N = cb_data$data[[X_dict[pp_focal]]]$N,
-          remain_jk = 1:cb_model_para$P
+          remain_jk = 1:cb_model_para$P,
+          ref_label = cb_data$data[[X_dict[pp_focal]]]$ref_label
         )
       })
       # ----- second, if within the same LD buddies, select the following variants
@@ -379,7 +386,8 @@ boost_check_update_jk_focal <- function(cb_model, cb_model_para, cb_data,
         # ----- third, if picked variant within the same LD buddies
         ld_tmp <- get_LD_jk1_jk2(jk_focal, jk_focal_tmp,
           XtX = cb_data$data[[X_dict[pp_focal]]]$XtX,
-          remain_jk = 1:cb_model_para$P
+          remain_jk = 1:cb_model_para$P,
+          ref_label = cb_data$data[[X_dict[pp_focal]]]$ref_label
         )
         if (ld_tmp > jk_equiv_corr) {
           jk_focal <- jk_focal_tmp
@@ -491,7 +499,7 @@ boost_check_update_jk_focal <- function(cb_model, cb_model_para, cb_data,
 #' @importFrom stats cor
 get_LD_jk1_jk2 <- function(jk1, jk2,
                            X = NULL, XtX = NULL, N = NULL,
-                           remain_jk = NULL) {
+                           remain_jk = NULL, ref_label = "LD") {
   if (!is.null(X)) {
     LD_temp <- suppressWarnings({
       get_cormat(X[, c(jk1, jk2)])
@@ -499,12 +507,18 @@ get_LD_jk1_jk2 <- function(jk1, jk2,
     LD_temp[which(is.na(LD_temp))] <- 0
     LD_temp <- LD_temp[1, 2]
   } else if (!is.null(XtX)) {
-    if (length(XtX) == 1){
+    if (identical(ref_label, "No_ref")) {
       LD_temp <- 0
     } else {
       jk1.remain <- match(jk1, remain_jk)
       jk2.remain <- match(jk2, remain_jk)
-      LD_temp <- XtX[jk1.remain, jk2.remain]
+      if (identical(ref_label, "X_ref")) {
+        LD_temp <- suppressWarnings({ get_cormat(XtX[, c(jk1.remain, jk2.remain)]) })
+        LD_temp[which(is.na(LD_temp))] <- 0
+        LD_temp <- LD_temp[1, 2]
+      } else {
+        LD_temp <- XtX[jk1.remain, jk2.remain]
+      }
     }
   }
   return(LD_temp)
@@ -528,7 +542,8 @@ check_jk_jkeach <- function(jk, jk_each,
         X = cb_data$data[[X_dict[i]]]$X,
         XtX = cb_data$data[[X_dict[i]]]$XtX,
         N = data_update[[i]]$N,
-        remain_jk = setdiff(1:length(model_update[[i]]$res), data_update[[i]]$variable_miss)
+        remain_jk = setdiff(1:length(model_update[[i]]$res), data_update[[i]]$variable_miss),
+        ref_label = cb_data$data[[X_dict[i]]]$ref_label
       )
       judge[i] <- (change_each <= jk_equiv_loglik) & (abs(LD_temp) >= jk_equiv_corr)
     } else {
@@ -549,7 +564,7 @@ check_pair_jkeach <- function(jk_each,
   #' @importFrom stats cor
   get_LD_jk_each <- function(jk_each,
                              X = NULL, XtX = NULL, N = NULL,
-                             remain_jk = NULL) {
+                             remain_jk = NULL, ref_label = "LD") {
     if (!is.null(X)) {
       LD_temp <- suppressWarnings({
         get_cormat(X[, jk_each])
@@ -557,11 +572,15 @@ check_pair_jkeach <- function(jk_each,
       LD_temp[which(is.na(LD_temp))] <- 0
       # LD_temp <- LD_temp[1, 2]
     } else if (!is.null(XtX)) {
-      if (length(XtX) == 1){
+      if (identical(ref_label, "No_ref")) {
         LD_temp <- matrix(0, length(jk_each), length(jk_each))
       } else {
         jk.remain <- match(jk_each, remain_jk)
-        LD_temp <- XtX[jk.remain, jk.remain]
+        if (identical(ref_label, "X_ref")) {
+          LD_temp <- suppressWarnings({ get_cormat(XtX[, jk.remain]) })
+        } else {
+          LD_temp <- XtX[jk.remain, jk.remain]
+        }
         LD_temp[which(is.na(LD_temp))] <- 0
       }
     }
@@ -582,7 +601,8 @@ check_pair_jkeach <- function(jk_each,
                    X = cb_data$data[[X_dict[idx]]]$X,
                    XtX = cb_data$data[[X_dict[idx]]]$XtX,
                    N = data_update[[idx]]$N,
-                   remain_jk = setdiff(1:length(model_update[[idx]]$res), data_update[[idx]]$variable_miss)
+                   remain_jk = setdiff(1:length(model_update[[idx]]$res), data_update[[idx]]$variable_miss),
+                   ref_label = cb_data$data[[X_dict[idx]]]$ref_label
     )
   })
 
@@ -612,7 +632,9 @@ estimate_change_profile_res <- function(jk,
                                         X = NULL, res = NULL, N = NULL,
                                         XtX = NULL, YtY = NULL, XtY = NULL,
                                         beta_k = NULL,
-                                        miss_idx = NULL) {
+                                        miss_idx = NULL,
+                                        ref_label = "LD",
+                                        XtX_beta_cache = NULL) {
   if (!is.null(X)) {
     rtr <- sum(res^2) / (N - 1)
     xtr <- t(X[, jk]) %*% res / (N - 1)
@@ -629,10 +651,13 @@ estimate_change_profile_res <- function(jk,
     } else {
       xty <- XtY / scaling_factor
     }
-    if (length(xtx) == 1){
+    if (identical(ref_label, "No_ref")) {
       rtr <- yty - 2 * sum(beta_k * xty) + sum(beta_k^2)
+    } else if (!is.null(XtX_beta_cache)) {
+      rtr <- yty - 2 * sum(beta_k * xty) + sum(XtX_beta_cache * beta_k)
     } else {
-      rtr <- yty - 2 * sum(beta_k * xty) + sum((xtx %*% as.matrix(beta_k)) * beta_k)
+      XtX_beta <- compute_XtX_product(xtx, beta_k, ref_label)
+      rtr <- yty - 2 * sum(beta_k * xty) + sum(XtX_beta * beta_k)
     }
   }
   numerator <- xtr^2 / (2 * rtr)

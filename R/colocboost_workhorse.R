@@ -284,7 +284,8 @@ cb_model_update <- function(cb_data, cb_model, cb_model_para) {
       XtX = cb_data$data[[X_dict]]$XtX,
       beta_k = model_each$beta,
       miss_idx = data_each$variable_miss,
-      XtX_beta_cache = model_each$XtX_beta_cache
+      XtX_beta_cache = model_each$XtX_beta_cache,
+      ref_label = cb_data$data[[X_dict]]$ref_label
     )
     cb_model[[i]]$correlation <- tmp
     cb_model[[i]]$z <- get_z(tmp, n = data_each$N, model_each$res)

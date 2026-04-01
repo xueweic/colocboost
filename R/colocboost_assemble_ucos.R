@@ -64,7 +64,8 @@ colocboost_assemble_ucos <- function(cb_obj_single,
       }
       purity <- matrix(get_purity(pos,
         X = cb_data$data[[1]]$X, Xcorr = cb_data$data[[1]]$XtX,
-        N = cb_data$data[[1]]$N, n = n_purity
+        N = cb_data$data[[1]]$N, n = n_purity,
+        ref_label = cb_data$data[[1]]$ref_label
       ), 1, 3)
       purity <- as.data.frame(purity)
       colnames(purity) <- c("min_abs_corr", "mean_abs_corr", "median_abs_corr")
@@ -131,7 +132,8 @@ colocboost_assemble_ucos <- function(cb_obj_single,
         X = cb_data$data[[1]]$X, Xcorr = cb_data$data[[1]]$XtX,
         N = cb_data$data[[1]]$N, n = n_purity, coverage = coverage,
         min_abs_corr = min_abs_corr, median_abs_corr = median_abs_corr,
-        miss_idx = cb_data$data[[1]]$variable_miss
+        miss_idx = cb_data$data[[1]]$variable_miss,
+        ref_label = cb_data$data[[1]]$ref_label
       )
       if (length(check_purity) != 0) {
         w <- w[check_purity]
@@ -237,7 +239,8 @@ colocboost_assemble_ucos <- function(cb_obj_single,
               X = cb_data$data[[1]]$X,
               Xcorr = cb_data$data[[1]]$XtX,
               miss_idx = cb_data$data[[1]]$variable_miss,
-              P = cb_model_para$P
+              P = cb_model_para$P,
+              ref_label = cb_data$data[[1]]$ref_label
             )
             min_between[i.between, j.between] <- min_between[j.between, i.between] <- res[1]
             max_between[i.between, j.between] <- max_between[j.between, i.between] <- res[2]
@@ -301,7 +304,8 @@ colocboost_assemble_ucos <- function(cb_obj_single,
             purity,
             matrix(get_purity(pos,
               X = cb_data$data[[1]]$X, Xcorr = cb_data$data[[1]]$XtX,
-              N = cb_data$data[[1]]$N, n = n_purity
+              N = cb_data$data[[1]]$N, n = n_purity,
+              ref_label = cb_data$data[[1]]$ref_label
             ), 1, 3)
           )
       }

@@ -1040,6 +1040,7 @@ test_that("get_ucos_evidence handles summary statistics data", {
     dict_YX = NULL,
     Z = Z_list,
     LD = list(LD_matrix),
+    ref_label = "LD",
     N_sumstat = lapply(sumstat_list, function(s) s$n[1]),
     dict_sumstatLD = c(1, 1),
     Var_y = NULL,

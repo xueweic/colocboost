@@ -32,7 +32,8 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data) {
         XtX = cb_data$data[[X_dict]]$XtX,
         N = cb_data$data[[i]]$N,
         remain_idx = setdiff(1:cb_model_para$P, cb_data$data[[i]]$variable_miss),
-        P = cb_model_para$P
+        P = cb_model_para$P,
+        ref_label = cb_data$data[[X_dict]]$ref_label
       )
       cb_model[[i]]$ld_jk <- rbind(cb_model[[i]]$ld_jk, ld_jk)
     }
@@ -107,39 +108,27 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data) {
       beta_scaling <- cb_model[[i]]$beta_scaling
       # - summary statistics
       xtx <- cb_data$data[[X_dict]]$XtX
+      ref_label_i <- cb_data$data[[X_dict]]$ref_label
       cb_model[[i]]$res <- rep(0, cb_model_para$P)
       if (length(cb_data$data[[i]]$variable_miss) != 0) {
         beta <- cb_model[[i]]$beta[-cb_data$data[[i]]$variable_miss]  / beta_scaling
         xty <- cb_data$data[[i]]$XtY[-cb_data$data[[i]]$variable_miss]
-        if (length(xtx) == 1){
-          XtX_beta <- beta
-          cb_model[[i]]$res[-cb_data$data[[i]]$variable_miss] <- xty - scaling_factor * beta
-        } else {
-          XtX_beta <- xtx %*% beta
-          cb_model[[i]]$res[-cb_data$data[[i]]$variable_miss] <- xty - scaling_factor * XtX_beta
-        }
+        XtX_beta <- compute_XtX_product(xtx, beta, ref_label_i)
+        cb_model[[i]]$res[-cb_data$data[[i]]$variable_miss] <- xty - scaling_factor * XtX_beta
 
       } else {
         beta <- cb_model[[i]]$beta / beta_scaling
         xty <- cb_data$data[[i]]$XtY
-        if (length(xtx) == 1){
-          XtX_beta <- beta
-          cb_model[[i]]$res <- xty - scaling_factor * beta
-        } else {
-          XtX_beta <- xtx %*% beta
-          cb_model[[i]]$res <- xty - scaling_factor * XtX_beta
-        }
+        XtX_beta <- compute_XtX_product(xtx, beta, ref_label_i)
+        cb_model[[i]]$res <- xty - scaling_factor * XtX_beta
       }
       # - cache XtX %*% beta for reuse in get_correlation (avoids redundant O(P^2) computation)
       cb_model[[i]]$XtX_beta_cache <- XtX_beta
       # - profile-loglikelihood (reuses cached XtX_beta)
       yty <- cb_data$data[[i]]$YtY / scaling_factor
       xty <- xty / scaling_factor
-      if (length(xtx) == 1){
-        profile_log <- (yty - 2 * sum(beta * xty) + sum(beta^2)) * adj_dep
-      } else {
-        profile_log <- (yty - 2 * sum(beta * xty) + sum(XtX_beta * beta)) * adj_dep
-      }
+      profile_log <- (yty - 2 * sum(beta * xty) + sum(XtX_beta * beta)) * adj_dep
+      
     }
     cb_model[[i]]$profile_loglike_each <- c(cb_model[[i]]$profile_loglike_each, profile_log)
   }
@@ -149,7 +138,7 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data) {
 
 
 # - calculate LD for update_jk
-get_LD_jk <- function(jk1, X = NULL, XtX = NULL, N = NULL, remain_idx = NULL, P = NULL) {
+get_LD_jk <- function(jk1, X = NULL, XtX = NULL, N = NULL, remain_idx = NULL, P = NULL, ref_label = "LD") {
   if (!is.null(X)) {
     corr <- suppressWarnings({
       Rfast::correls(X[, jk1], X)[, "correlation"]
@@ -158,8 +147,14 @@ get_LD_jk <- function(jk1, X = NULL, XtX = NULL, N = NULL, remain_idx = NULL, P 
   } else if (!is.null(XtX)) {
     jk1.remain <- which(remain_idx == jk1)
     corr <- rep(0, P)
-    if (length(XtX) == 1 | length(jk1.remain)==0){
+    if (identical(ref_label, "No_ref") | length(jk1.remain) == 0) {
       corr[remain_idx] <- 1
+    } else if (identical(ref_label, "X_ref")) {
+      corr_common <- suppressWarnings({
+        correls(XtX[, jk1.remain], XtX)[, "correlation"]
+      })
+      corr_common[which(is.na(corr_common))] <- 0
+      corr[remain_idx] <- corr_common
     } else {
       corr[remain_idx] <- XtX[, jk1.remain]
     }
@@ -262,7 +257,8 @@ boost_obj_last <- function(cb_data, cb_model, cb_model_para) {
         XtX = cb_data$data[[X_dict]]$XtX,
         N = cb_data$data[[i]]$N,
         remain_idx = setdiff(1:cb_model_para$P, cb_data$data[[i]]$variable_miss),
-        P = cb_model_para$P
+        P = cb_model_para$P,
+        ref_label = cb_data$data[[X_dict]]$ref_label
       )
       ld_feature <- sqrt(abs(ld_jk))
 

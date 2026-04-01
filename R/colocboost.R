@@ -22,12 +22,20 @@
 #'                  \code{variant} is required if sumstat for different outcomes do not have the same number of variables.
 #'                  \code{var_y} is the variance of phenotype (default is 1 meaning that the Y is in the \dQuote{standardized} scale).
 #' @param LD A list of correlation matrix indicating the LD matrix for each genotype. It also could be a single matrix if all sumstats were
-#'           obtained from the same genotypes.
+#'           obtained from the same genotypes. Provide either \code{LD} or \code{X_ref}, not both.
+#'           If neither is provided, LD-free mode is used.
+#' @param X_ref A reference panel genotype matrix (N_ref x P) or a list of matrices, as an alternative to providing a precomputed
+#'              \code{LD} matrix. Column names must include variant names matching those in \code{sumstat}.
+#'              When the number of reference panel samples is less than the number of variants (N_ref < P),
+#'              this avoids storing the full P x P LD matrix and reduces memory usage.
+#'              When N_ref >= P, LD is precomputed from \code{X_ref} internally.
+#'              Provide either \code{LD} or \code{X_ref}, not both. If neither is provided, LD-free mode is used.
 #' @param dict_YX A L by 2 matrix of dictionary for \code{X} and \code{Y} if there exist subsets of outcomes corresponding to the same X matrix.
 #'                  The first column should be 1:L for L outcomes. The second column should be the index of \code{X} corresponding to the outcome.
 #'                  The innovation: do not provide the same matrix in \code{X} to reduce the computational burden.
-#' @param dict_sumstatLD A L by 2 matrix of dictionary for \code{sumstat} and \code{LD} if there exist subsets of outcomes corresponding to the same sumstat.
-#'                  The first column should be 1:L for L sumstat The second column should be the index of \code{LD} corresponding to the sumstat.
+#' @param dict_sumstatLD A L by 2 matrix of dictionary for \code{sumstat} and \code{LD} (or \code{X_ref}) if there exist subsets of outcomes
+#'                  corresponding to the same sumstat.
+#'                  The first column should be 1:L for L sumstat The second column should be the index of \code{LD} (or \code{X_ref}) corresponding to the sumstat.
 #'                  The innovation: do not provide the same matrix in \code{LD} to reduce the computational burden.
 #' @param outcome_names The names of outcomes, which has the same order for Y.
 #' @param focal_outcome_idx The index of the focal outcome if perform GWAS-xQTL ColocBoost
@@ -129,9 +137,10 @@
 #'
 #' @family colocboost
 #' @importFrom stats na.omit
+#' @importFrom Rfast correls standardise upper_tri med
 #' @export
 colocboost <- function(X = NULL, Y = NULL, # individual data
-                       sumstat = NULL, LD = NULL, # summary statistics: either Z, bhat, sebhat, N, var_Y,
+                       sumstat = NULL, LD = NULL, X_ref = NULL, # summary statistics: either Z, bhat, sebhat, N, var_Y,
                        ###### - index dict for X match multiple Y / LD match multiple sumstat
                        dict_YX = NULL, # Y index for 1st column, X index for 2nd column
                        dict_sumstatLD = NULL, # sumstat index for 1st column, LD index for 2nd column
@@ -202,11 +211,15 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
     warning("Error: No individual data (X, Y) or summary statistics (sumstat) or (effect_est, effect_se) are provided! Please check!")
     return(NULL)
   }
+  if (!is.null(LD) && !is.null(X_ref)) {
+    warning("Error: Provide either LD or X_ref, not both.")
+    return(NULL)
+  }
 
   # - check input data: individual level data and summary-level data
   validated_data <- colocboost_validate_input_data(
     X = X, Y = Y,
-    sumstat = sumstat, LD = LD,
+    sumstat = sumstat, LD = LD, X_ref = X_ref,
     dict_YX = dict_YX, dict_sumstatLD = dict_sumstatLD,
     effect_est = effect_est, effect_se = effect_se, effect_n = effect_n,
     overlap_variables = overlap_variables,
@@ -227,6 +240,8 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
   keep_variable_individual <- validated_data$keep_variable_individual
   sumstat <- validated_data$sumstat
   LD <- validated_data$LD
+  X_ref <- validated_data$X_ref
+  ref_label <- validated_data$ref_label
   sumstatLD_dict <- validated_data$sumstatLD_dict
   keep_variable_sumstat <- validated_data$keep_variable_sumstat
   Z <- validated_data$Z
@@ -277,7 +292,8 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
   }
   cb_data <- colocboost_init_data(
     X = X, Y = Y, dict_YX = yx_dict,
-    Z = Z, LD = LD, N_sumstat = N_sumstat, dict_sumstatLD = sumstatLD_dict,
+    Z = Z, LD = LD, X_ref = X_ref, ref_label = ref_label,
+    N_sumstat = N_sumstat, dict_sumstatLD = sumstatLD_dict,
     Var_y = Var_y, SeBhat = SeBhat,
     keep_variables = keep_variables,
     focal_outcome_idx = focal_outcome_idx,
@@ -377,7 +393,15 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
 #' @param X A list of genotype matrices for different outcomes, or a single matrix if all outcomes share the same genotypes.
 #' @param Y A list of vectors of outcomes or an N by L matrix if it is considered for the same X and multiple outcomes.
 #' @param sumstat A list of data.frames of summary statistics.
-#' @param LD A list of correlation matrices indicating the LD matrix for each genotype.
+#' @param LD A list of correlation matrix indicating the LD matrix for each genotype. It also could be a single matrix if all sumstats were
+#'           obtained from the same genotypes. Provide either \code{LD} or \code{X_ref}, not both.
+#'           If neither is provided, LD-free mode is used.
+#' @param X_ref A reference panel genotype matrix (N_ref x P) or a list of matrices, as an alternative to providing a precomputed
+#'              \code{LD} matrix. Column names must include variant names matching those in \code{sumstat}.
+#'              When the number of reference panel samples is less than the number of variants (N_ref < P),
+#'              this avoids storing the full P x P LD matrix and reduces memory usage.
+#'              When N_ref >= P, LD is precomputed from \code{X_ref} internally.
+#'              Provide either \code{LD} or \code{X_ref}, not both. If neither is provided, LD-free mode is used.
 #' @param dict_YX A L by 2 matrix of dictionary for X and Y if there exist subsets of outcomes corresponding to the same X matrix.
 #' @param dict_sumstatLD A L by 2 matrix of dictionary for sumstat and LD if there exist subsets of outcomes corresponding to the same sumstat.
 #' @param effect_est Matrix of variable regression coefficients (i.e. regression beta values) in the genomic region
@@ -394,6 +418,8 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
 #'   \item{keep_variable_individual}{List of variable names for each X matrix}
 #'   \item{sumstat}{Processed list of summary statistics data.frames}
 #'   \item{LD}{Processed list of LD matrices}
+#'   \item{X_ref}{Processed list of reference genotype matrices}
+#'   \item{ref_label}{Style of reference matrics}
 #'   \item{sumstatLD_dict}{Dictionary mapping sumstat to LD}
 #'   \item{keep_variable_sumstat}{List of variant names for each sumstat}
 #'   \item{Z}{List of z-scores for each outcome}
@@ -408,7 +434,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
 #'
 #' @keywords internal
 colocboost_validate_input_data <- function(X = NULL, Y = NULL,
-                                           sumstat = NULL, LD = NULL,
+                                           sumstat = NULL, LD = NULL, X_ref = NULL,
                                            dict_YX = NULL, dict_sumstatLD = NULL,
                                            effect_est = NULL, effect_se = NULL, effect_n = NULL,
                                            overlap_variables = FALSE,
@@ -418,7 +444,7 @@ colocboost_validate_input_data <- function(X = NULL, Y = NULL,
                                            cos_npc_cutoff = 0.2,
                                            npc_outcome_cutoff = 0.2) {
   
-  # - check individual level data
+  ############### Check individual level data ###########################
   if (!is.null(X) & !is.null(Y)) {
     # --- check input
     if (is.data.frame(X))  X <- as.matrix(X)
@@ -557,8 +583,9 @@ colocboost_validate_input_data <- function(X = NULL, Y = NULL,
   } else {
     yx_dict <- keep_variable_individual <- NULL
   }
+  ############### Done! Check individual level data ###########################
   
-  # - check summary-level data
+  ############### Check summary level data ###########################
   if ((!is.null(sumstat)) | (!is.null(effect_est) & !is.null(effect_se))) {
     # --- check input of (effect_est, effect_se)
     if ((!is.null(effect_est) & !is.null(effect_se))) {
@@ -649,8 +676,9 @@ colocboost_validate_input_data <- function(X = NULL, Y = NULL,
       }
       return(xx)
     })
+    ############### Done! Check summary level data ###########################
     
-    # --- check input of LD
+    ############### Check input of LD or reference X_ref ###########################
     M_updated <- M
     min_abs_corr_updated <- min_abs_corr
     jk_equiv_corr_updated <- jk_equiv_corr
@@ -659,10 +687,13 @@ colocboost_validate_input_data <- function(X = NULL, Y = NULL,
     cos_npc_cutoff_updated <- cos_npc_cutoff
     npc_outcome_cutoff_updated <- npc_outcome_cutoff
     
-    if (is.null(LD)) {
+    # --- Handle X_ref: convert to LD when N_ref >= P, or keep for on-the-fly computation
+    
+    
+    if (is.null(LD) && is.null(X_ref)) {
       # if no LD input, set diagonal matrix to LD
       warning(
-        "Providing the LD for summary statistics data is highly recommended. ",
+        "Providing the LD or X_ref for summary statistics data is highly recommended. ",
         "Without LD, only a single iteration will be performed under the assumption of one causal variable per outcome. ",
         "Additionally, the purity of CoS cannot be evaluated!"
       )
@@ -677,61 +708,98 @@ colocboost_validate_input_data <- function(X = NULL, Y = NULL,
       func_simplex_updated <- "only_z2z"
       cos_npc_cutoff_updated <- 0
       npc_outcome_cutoff_updated <- 0
+      ref_label <- "No_ref"
       
     } else {
       
-      if (is.data.frame(LD)) LD <- as.matrix(LD)
-      if (is.matrix(LD)) LD <- list(LD)
-      # - check if NA in LD matrix
-      num_na <- sapply(LD, sum)
-      if (any(is.na(num_na))){
-        warning("Error: Input LD must not contain missing values (NA).")
-        return(NULL)
+      # -- Determine reference list and variant extraction for LD or X_ref
+      if (!is.null(LD)){
+        
+        if (is.data.frame(LD)) LD <- as.matrix(LD)
+        if (is.matrix(LD)) LD <- list(LD)
+        # - check if NA in LD matrix
+        num_na <- sapply(LD, sum)
+        if (any(is.na(num_na))){
+          warning("Error: Input LD must not contain missing values (NA).")
+          return(NULL)
+        }
+        ref_list <- LD
+        ref_label <- "LD"
+        
+      } else {
+        if (is.data.frame(X_ref)) X_ref <- as.matrix(X_ref)
+        if (is.matrix(X_ref)) X_ref <- list(X_ref)
+        
+        # When N_ref >= P, precompute LD (avoids repeated O(N_ref*P) in boosting loop)
+        # When N_ref < P, keep X_ref for on-the-fly computation (avoids P*P memory)
+        all_large <- all(sapply(X_ref, function(xr) nrow(xr) >= ncol(xr)))
+        if (all_large) {
+          message("N_ref >= P: precomputing LD from X_ref.")
+          LD <- lapply(X_ref, function(xr) {
+            ld <- get_cormat(xr)
+            rownames(ld) <- colnames(ld) <- colnames(xr)
+            ld
+          })
+          X_ref <- NULL
+          ref_list <- LD
+          ref_label <- "LD"
+        } else {
+          # N_ref < P: standardize and keep for on-the-fly crossprod/(N_ref-1)
+          for (idx in seq_along(X_ref)) {
+            X_ref[[idx]] <- standardise(X_ref[[idx]], center = TRUE, scale = TRUE)
+            X_ref[[idx]][which(is.na(X_ref[[idx]]))] <- 0
+          }
+          ref_list <- X_ref
+          ref_label <- "X_ref"
+        }
       }
-      # Create sumstat-LD mapping ===
-      if (length(LD) == 1) {
+
+      # -- Create sumstat - LD/X_ref mapping ===
+      if (length(ref_list) == 1) {
         sumstatLD_dict <- rep(1, length(sumstat))
-      } else if (length(LD) == length(sumstat)) {
+      } else if (length(ref_list) == length(sumstat)) {
         sumstatLD_dict <- seq_along(sumstat)
       } else {
         if (is.null(dict_sumstatLD)) {
           warning('Error: Please provide dict_sumstatLD: you have ', length(sumstat), 
-                  ' sumstats but only ', length(LD), ' LD matrices')
+                  ' sumstats but only ', length(ref_list), ' ', ref_label, ' matrices')
           return(NULL)
         } else {
-          # - dict for sumstat to LD mapping
+          # - dict for sumstat to LD/X_ref mapping
           sumstatLD_dict <- rep(NA, length(sumstat))
           for (i in 1:length(sumstat)) {
             tmp <- unique(dict_sumstatLD[dict_sumstatLD[, 1] == i, 2])
             if (length(tmp) == 0) {
-              warning(paste("Error: You don't provide matched LD for sumstat", i))
+              warning("Error: You don't provide matched", ref_label, "for sumstat", i)
               return(NULL)
             } else if (length(tmp) != 1) {
-              warning(paste("Error: You provide multiple matched LD for sumstat", i))
+              warning("Error: You provide multiple matched", ref_label, "for sumstat", i)
               return(NULL)
             } else {
               sumstatLD_dict[i] <- tmp
             }
           }
-          if (max(sumstatLD_dict) > length(LD)) {
-            warning("Error: You don't provide enough LD matrices!")
+          if (max(sumstatLD_dict) > length(ref_list)) {
+            warning("Error: You don't provide enough", ref_label, "matrices!")
             return(NULL)
           }
         }
       }
       
-      # === Filter variants for each sumstat ===
+      # -- Filter variants for each sumstat
+      get_ref_variants <- function(ref_mat) colnames(ref_mat)
+      ref_ncol <- function(ref_mat) ncol(ref_mat)
       for (i in seq_along(sumstat)) {
         # Get sumstat variants (adjust field name based on your data structure)
         sumstat_variants <- sumstat[[i]]$variant
         n_total <- length(sumstat_variants)
-        # Get LD variants
+        # Get LD/X_ref variants
         ld_idx <- sumstatLD_dict[i]
-        current_ld <- LD[[ld_idx]]
-        ld_variants <- rownames(current_ld)
+        current_ref <- ref_list[[ld_idx]]
+        ld_variants <- get_ref_variants(current_ref)
         if (is.null(ld_variants)) {
-          if (ncol(current_ld) != n_total){
-            warning('Error: LD matrix ', ld_idx, ' has no rownames. Please ensure all LD matrices have variant names as rownames.')
+          if (ncol(current_ref) != n_total){
+            warning('Error: ', ref_label, ' matrix ', ld_idx, ' has no variant names. Please ensure all ', ref_label, ' matrices have variant names.')
             return(NULL)
           }
         }
@@ -755,6 +823,7 @@ colocboost_validate_input_data <- function(X = NULL, Y = NULL,
     keep_variable_sumstat <- lapply(sumstat, function(xx) {
       xx$variant
     })
+    ############### Done! Check input of LD or reference X_ref ###########################
     
     # - checking sample size existency
     n_exist <- sapply(sumstat, function(ss) {
@@ -834,7 +903,7 @@ colocboost_validate_input_data <- function(X = NULL, Y = NULL,
       Z[[i.summstat]] <- z
     }
   } else {
-    Z <- N_sumstat <- Var_y <- SeBhat <- sumstatLD_dict <- keep_variable_sumstat <- NULL
+    Z <- N_sumstat <- Var_y <- SeBhat <- sumstatLD_dict <- keep_variable_sumstat <- X_ref <- ref_label <- NULL
     M_updated <- M
     min_abs_corr_updated <- min_abs_corr
     jk_equiv_corr_updated <- jk_equiv_corr
@@ -851,6 +920,8 @@ colocboost_validate_input_data <- function(X = NULL, Y = NULL,
     keep_variable_individual = keep_variable_individual,
     sumstat = sumstat,
     LD = LD,
+    X_ref = X_ref,
+    ref_label = ref_label,
     sumstatLD_dict = sumstatLD_dict,
     keep_variable_sumstat = keep_variable_sumstat,
     Z = Z,

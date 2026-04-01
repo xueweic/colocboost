@@ -28,7 +28,8 @@ colocboost_inits <- function() {
 #' @noRd
 #' @keywords cb_objects
 colocboost_init_data <- function(X, Y, dict_YX,
-                                 Z, LD, N_sumstat, dict_sumstatLD,
+                                 Z, LD, X_ref, ref_label,
+                                 N_sumstat, dict_sumstatLD,
                                  Var_y, SeBhat,
                                  keep_variables,
                                  focal_outcome_idx = NULL,
@@ -98,6 +99,7 @@ colocboost_init_data <- function(X, Y, dict_YX,
     )
     for (i in 1:length(Y)) {
       cb_data$data[[flag]] <- ind_formated$result[[i]]
+      cb_data$data[[flag]]$ref_label <- "individual"
       names(cb_data$data)[flag] <- paste0("ind_outcome_", i)
       flag <- flag + 1
     }
@@ -105,17 +107,20 @@ colocboost_init_data <- function(X, Y, dict_YX,
   } 
   n_ind <- flag - 1
   # if summary: XtX XtY, YtY
-  if (!is.null(Z) & !is.null(LD)) {
+  if (!is.null(Z)) {
     ####################### need to consider more #########################
     # ------ only code up one sumstat
     variant_lists <- keep_variables[c((n_ind_variable+1):length(keep_variables))]
     sumstat_formated <- process_sumstat(
-      Z, N_sumstat, Var_y, SeBhat, LD,
+      Z, N_sumstat, Var_y, SeBhat,
+      ld_matrices  =  if (ref_label == "X_ref") X_ref else LD,
       variant_lists, dict_sumstatLD,
-      keep_variable_names
+      keep_variable_names,
+      ref_label = ref_label
     )
     for (i in 1:length(Z)) {
       cb_data$data[[flag]] <- sumstat_formated$results[[i]]
+      cb_data$data[[flag]]$ref_label <- ref_label
       names(cb_data$data)[flag] <- paste0("sumstat_outcome_", i)
       flag <- flag + 1
     }
@@ -196,7 +201,8 @@ colocboost_init_model <- function(cb_data,
       N = data_each$N, YtY = data_each$YtY,
       XtX = cb_data$data[[X_dict]]$XtX,
       beta_k = tmp$beta,
-      miss_idx = data_each$variable_miss
+      miss_idx = data_each$variable_miss,
+      ref_label = cb_data$data[[X_dict]]$ref_label
     )
     # - initial z-score between X and residual based on correlation
     tmp$z <- get_z(tmp$correlation, n = data_each$N, tmp$res)
@@ -378,7 +384,8 @@ inital_residual <- function(Y = NULL, XtY = NULL) {
 # - Calculate correlation between X and res
 get_correlation <- function(X = NULL, res = NULL, XtY = NULL, N = NULL,
                             YtY = NULL, XtX = NULL, beta_k = NULL, miss_idx = NULL,
-                            XtX_beta_cache = NULL) {
+                            XtX_beta_cache = NULL,
+                            ref_label = "LD") {
   if (!is.null(X)) {
     corr <- suppressWarnings({
       Rfast::correls(res, X)[, "correlation"]
@@ -400,12 +407,13 @@ get_correlation <- function(X = NULL, res = NULL, XtY = NULL, N = NULL,
       Xtr <- res / scaling_factor
       XtY <- XtY / scaling_factor
     }
-    if (length(XtX) == 1){
+    if (identical(ref_label, "No_ref")) {
       var_r <- YtY - 2 * sum(beta_k * XtY) + sum(beta_k^2)
     } else if (!is.null(XtX_beta_cache)) {
       var_r <- YtY - 2 * sum(beta_k * XtY) + sum(XtX_beta_cache * beta_k)
     } else {
-      var_r <- YtY - 2 * sum(beta_k * XtY) + sum((XtX %*% as.matrix(beta_k)) * beta_k)
+      XtX_beta_val <- compute_XtX_product(XtX, beta_k, ref_label)
+      var_r <- YtY - 2 * sum(beta_k * XtY) + sum(XtX_beta_val * beta_k)
     }
     if (var_r > 1e-6) {
       corr_nomiss <- Xtr / sqrt(var_r)
@@ -561,7 +569,10 @@ get_multiple_testing_correction <- function(z, miss_idx = NULL, func_multi_test 
 #'
 #' @return List containing processed data with optimized LD submatrix storage
 #' @noRd
-process_sumstat <- function(Z, N, Var_y, SeBhat, ld_matrices, variant_lists, dict, target_variants) {
+process_sumstat <- function(Z, N, Var_y, SeBhat, 
+                            ld_matrices, variant_lists, dict, 
+                            target_variants,
+                            ref_label = "LD") {
   
   
   # Step 1: Identify unique combinations of (variant list, LD matrix)
@@ -582,7 +593,6 @@ process_sumstat <- function(Z, N, Var_y, SeBhat, ld_matrices, variant_lists, dic
           break
         }
       }
-
       if (!is_duplicate) {
         # If not a duplicate, assign its exact index
         unified_dict[i] <- i
@@ -606,14 +616,12 @@ process_sumstat <- function(Z, N, Var_y, SeBhat, ld_matrices, variant_lists, dic
     current_variants <- variant_lists[[i]]
     current_z <- Z[[i]]
     current_n <- N[[i]]
-
     # Get corresponding LD matrix from original dictionary mapping
     ld_index <- dict[i]
-    current_ld_matrix <- ld_matrices[[ld_index]]
+    current_ref <- ld_matrices[[ld_index]]
 
     # Find common variants between current list and target variants
     common_variants <- intersect(current_variants, target_variants)
-
     # Find variants in target but not in current list
     missing_variants <- setdiff(target_variants, current_variants)
     tmp$variable_miss <- which(target_variants %in% missing_variants)
@@ -625,51 +633,76 @@ process_sumstat <- function(Z, N, Var_y, SeBhat, ld_matrices, variant_lists, dic
     Z_extend[pos_target] <- current_z[pos_z]
 
     # Calculate submatrix for each unique entry (not duplicates)
-    if (length(current_ld_matrix) == 1){
-      ld_submatrix <- current_ld_matrix
-    } else {
-      ld_submatrix <- NULL
+    ref_submatrix <- NULL
+    
+    if (ref_label == "No_ref"){
+      
+      ref_submatrix <- current_ref
+      
+    } else if (ref_label == "X_ref") {
+      
+      # match by column names only (rows = samples)
       if (length(common_variants) > 0) {
-        # Only include the submatrix if this entry is unique or is the first occurrence
         if (i == unified_dict[i]) {
-          # Check if common_variants and rownames have identical order
-          if (identical(common_variants, rownames(current_ld_matrix))) {
-            # If order is identical, use the matrix directly without reordering
-            ld_submatrix <- current_ld_matrix
-          } else {
-            # If order is different, reorder using matched indices
-            matched_indices <- match(common_variants, rownames(current_ld_matrix))
-            ld_submatrix <- current_ld_matrix[matched_indices, matched_indices, drop = FALSE]
-            rownames(ld_submatrix) <- common_variants
-            colnames(ld_submatrix) <- common_variants
+          col_idx <- match(common_variants, colnames(current_ref))
+          col_idx <- col_idx[!is.na(col_idx)]
+          if (length(col_idx) > 0) {
+            ref_submatrix <- current_ref[, col_idx, drop = FALSE]
+            colnames(ref_submatrix) <- common_variants
           }
         }
       }
+      
+    } else {
+      
+      # ref_label == "LD": match by both row and column names
+      if (length(common_variants) > 0) {
+        if (i == unified_dict[i]) {
+          if (identical(common_variants, rownames(current_ref))) {
+            # Order is identical, use matrix directly without reordering
+            ref_submatrix <- current_ref
+          } else {
+            # Reorder to match common_variants order
+            matched_indices <- match(common_variants, rownames(current_ref))
+            ref_submatrix <- current_ref[matched_indices, matched_indices, drop = FALSE]
+            rownames(ref_submatrix) <- common_variants
+            colnames(ref_submatrix) <- common_variants
+          }
+        }
+      }
+      
     }
 
     # Organize data
     if (is.null(current_n)) {
-      tmp$XtX <- ld_submatrix
+      tmp$XtX <- ref_submatrix
       tmp$XtY <- Z_extend
       tmp$YtY <- 1
     } else {
       if (!is.null(SeBhat[[i]]) & !is.null(Var_y[[i]])) {
+        
         # var_y, shat (and bhat) are provided, so the effects are on the
         # *original scale*.
         adj <- 1 / (Z_extend^2 + current_n - 2)
-        if (!is.null(ld_submatrix)) {
-          XtXdiag <- Var_y[[i]] * adj / (SeBhat[[i]]^2)
-          xtx <- t(ld_submatrix * sqrt(XtXdiag)) * sqrt(XtXdiag)
-          tmp$XtX <- (xtx + t(xtx)) / 2
-        }
         tmp$YtY <- (current_n - 1) * Var_y[[i]]
         tmp$XtY <- Z_extend * sqrt(adj) * Var_y[[i]] / SeBhat[[i]]
-      } else {
-        if (!is.null(ld_submatrix)) {
-          tmp$XtX <- ld_submatrix
+        if (ref_label == "X_ref") {
+          # Store X_ref slice directly; XtX computed on-the-fly downstream
+          tmp$XtX <- ref_submatrix
+        } else {
+          # LD or No_ref: scale to original scale
+          XtXdiag <- Var_y[[i]] * adj / (SeBhat[[i]]^2)
+          xtx <- t(ref_submatrix * sqrt(XtXdiag)) * sqrt(XtXdiag)
+          tmp$XtX <- (xtx + t(xtx)) / 2
         }
+        
+      } else {
+        # Standardised scale
         tmp$YtY <- (current_n - 1)
         tmp$XtY <- sqrt(current_n - 1) * Z_extend
+        if (!is.null(ref_submatrix)) {
+          tmp$XtX <- ref_submatrix   # LD, X_ref, or scalar 1 stored as-is
+        }
       }
     }
 

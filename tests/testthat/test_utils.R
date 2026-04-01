@@ -571,6 +571,7 @@ test_that("colocboost_init_data handles complex dictionary mappings", {
         dict_YX = dict_YX,
         Z = Z_list,
         LD = LD_list,
+        ref_label = "LD",
         N_sumstat = N_sumstat,
         dict_sumstatLD = dict_sumstatLD,
         Var_y = NULL,

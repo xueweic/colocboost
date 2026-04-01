@@ -43,7 +43,8 @@ merge_cos_ucos <- function(cb_obj, out_cos, out_ucos, coverage = 0.95,
           X = cb_obj$cb_data$data[[X_dict]]$X,
           Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
           miss_idx = cb_obj$cb_data$data[[fine_outcome]]$variable_miss,
-          P = cb_obj$cb_model_para$P
+          P = cb_obj$cb_model_para$P,
+          ref_label = cb_obj$cb_data$data[[X_dict]]$ref_label
         )
         # is.between <- length(intersect(cset1, cset2)) != 0
         is.between <- (abs(res[2] - 1) < tol)
@@ -66,7 +67,8 @@ merge_cos_ucos <- function(cb_obj, out_cos, out_ucos, coverage = 0.95,
             X = cb_obj$cb_data$data[[X_dict]]$X,
             Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
             miss_idx = cb_obj$cb_data$data[[ii]]$variable_miss,
-            P = cb_obj$cb_model_para$P
+            P = cb_obj$cb_model_para$P,
+            ref_label = cb_obj$cb_data$data[[X_dict]]$ref_label
           )
         }
         res <- Reduce(pmax, res)
@@ -151,7 +153,8 @@ merge_ucos <- function(cb_obj, past_out,
           X = cb_obj$cb_data$data[[X_dict]]$X,
           Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
           miss_idx = cb_obj$cb_data$data[[ii]]$variable_miss,
-          P = cb_obj$cb_model_para$P
+          P = cb_obj$cb_model_para$P,
+          ref_label = cb_obj$cb_data$data[[X_dict]]$ref_label
         )
         flag <- flag + 1
       }
@@ -221,7 +224,8 @@ merge_ucos <- function(cb_obj, past_out,
           tmp <- matrix(get_purity(pos,
             X = cb_obj$cb_data$data[[X_dict]]$X,
             Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
-            N = cb_obj$cb_data$data[[i3]]$N, n = n_purity
+            N = cb_obj$cb_data$data[[i3]]$N, n = n_purity,
+            ref_label = cb_obj$cb_data$data[[X_dict]]$ref_label
           ), 1, 3)
           p_tmp <- rbind(p_tmp, tmp)
         }
@@ -763,7 +767,8 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL) {
               X = cb_obj$cb_data$data[[X_dict]]$X,
               Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
               miss_idx = cb_obj$cb_data$data[[ii]]$variable_miss,
-              P = cb_obj$cb_model_para$P
+              P = cb_obj$cb_model_para$P,
+              ref_label = cb_obj$cb_data$data[[X_dict]]$ref_label
             )
             flag <- flag + 1
           }
@@ -1025,7 +1030,8 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
                   X = cb_obj$cb_data$data[[X_dict]]$X,
                   Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
                   miss_idx = cb_obj$cb_data$data[[ii]]$variable_miss,
-                  P = cb_obj$cb_model_para$P
+                  P = cb_obj$cb_model_para$P,
+                  ref_label = cb_obj$cb_data$data[[X_dict]]$ref_label
                 )
                 flag <- flag + 1
               }
@@ -1069,7 +1075,8 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
                   X = cb_obj$cb_data$data[[X_dict]]$X,
                   Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
                   miss_idx = cb_obj$cb_data$data[[ii]]$variable_miss,
-                  P = cb_obj$cb_model_para$P
+                  P = cb_obj$cb_model_para$P,
+                  ref_label = cb_obj$cb_data$data[[X_dict]]$ref_label
                 )
                 flag <- flag + 1
               }
@@ -1123,4 +1130,18 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
 
   return(ll)
 }
+
+
+#' Compute XtX %*% beta, dispatching on ref_label
+#' @noRd
+compute_XtX_product <- function(XtX, beta, ref_label = "LD") {
+  if (identical(ref_label, "No_ref")) return(beta)
+  if (identical(ref_label, "X_ref")) {
+    N_ref <- nrow(XtX)
+    temp <- XtX %*% as.matrix(beta)
+    return(as.vector(crossprod(XtX, temp)) / (N_ref - 1))
+  }
+  as.vector(XtX %*% as.matrix(beta))
+}
+
 
