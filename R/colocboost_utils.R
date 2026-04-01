@@ -693,7 +693,8 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL) {
         tmp <- matrix(get_purity(pos,
                                  X = cb_obj$cb_data$data[[X_dict]]$X,
                                  Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
-                                 N = cb_obj$cb_data$data[[i3]]$N, n = cb_obj$cb_model_para$n_purity
+                                 N = cb_obj$cb_data$data[[i3]]$N, n = cb_obj$cb_model_para$n_purity,
+                                 ref_label = cb_obj$cb_data$data[[X_dict]]$ref_label
         ), 1, 3)
         p_tmp <- rbind(p_tmp, tmp)
       }
