@@ -63,6 +63,7 @@ colocboost(
   check_null_max_ucos = 0.015,
   weaker_effect = TRUE,
   LD_free = FALSE,
+  use_entropy = FALSE,
   output_level = 1,
   cos_npc_cutoff = 0.2,
   npc_outcome_cutoff = 0.2,
@@ -203,6 +204,8 @@ to merge colocalized sets, which may resulting in a huge set.}
 \item{weaker_effect}{If \code{weaker_effect = TRUE}, consider the weaker single effect due to coupling effects}
 
 \item{LD_free}{When \code{LD_free = FALSE}, objective function doesn't include LD information.}
+
+\item{use_entropy}{A logic variable to consider the heterogeneity of traits for a single-effect.}
 
 \item{output_level}{When \code{output_level = 1}, return basic cos details for colocalization results
 When \code{output_level = 2}, return the ucos details for the single specific effects.
