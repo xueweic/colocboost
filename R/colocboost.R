@@ -367,6 +367,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
     pvalue_cutoff = pvalue_cutoff,
     weight_fudge_factor = weight_fudge_factor,
     use_entropy = use_entropy,
+    residual_correlation = residual_correlation,
     coverage = coverage
   )
   # ---- post filtering of the colocboost results (get robust trait-specific events)

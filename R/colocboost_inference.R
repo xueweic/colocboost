@@ -502,12 +502,14 @@ get_between_purity <- function(pos1, pos2, X = NULL, Xcorr = NULL, miss_idx = NU
 #' @importFrom stats var
 #' @importFrom utils tail
 get_cos_evidence <- function(cb_obj, coloc_out, data_info) {
-  get_cos_config <- function(w, config_idx, weight_fudge_factor = 1.5, use_entropy = FALSE, coverage = 0.95) {
+  get_cos_config <- function(w, config_idx, weight_fudge_factor = 1.5, use_entropy = FALSE, 
+                             residual_correlation = NULL, coverage = 0.95) {
     w_outcome <- colnames(w)
     config_outcome <- paste0("outcome", config_idx)
     pos <- which(w_outcome %in% config_outcome)
     w_config <- w[, pos, drop = FALSE]
-    int_w <- get_integrated_weight(w_config, weight_fudge_factor = weight_fudge_factor, use_entropy = use_entropy)
+    int_w <- get_integrated_weight(w_config, weight_fudge_factor = weight_fudge_factor, 
+                                   use_entropy = use_entropy, residual_correlation = residual_correlation)
     unlist(get_in_cos(int_w, coverage = coverage))
   }
 
@@ -602,6 +604,7 @@ get_cos_evidence <- function(cb_obj, coloc_out, data_info) {
     # most likely cos
     cos <- get_cos_config(w, outcomes, weight_fudge_factor = cb_obj$cb_model_para$weight_fudge_factor, 
                           use_entropy = cb_obj$cb_model_para$use_entropy,
+                          residual_correlation = cb_obj$cb_model_para$residual_correlation,
                           coverage = cb_obj$cb_model_para$coverage)
     profile_change_outcome <- sapply(outcomes, function(outcome_idx) {
       get_outcome_profile_change(outcome_idx, cos, cb_obj, check_null_max)

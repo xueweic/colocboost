@@ -604,7 +604,8 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL) {
     })
     int_weight <- lapply(cos_weights, get_integrated_weight, 
                          weight_fudge_factor = cb_obj$cb_model_para$weight_fudge_factor,
-                         use_entropy = cb_obj$cb_model_para$use_entropy)
+                         use_entropy = cb_obj$cb_model_para$use_entropy,
+                         residual_correlation = cb_obj$cb_model_para$residual_correlation)
     names(int_weight) <- names(cos_weights) <- colocset_names
 
     # - resummary results
@@ -1082,4 +1083,15 @@ compute_XtX_product <- function(XtX, beta, ref_label = "LD") {
   as.vector(XtX %*% as.matrix(beta))
 }
 
+#' Pseudo-inverse via truncated eigendecomposition (99.9% variance).
+#' Used to invert residual_correlation, which may be rank-deficient when
+#' the submatrix contains duplicated traits.
+#' @noRd
+pseudo_inverse <- function(mat) {
+  eig <- eigen(mat, symmetric = TRUE)
+  keep <- which(cumsum(eig$values) / sum(eig$values) > 0.999)[1]
+  eig$vectors[, 1:keep, drop = FALSE] %*%
+    diag(1 / eig$values[1:keep], keep, keep) %*%
+    t(eig$vectors[, 1:keep, drop = FALSE])
+}
 

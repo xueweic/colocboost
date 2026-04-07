@@ -13,6 +13,7 @@ colocboost_assemble_cos <- function(cb_obj,
                                     min_cluster_corr = 0.8,
                                     median_cos_abs_corr = 0.8,
                                     use_entropy = FALSE,
+                                    residual_correlation = NULL,
                                     tol = 1e-9) {
   if (!inherits(cb_obj, "colocboost")) {
     stop("Input must from colocboost function!")
@@ -55,7 +56,8 @@ colocboost_assemble_cos <- function(cb_obj,
       pos_purity <- which(check_purity)
       avWeight <- avWeight[, pos_purity, drop = FALSE]
       coloc_outcomes <- coloc_outcomes[pos_purity]
-      weights <- get_integrated_weight(avWeight, weight_fudge_factor = weight_fudge_factor, use_entropy = use_entropy)
+      weights <- get_integrated_weight(avWeight, weight_fudge_factor = weight_fudge_factor, 
+                                       use_entropy = use_entropy, residual_correlation = residual_correlation)
       coloc_cos <- get_in_cos(weights, coverage = coverage)
       evidence_strength <- sum(weights[coloc_cos[[1]]])
 
@@ -162,7 +164,8 @@ colocboost_assemble_cos <- function(cb_obj,
           pos_purity <- which(check_purity)
           avWeight <- avWeight[, pos_purity, drop = FALSE]
           coloc_outcomes <- coloc_outcomes[pos_purity]
-          weights <- get_integrated_weight(avWeight, weight_fudge_factor = weight_fudge_factor, use_entropy = use_entropy)
+          weights <- get_integrated_weight(avWeight, weight_fudge_factor = weight_fudge_factor, 
+                                           use_entropy = use_entropy, residual_correlation = residual_correlation)
           coloc_cos <- get_in_cos(weights, coverage = coverage)
           evidence_strength <- sum(weights[coloc_cos[[1]]])
 
@@ -250,7 +253,8 @@ colocboost_assemble_cos <- function(cb_obj,
         for (i.w in 1:length(avWeight_coloc)) {
           w <- avWeight_coloc[[i.w]]
           if (sum(w) != 0) {
-            weights <- get_integrated_weight(w, weight_fudge_factor = weight_fudge_factor, use_entropy = use_entropy)
+            weights <- get_integrated_weight(w, weight_fudge_factor = weight_fudge_factor, 
+                                             use_entropy = use_entropy, residual_correlation = residual_correlation)
             csets <- get_in_cos(weights, coverage = coverage)
             coloc_cos[[fl]] <- unlist(csets)
             evidence_strength[[fl]] <- sum(weights[coloc_cos[[fl]]])

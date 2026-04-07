@@ -126,6 +126,7 @@ get_colocboost_summary <- function(cb_output,
 #' @param pvalue_cutoff Maximum threshold of marginal p-values of colocalized variants on colocalized traits in each CoS.
 #' @param weight_fudge_factor The strength to integrate weight from different outcomes, default is 1.5
 #' @param use_entropy A logic variable to consider the heterogeneity of traits for a single-effect.
+#' @param residual_correlation The residual correlation based on the sample overlap, it is diagonal if it is NULL.
 #' @param coverage A number between 0 and 1 specifying the \dQuote{coverage} of the estimated colocalization confidence sets (CoS) (default is 0.95).
 #'
 #' @return A \code{"colocboost"} object with some or all of the following elements:
@@ -172,6 +173,7 @@ get_robust_colocalization <- function(cb_output,
                                       pvalue_cutoff = NULL,
                                       weight_fudge_factor = 1.5,
                                       use_entropy = FALSE,
+                                      residual_correlation = NULL,
                                       coverage = 0.95) {
   if (!inherits(cb_output, "colocboost")) {
     stop("Input must from colocboost object!")
@@ -317,7 +319,8 @@ get_robust_colocalization <- function(cb_output,
     colnames(ww) <- gsub("outcome", "Y", colnames(ww))
     ww
   })
-  int_weight <- lapply(cos_weights, get_integrated_weight, weight_fudge_factor = weight_fudge_factor, use_entropy = use_entropy)
+  int_weight <- lapply(cos_weights, get_integrated_weight, weight_fudge_factor = weight_fudge_factor, 
+                       use_entropy = use_entropy, residual_correlation = residual_correlation)
   names(int_weight) <- names(cos_weights) <- colocset_names
   cos_details$cos_weights <- cos_weights
   vcp <- as.vector(1 - apply(1 - do.call(cbind, int_weight), 1, prod))
@@ -1172,12 +1175,45 @@ get_cos <- function(cb_output, coverage = 0.95, X = NULL, Xcorr = NULL, n_purity
 #' Get integrated weight from different outcomes
 #' @keywords cb_get_functions
 #' @noRd
-get_integrated_weight <- function(weights, weight_fudge_factor = 1.5, use_entropy = FALSE) {
-  if (use_entropy){
-    h <- apply(weights, 2, function(w) { w <- w[w > 0]; -sum(w * log(w)) })
-    alpha <- h / sum(h)
+get_integrated_weight <- function(weights, weight_fudge_factor = 1.5, 
+                                  use_entropy = FALSE,
+                                  residual_correlation = NULL) {
+  
+  # Collapse duplicate outcome columns by geometric mean (only if RE is given
+  # and colnames are parseable as "outcomeN" or "YN").
+  if (!is.null(residual_correlation) && !is.null(colnames(weights))) {
+    idx <- as.integer(sub("^(outcome|Y)", "", colnames(weights)))
+    if (anyDuplicated(idx)) {
+      uniq <- unique(idx)
+      weights <- sapply(uniq, function(k) {
+        cols <- which(idx == k)
+        if (length(cols) == 1) weights[, cols]
+        else exp(rowMeans(log(pmax(weights[, cols, drop = FALSE], 1e-300))))
+      })
+      colnames(weights) <- paste0("outcome", uniq)
+      idx <- uniq
+    }
+  }
+  
+  L <- ncol(weights)
+  
+  if (is.null(residual_correlation)){
+    if (use_entropy){
+      h <- apply(weights, 2, function(w) { w <- w[w > 0]; -sum(w * log(w)) })
+      alpha <- h / sum(h)
+    } else {
+      alpha <- rep(1 / L, L)
+    }
   } else {
-    alpha <- 1 / ncol(weights)
+    idx <- as.integer(sub("^(outcome|Y)", "", colnames(weights)))
+    RE_inv <- solve(residual_correlation[idx, idx, drop = FALSE])
+    v <- if (use_entropy) {
+      apply(weights, 2, function(w) { w <- w[w > 0]; -sum(w * log(w)) })
+    } else {
+      rep(1, L)
+    }
+    alpha <- as.numeric(RE_inv %*% v)
+    alpha <- alpha / sum(alpha)
   }
   av <- apply(weights, 1, function(w) prod(w^(weight_fudge_factor * alpha)))
   return(av / sum(av))
