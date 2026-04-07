@@ -314,7 +314,7 @@ get_robust_colocalization <- function(cb_output,
     config_outcome <- paste0("outcome", config_idx)
     pos <- which(w_outcome %in% config_outcome)
     ww = w[, pos, drop = FALSE]
-    colnames(ww) <- cos_details$cos_outcomes$outcome_name[[idx]]
+    colnames(ww) <- gsub("outcome", "Y", colnames(ww))
     ww
   })
   int_weight <- lapply(cos_weights, get_integrated_weight, weight_fudge_factor = weight_fudge_factor, use_entropy = use_entropy)
