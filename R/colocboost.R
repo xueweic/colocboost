@@ -94,6 +94,7 @@
 #' @param check_null_max_ucos The smallest value of change of profile loglikelihood for each outcome in uCoS.
 #' @param weaker_effect If \code{weaker_effect = TRUE}, consider the weaker single effect due to coupling effects
 #' @param LD_free When \code{LD_free = FALSE}, objective function doesn't include LD information.
+#' @param use_entropy A logic variable to consider the heterogeneity of traits for a single-effect.
 #' @param output_level When \code{output_level = 1}, return basic cos details for colocalization results
 #'                     When \code{output_level = 2}, return the ucos details for the single specific effects.
 #'                     When \code{output_level = 3}, return the entire Colocboost model to diagnostic results (more space).
@@ -196,6 +197,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
                        check_null_max_ucos = 0.015, # the smallest value of change of profile loglikelihood for each outcome in uCoS.
                        weaker_effect = TRUE,
                        LD_free = FALSE,
+                       use_entropy = FALSE,
                        output_level = 1,
                        ###### - Post filtering parameters
                        cos_npc_cutoff = 0.2, # remove the CoS with cos_npc less than this cutoff
@@ -300,8 +302,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
     focal_outcome_variables = focal_outcome_variables,
     overlap_variables = overlap_variables,
     intercept = intercept,
-    standardize = standardize,
-    residual_correlation = residual_correlation
+    standardize = standardize
   )
 
   ##################  colocboost updates   ###################################
@@ -351,6 +352,8 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
     median_cos_abs_corr = median_cos_abs_corr,
     weaker_effect = weaker_effect,
     merge_cos = merge_cos,
+    residual_correlation = residual_correlation,
+    use_entropy = use_entropy,
     tol = tol,
     output_level = output_level
   )
@@ -363,6 +366,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
     npc_outcome_cutoff = npc_outcome_cutoff,
     pvalue_cutoff = pvalue_cutoff,
     weight_fudge_factor = weight_fudge_factor,
+    use_entropy = use_entropy,
     coverage = coverage
   )
   # ---- post filtering of the colocboost results (get robust trait-specific events)

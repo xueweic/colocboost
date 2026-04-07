@@ -36,6 +36,8 @@ colocboost_assemble <- function(cb_obj,
                                 median_cos_abs_corr = 0.8,
                                 weaker_effect = TRUE,
                                 merge_cos = TRUE,
+                                residual_correlation = NULL,
+                                use_entropy = FALSE,
                                 tol = 1e-9,
                                 output_level = 1) {
   if (!inherits(cb_obj, "colocboost")) {
@@ -84,6 +86,17 @@ colocboost_assemble <- function(cb_obj,
     cb_obj <- get_max_profile(cb_obj, check_null_max = check_null_max, 
                               check_null_max_ucos = check_null_max_ucos, 
                               check_null_method = check_null_method)
+    
+    # - if residual correlation matrix is not NULL, we need to adjust the study dependence
+    if (!is.null(residual_correlation)) {
+      pseudo_inverse <- function(residual_correlation) {
+        eigen_Sigma <- eigen(residual_correlation)
+        L <- which(cumsum(eigen_Sigma$values) / sum(eigen_Sigma$values) > 0.999)[1]
+        return(eigen_Sigma$vectors[, 1:L] %*% diag(1 / eigen_Sigma$values[1:L]) %*% t(eigen_Sigma$vectors[, 1:L]))
+      }
+      Theta <- pseudo_inverse(residual_correlation)
+    }
+    
     # --------- about colocalized confidence sets ---------------------------------
     out_cos <- colocboost_assemble_cos(cb_obj,
       coverage = coverage,
@@ -98,6 +111,7 @@ colocboost_assemble <- function(cb_obj,
       median_abs_corr = median_abs_corr,
       min_cluster_corr = min_cluster_corr,
       median_cos_abs_corr = median_cos_abs_corr,
+      use_entropy = use_entropy,
       tol = tol
     )
 
@@ -211,6 +225,7 @@ colocboost_assemble <- function(cb_obj,
 
     ############# - extract colocboost output - ####################
     # - colocalization results
+    cb_obj$cb_model_para$use_entropy <- use_entropy
     cb_obj$cb_model_para$weight_fudge_factor <- weight_fudge_factor
     cb_obj$cb_model_para$coverage <- coverage
     cb_obj$cb_model_para$min_abs_corr <- min_abs_corr

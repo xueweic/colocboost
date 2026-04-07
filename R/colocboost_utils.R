@@ -290,71 +290,6 @@ merge_ucos <- function(cb_obj, past_out,
   return(ll)
 }
 
-#' @title Set of internal utils functions
-#'
-#' @description
-#' The `colocboost_utils` functions serves as a summary for the following two refine functions.
-#'
-#' @details
-#' The following functions are included in this set:
-#' `merge_cos_ucos` merge a trait-specific confidence set CS into a colocalization set CoS.
-#' `merge_ucos` merge two trait-specific confidence sets.
-#'
-#' These functions are not exported individually and are accessed via `colocboost_utils`.
-#'
-#' @rdname colocboost_utils
-#' @keywords cb_utils
-#' @noRd
-get_vcp <- function(past_out, P) {
-  if (!is.null(past_out$cos$cos$cos)) {
-    avW_coloc_vcp <- sapply(past_out$cos$cos$avWeight, get_integrated_weight)
-  } else {
-    avW_coloc_vcp <- NULL
-  }
-  all_weight <- avW_coloc_vcp
-  if (length(all_weight) == P) {
-    all_weight <- as.matrix(unlist(all_weight))
-  }
-  if (!is.null(all_weight)) {
-    all_weight <- apply(all_weight, 2, as.numeric)
-    all_weight <- as.matrix(all_weight)
-    vcp <- as.vector(1 - apply(1 - all_weight, 1, prod))
-  } else {
-    vcp <- rep(0, P)
-  }
-  return(vcp)
-}
-
-
-get_pip <- function(past_out, R, P) {
-  if (length(past_out$cos$cos$cos) != 0) {
-    av_coloc <- do.call(cbind, past_out$cos$cos$avWeight)
-  } else {
-    av_coloc <- NULL
-  }
-  if (length(past_out$ucos$ucos_each) != 0) {
-    av_noncoloc <- past_out$ucos$avW_ucos_each
-    tmp <- do.call(rbind, strsplit(colnames(av_noncoloc), ":"))
-    colnames(av_noncoloc) <- paste0("outcome", gsub("[^0-9.]+", "", tmp[, 2]))
-  } else {
-    av_noncoloc <- NULL
-  }
-  av_all <- cbind(av_coloc, av_noncoloc)
-  pip <- vector(mode = "list", length = R)
-  if (!is.null(av_all)) {
-    av_name <- colnames(av_all)
-    for (i in 1:R) {
-      pos <- grep(i, av_name)
-      if (length(pos) != 0) {
-        av_i <- as.matrix(av_all[, pos])
-        pip[[i]] <- as.vector(1 - apply(1 - av_i, 1, prod))
-      } else {
-        pip[[i]] <- rep(0, P)
-      }
-    }
-  }
-  return(pip)
-}
 
 check_two_overlap_sets <- function(total, i, j) {
   t1 <- total[[i]]
@@ -667,7 +602,9 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL) {
       pos <- match(data_info$variables, cb_obj$cb_model_para$variables)
       return(w[pos, , drop = FALSE])
     })
-    int_weight <- lapply(cos_weights, get_integrated_weight, weight_fudge_factor = cb_obj$cb_model_para$weight_fudge_factor)
+    int_weight <- lapply(cos_weights, get_integrated_weight, 
+                         weight_fudge_factor = cb_obj$cb_model_para$weight_fudge_factor,
+                         use_entropy = cb_obj$cb_model_para$use_entropy)
     names(int_weight) <- names(cos_weights) <- colocset_names
 
     # - resummary results

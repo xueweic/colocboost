@@ -121,11 +121,10 @@ boost_check_update_jk_one_causal <- function(cb_model, cb_model_para, cb_data) {
     # -- extract data and model based on pos.update
     model_update <- cb_model[pos.update]
     X_dict <- cb_data$dict[pos.update]
-    adj_dep <- sapply(pos.update, function(ii) cb_data$data[[ii]]$dependency)
 
     # -- define jk and jk_each
     cor_vals_each <- do.call(cbind, lapply(model_update, function(cc) cc$correlation))
-    abs_cor_vals_each <- sweep(abs(cor_vals_each), 2, adj_dep, `*`)
+    abs_cor_vals_each <- abs(cor_vals_each)
     jk_each <- apply(abs_cor_vals_each, 2, function(temp) {
       jk_temp <- which(temp == max(temp))
       return(ifelse(length(jk_temp) == 1, jk_temp, sample(jk_temp, 1)))
@@ -213,9 +212,8 @@ colocboost_diagLD <- function(cb_model, cb_model_para, cb_data) {
     pos.update <- which(cb_model_para$update_y == 1)
     model_update <- cb_model[pos.update]
     X_dict <- cb_data$dict[pos.update]
-    adj_dep <- sapply(pos.update, function(ii) cb_data$data[[ii]]$dependency)
     cor_vals_each <- do.call(cbind, lapply(model_update, function(cc) cc$correlation))
-    abs_cor_vals_each <- sweep(abs(cor_vals_each), 2, adj_dep, `*`)
+    abs_cor_vals_each <- abs(cor_vals_each)
     jk_each <- apply(abs_cor_vals_each, 2, function(temp) {
       jk_temp <- which(temp == max(temp))
       return(ifelse(length(jk_temp) == 1, jk_temp, sample(jk_temp, 1)))

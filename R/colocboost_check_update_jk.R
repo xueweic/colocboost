@@ -61,13 +61,10 @@ boost_check_update_jk_nofocal <- function(cb_model, cb_model_para, cb_data) {
     model_update <- cb_model[pos.update]
     # data_update = cb_data$data[pos.update]
     X_dict <- cb_data$dict[pos.update]
-    # adj_dependence
-    adj_dep <- sapply(pos.update, function(ii) cb_data$data[[ii]]$dependency)
 
     # -- define jk and jk_each
     cor_vals_each <- do.call(cbind, lapply(model_update, function(cc) cc$correlation))
-    # abs_cor_vals_each <- sweep(abs(cor_vals_each), 2, adj_dep, `*`)
-    abs_cor_vals_each <- abs(cor_vals_each) * rep(adj_dep, each = nrow(cor_vals_each))
+    abs_cor_vals_each <- abs(cor_vals_each)
     abs_cor_vals <- rowSums(abs_cor_vals_each)
 
     # jk <- which(abs_cor_vals == max(abs_cor_vals))
@@ -352,13 +349,10 @@ boost_check_update_jk_focal <- function(cb_model, cb_model_para, cb_data,
     model_update <- cb_model[pos.update]
     # data_update = cb_data$data[pos.update]
     X_dict <- cb_data$dict[pos.update]
-    # adj_dependence
-    adj_dep <- sapply(pos.update, function(ii) cb_data$data[[ii]]$dependency)
 
     # -- define jk and jk_each
     cor_vals_each <- do.call(cbind, lapply(model_update, function(cc) as.vector(cc$correlation)))
-    # abs_cor_vals_each <- sweep(abs(cor_vals_each), 2, adj_dep, `*`)
-    abs_cor_vals_each <- abs(cor_vals_each) * rep(adj_dep, each = nrow(cor_vals_each))
+    abs_cor_vals_each <- abs(cor_vals_each)
     # jk_each <- apply(abs_cor_vals_each, 2, which.max)
     jk_each <- sapply(1:ncol(abs_cor_vals_each), function(j) which.max(abs_cor_vals_each[, j]))
     pp_focal <- which(pos.update == focal_outcome_idx)

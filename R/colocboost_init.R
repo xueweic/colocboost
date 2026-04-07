@@ -35,8 +35,7 @@ colocboost_init_data <- function(X, Y, dict_YX,
                                  focal_outcome_idx = NULL,
                                  focal_outcome_variables = TRUE,
                                  overlap_variables = FALSE,
-                                 intercept = TRUE, standardize = TRUE,
-                                 residual_correlation = NULL) {
+                                 intercept = TRUE, standardize = TRUE) {
   #################  initialization #######################################
   cb_data <- list("data" = list())
   class(cb_data) <- "colocboost"
@@ -126,23 +125,6 @@ colocboost_init_data <- function(X, Y, dict_YX,
     }
     cb_data$dict <- c(cb_data$dict, sumstat_formated$unified_dict + n_ind)
   }
-  # - if residual correlation matrix is not NULL, we need to adjust the study dependence
-  if (is.null(residual_correlation)) {
-    for (i in 1:length(cb_data$data)) {
-      cb_data$data[[i]]$dependency <- 1
-    }
-  } else {
-    pseudo_inverse <- function(residual_correlation) {
-      eigen_Sigma <- eigen(residual_correlation)
-      L <- which(cumsum(eigen_Sigma$values) / sum(eigen_Sigma$values) > 0.999)[1]
-      return(eigen_Sigma$vectors[, 1:L] %*% diag(1 / eigen_Sigma$values[1:L]) %*% t(eigen_Sigma$vectors[, 1:L]))
-    }
-    Theta <- pseudo_inverse(residual_correlation)
-    for (i in 1:length(cb_data$data)) {
-      cb_data$data[[i]]$dependency <- Theta[i, i]
-    }
-  }
-
 
   return(cb_data)
 }
@@ -192,7 +174,7 @@ colocboost_init_model <- function(cb_data,
       YtY = data_each$YtY, XtY = data_each$XtY
     )
     # - initial profile loglikelihood
-    tmp$profile_loglike_each <- estimate_profile_loglike(Y = data_each[["Y"]], N = data_each$N, YtY = data_each$YtY) * data_each$dependency
+    tmp$profile_loglike_each <- estimate_profile_loglike(Y = data_each[["Y"]], N = data_each$N, YtY = data_each$YtY)
     # - initial residual: res for ind; xtr for sumstat
     tmp$res <- inital_residual(Y = data_each[["Y"]], XtY = data_each$XtY)
     # - initial correlation between X and residual

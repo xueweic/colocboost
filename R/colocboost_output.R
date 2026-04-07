@@ -125,6 +125,7 @@ get_colocboost_summary <- function(cb_output,
 #' @param npc_outcome_cutoff Minimum threshold of normalized probability of colocalized traits in each CoS.
 #' @param pvalue_cutoff Maximum threshold of marginal p-values of colocalized variants on colocalized traits in each CoS.
 #' @param weight_fudge_factor The strength to integrate weight from different outcomes, default is 1.5
+#' @param use_entropy A logic variable to consider the heterogeneity of traits for a single-effect.
 #' @param coverage A number between 0 and 1 specifying the \dQuote{coverage} of the estimated colocalization confidence sets (CoS) (default is 0.95).
 #'
 #' @return A \code{"colocboost"} object with some or all of the following elements:
@@ -170,6 +171,7 @@ get_robust_colocalization <- function(cb_output,
                                       npc_outcome_cutoff = 0.2,
                                       pvalue_cutoff = NULL,
                                       weight_fudge_factor = 1.5,
+                                      use_entropy = FALSE,
                                       coverage = 0.95) {
   if (!inherits(cb_output, "colocboost")) {
     stop("Input must from colocboost object!")
@@ -311,11 +313,13 @@ get_robust_colocalization <- function(cb_output,
     w_outcome <- colnames(w)
     config_outcome <- paste0("outcome", config_idx)
     pos <- which(w_outcome %in% config_outcome)
-    w[, pos, drop = FALSE]
+    ww = w[, pos, drop = FALSE]
+    colnames(ww) <- cos_details$cos_outcomes$outcome_name[[idx]]
+    ww
   })
-  cos_details$cos_weights <- cos_weights
-  int_weight <- lapply(cos_weights, get_integrated_weight, weight_fudge_factor = weight_fudge_factor)
+  int_weight <- lapply(cos_weights, get_integrated_weight, weight_fudge_factor = weight_fudge_factor, use_entropy = use_entropy)
   names(int_weight) <- names(cos_weights) <- colocset_names
+  cos_details$cos_weights <- cos_weights
   vcp <- as.vector(1 - apply(1 - do.call(cbind, int_weight), 1, prod))
   names(vcp) <- cb_output$data_info$variables
   cb_output$vcp <- vcp
@@ -1168,8 +1172,14 @@ get_cos <- function(cb_output, coverage = 0.95, X = NULL, Xcorr = NULL, n_purity
 #' Get integrated weight from different outcomes
 #' @keywords cb_get_functions
 #' @noRd
-get_integrated_weight <- function(weights, weight_fudge_factor = 1.5) {
-  av <- apply(weights, 1, function(w) prod(w^(weight_fudge_factor / ncol(weights))))
+get_integrated_weight <- function(weights, weight_fudge_factor = 1.5, use_entropy = FALSE) {
+  if (use_entropy){
+    h <- apply(weights, 2, function(w) { w <- w[w > 0]; -sum(w * log(w)) })
+    alpha <- h / sum(h)
+  } else {
+    alpha <- 1 / ncol(weights)
+  }
+  av <- apply(weights, 1, function(w) prod(w^(weight_fudge_factor * alpha)))
   return(av / sum(av))
 }
 
