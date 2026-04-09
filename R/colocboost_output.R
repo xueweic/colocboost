@@ -1200,6 +1200,7 @@ get_integrated_weight <- function(weights, weight_fudge_factor = 1.5,
   if (is.null(residual_correlation)){
     if (use_entropy){
       h <- apply(weights, 2, function(w) { w <- w[w > 0]; -sum(w * log(w)) })
+      h <- h + mean(h)
       alpha <- h / sum(h)
     } else {
       alpha <- rep(1 / L, L)
@@ -1208,7 +1209,8 @@ get_integrated_weight <- function(weights, weight_fudge_factor = 1.5,
     idx <- as.integer(sub("^(outcome|Y)", "", colnames(weights)))
     RE_inv <- solve(residual_correlation[idx, idx, drop = FALSE])
     v <- if (use_entropy) {
-      apply(weights, 2, function(w) { w <- w[w > 0]; -sum(w * log(w)) })
+      h <- apply(weights, 2, function(w) { w <- w[w > 0]; -sum(w * log(w)) })
+      h + mean(h)                    # same soft floor
     } else {
       rep(1, L)
     }
@@ -1333,78 +1335,87 @@ get_cos_purity <- function(cos, X = NULL, Xcorr = NULL, n_purity = 100) {
 #' @keywords cb_get_functions
 #' @noRd
 merge_ucos_details <- function(ucos_details, ucos_from_cos) {
-  
-  get_cos_ucos_purity <- function(from_ucos, from_cos){
-    if (is.null(from_cos)){
-      return(from_ucos)
-    } else {
-      cos <- intersect(rownames(from_ucos), rownames(from_cos))
-      tmp_from_ucos <- from_ucos[match(cos, rownames(from_ucos)), , drop = FALSE]
-      tmp_from_cos <- from_cos[match(cos, rownames(from_cos)), , drop = FALSE]
-      cbind(tmp_from_ucos, tmp_from_cos)
-    }
-  }
-  
-  get_ucos_purity <- function(from_ucos, from_cos, cross_from_ucos, cross_from_cos) {
-    
-    from_ucos = ucos_details$ucos_purity$min_abs_cor
-    from_cos = ucos_from_cos$ucos_purity$min_abs_cor
-    cross_from_ucos = ucos_details$cos_ucos_purity$min_abs_cor
-    cross_from_cos = ucos_from_cos$cos_ucos_purity$min_abs_cor
-    
-    
-    for (id in unique(sub(":.*", "", rownames(from_cos)))) {
-      old <- grep(paste0("^", id, ":"), rownames(cross_from_ucos), value = TRUE)[1]
-      new <- grep(paste0("^", id, ":"), rownames(from_cos), value = TRUE)[1]
-      if (!is.na(old) && !is.na(new)) {
-        rownames(cross_from_ucos) <- sub(old, new, rownames(cross_from_ucos), fixed = TRUE)
-        colnames(cross_from_ucos) <- sub(old, new, colnames(cross_from_ucos), fixed = TRUE)
-        if (!is.null(cross_from_cos)){
-          rownames(cross_from_cos) <- sub(old, new, rownames(cross_from_cos), fixed = TRUE)
-          colnames(cross_from_cos) <- sub(old, new, colnames(cross_from_cos), fixed = TRUE)
+
+  # Build a merged purity matrix from up to 5 sources, dimensioned by the
+  # union of uCoS names (NOT by rownames of the inputs).
+    build_merged <- function(stat) {
+        a <- ucos_details$ucos_purity[[stat]]
+        b <- ucos_from_cos$ucos_purity[[stat]]
+        
+        nm_a <- names(ucos_details$ucos$ucos_index)
+        nm_b <- names(ucos_from_cos$ucos$ucos_index)
+        all_ucos <- c(nm_a, nm_b)
+        n <- length(all_ucos)
+        out <- matrix(NA_real_, n, n, dimnames = list(all_ucos, all_ucos))
+        
+        # within-original block
+        if (!is.null(a) && length(nm_a)) {
+            ra <- intersect(nm_a, rownames(a))
+            if (length(ra)) out[ra, ra] <- a[ra, ra, drop = FALSE]
         }
-      }
-    }
-    all_ucos <- c(rownames(from_ucos), rownames(from_cos))
-    n <- length(all_ucos)
-    result <- matrix(NA_real_, n, n, dimnames = list(all_ucos, all_ucos))
-    mats <- list(from_ucos, from_cos, cross_from_ucos, cross_from_cos)
-    for (i in 1:n) {
-      for (j in 1:n) {
-        for (m in mats) {
-          if (all_ucos[i] %in% rownames(m) && all_ucos[j] %in% colnames(m)) {
-            result[i, j] <- result[j, i] <- m[all_ucos[i], all_ucos[j]]
-            break
-          }
+        # within-demoted block
+        if (!is.null(b) && length(nm_b)) {
+            rb <- intersect(nm_b, rownames(b))
+            if (length(rb)) out[rb, rb] <- b[rb, rb, drop = FALSE]
         }
-      }
+        # cross block: 0 (no LD info available at this stage)
+        if (length(nm_a) && length(nm_b)) {
+            out[nm_a, nm_b] <- 0
+            out[nm_b, nm_a] <- 0
+        }
+        out
     }
-    result
-  }
-  
+
+  # cos_ucos_purity for the merged object: stack remaining-CoS rows against
+  # both old and new uCoS columns.
+    build_cos_ucos <- function(stat) {
+        old <- ucos_details$cos_ucos_purity[[stat]]
+        new <- ucos_from_cos$cos_ucos_purity[[stat]]
+        if (is.null(old) && is.null(new)) return(NULL)
+        if (is.null(old)) return(new)
+        if (is.null(new)) return(old)
+        
+        # Both are CoS-rows x uCoS-cols. Align by union of CoS rownames, pad with NA.
+        rn_old <- rownames(old); rn_new <- rownames(new)
+        if (is.null(rn_old)) rn_old <- paste0("cos_old_", seq_len(nrow(old)))
+        if (is.null(rn_new)) rn_new <- paste0("cos_new_", seq_len(nrow(new)))
+        rownames(old) <- rn_old
+        rownames(new) <- rn_new
+        
+        all_rows <- union(rn_old, rn_new)
+        
+        pad <- function(m, ncol_target, colnames_target) {
+            out <- matrix(NA_real_, nrow = length(all_rows), ncol = ncol_target,
+                          dimnames = list(all_rows, colnames_target))
+            out[rownames(m), ] <- m
+            out
+        }
+        
+        old_p <- pad(old, ncol(old), colnames(old))
+        new_p <- pad(new, ncol(new), colnames(new))
+        cbind(old_p, new_p)
+    }
+
   list(
     "ucos" = list(
-      "ucos_index" = c(ucos_details$ucos$ucos_index, ucos_from_cos$ucos$ucos_index),
+      "ucos_index"     = c(ucos_details$ucos$ucos_index,     ucos_from_cos$ucos$ucos_index),
       "ucos_variables" = c(ucos_details$ucos$ucos_variables, ucos_from_cos$ucos$ucos_variables)
     ),
     "ucos_outcomes" = list(
       "outcome_index" = c(ucos_details$ucos_outcomes$outcome_index, ucos_from_cos$ucos_outcomes$outcome_index),
-      "outcome_name" = c(ucos_details$ucos_outcomes$outcome_name, ucos_from_cos$ucos_outcomes$outcome_name)
+      "outcome_name"  = c(ucos_details$ucos_outcomes$outcome_name,  ucos_from_cos$ucos_outcomes$outcome_name)
     ),
-    "ucos_weight" = c(ucos_details$ucos_weight, ucos_from_cos$ucos_weight),
+    "ucos_weight"        = c(ucos_details$ucos_weight, ucos_from_cos$ucos_weight),
     "ucos_top_variables" = rbind(ucos_details$ucos_top_variables, ucos_from_cos$ucos_top_variables),
     "ucos_purity" = list(
-      "min_abs_cor" = get_ucos_purity(ucos_details$ucos_purity$min_abs_cor, ucos_from_cos$ucos_purity$min_abs_cor, 
-                                      ucos_details$cos_ucos_purity$min_abs_cor, ucos_from_cos$cos_ucos_purity$min_abs_cor),
-      "median_abs_cor" = get_ucos_purity(ucos_details$ucos_purity$median_abs_cor, ucos_from_cos$ucos_purity$median_abs_cor, 
-                                         ucos_details$cos_ucos_purity$median_abs_cor, ucos_from_cos$cos_ucos_purity$median_abs_cor),
-      "max_abs_cor" = get_ucos_purity(ucos_details$ucos_purity$max_abs_cor, ucos_from_cos$ucos_purity$max_abs_cor, 
-                                      ucos_details$cos_ucos_purity$max_abs_cor, ucos_from_cos$cos_ucos_purity$max_abs_cor)
+      "min_abs_cor"    = build_merged("min_abs_cor"),
+      "median_abs_cor" = build_merged("median_abs_cor"),
+      "max_abs_cor"    = build_merged("max_abs_cor")
     ),
     "cos_ucos_purity" = list(
-      "min_abs_cor" = get_cos_ucos_purity(ucos_from_cos$cos_ucos_purity$min_abs_cor, ucos_details$cos_ucos_purity$min_abs_cor),
-      "median_abs_cor" = get_cos_ucos_purity(ucos_from_cos$cos_ucos_purity$median_abs_cor, ucos_details$cos_ucos_purity$median_abs_cor),
-      "max_abs_cor" = get_cos_ucos_purity(ucos_from_cos$cos_ucos_purity$max_abs_cor, ucos_details$cos_ucos_purity$max_abs_cor)
+      "min_abs_cor"    = build_cos_ucos("min_abs_cor"),
+      "median_abs_cor" = build_cos_ucos("median_abs_cor"),
+      "max_abs_cor"    = build_cos_ucos("max_abs_cor")
     ),
     "ucos_outcomes_npc" = rbind(ucos_details$ucos_outcomes_npc, ucos_from_cos$ucos_outcomes_npc)
   )
