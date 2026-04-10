@@ -817,7 +817,7 @@ colocboost_validate_input_data <- function(X = NULL, Y = NULL,
                   ' variants since those variants are not in LD matrix ', ld_idx)
           keep_idx <- match(common_variants, sumstat_variants)
           if (length(keep_idx) == 0){
-            warning('Error: Sumstat data ', i, ' is empty after filtering. Returning NULL')
+            warning('Error: Sumstat data ', i, ' is empty after filtering. Please check variant in sumstat data! Returning NULL!')
             return(NULL)
           }
           # Filter all relevant fields - ADJUST THESE FIELD NAMES TO YOUR DATA
