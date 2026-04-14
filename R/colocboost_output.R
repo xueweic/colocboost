@@ -1335,67 +1335,120 @@ get_cos_purity <- function(cos, X = NULL, Xcorr = NULL, n_purity = 100) {
 #' @keywords cb_get_functions
 #' @noRd
 merge_ucos_details <- function(ucos_details, ucos_from_cos) {
-
-  # Build a merged purity matrix from up to 5 sources, dimensioned by the
-  # union of uCoS names (NOT by rownames of the inputs).
-    build_merged <- function(stat) {
-        a <- ucos_details$ucos_purity[[stat]]
-        b <- ucos_from_cos$ucos_purity[[stat]]
-        
-        nm_a <- names(ucos_details$ucos$ucos_index)
-        nm_b <- names(ucos_from_cos$ucos$ucos_index)
-        all_ucos <- c(nm_a, nm_b)
-        n <- length(all_ucos)
-        out <- matrix(NA_real_, n, n, dimnames = list(all_ucos, all_ucos))
-        
-        # within-original block
-        if (!is.null(a) && length(nm_a)) {
-            ra <- intersect(nm_a, rownames(a))
-            if (length(ra)) out[ra, ra] <- a[ra, ra, drop = FALSE]
-        }
-        # within-demoted block
-        if (!is.null(b) && length(nm_b)) {
-            rb <- intersect(nm_b, rownames(b))
-            if (length(rb)) out[rb, rb] <- b[rb, rb, drop = FALSE]
-        }
-        # cross block: 0 (no LD info available at this stage)
-        if (length(nm_a) && length(nm_b)) {
-            out[nm_a, nm_b] <- 0
-            out[nm_b, nm_a] <- 0
-        }
-        out
+  
+  # Dedupe: drop any uCoS in ucos_from_cos that is already present in
+  # ucos_details (matched by name). This guards against repeated
+  # get_robust_colocalization() calls re-demoting and re-merging the same CoS.
+  existing <- names(ucos_details$ucos$ucos_index)
+  new_nms  <- names(ucos_from_cos$ucos$ucos_index)
+  keep <- which(!(new_nms %in% existing))
+  if (length(keep) == 0) {
+    # everything in ucos_from_cos is already in ucos_details — nothing to merge
+    return(ucos_details)
+  }
+  if (length(keep) < length(new_nms)) {
+    ucos_from_cos$ucos$ucos_index             <- ucos_from_cos$ucos$ucos_index[keep]
+    ucos_from_cos$ucos$ucos_variables         <- ucos_from_cos$ucos$ucos_variables[keep]
+    ucos_from_cos$ucos_outcomes$outcome_index <- ucos_from_cos$ucos_outcomes$outcome_index[keep]
+    ucos_from_cos$ucos_outcomes$outcome_name  <- ucos_from_cos$ucos_outcomes$outcome_name[keep]
+    ucos_from_cos$ucos_weight                 <- ucos_from_cos$ucos_weight[keep]
+    ucos_from_cos$ucos_top_variables          <- ucos_from_cos$ucos_top_variables[keep, , drop = FALSE]
+    ucos_from_cos$ucos_purity                 <- lapply(ucos_from_cos$ucos_purity,
+                                                        function(p) p[keep, keep, drop = FALSE])
+    if (!is.null(ucos_from_cos$cos_ucos_purity)) {
+      ucos_from_cos$cos_ucos_purity <- lapply(ucos_from_cos$cos_ucos_purity,
+                                              function(p) p[, keep, drop = FALSE])
     }
-
-  # cos_ucos_purity for the merged object: stack remaining-CoS rows against
-  # both old and new uCoS columns.
-    build_cos_ucos <- function(stat) {
-        old <- ucos_details$cos_ucos_purity[[stat]]
-        new <- ucos_from_cos$cos_ucos_purity[[stat]]
-        if (is.null(old) && is.null(new)) return(NULL)
-        if (is.null(old)) return(new)
-        if (is.null(new)) return(old)
-        
-        # Both are CoS-rows x uCoS-cols. Align by union of CoS rownames, pad with NA.
-        rn_old <- rownames(old); rn_new <- rownames(new)
-        if (is.null(rn_old)) rn_old <- paste0("cos_old_", seq_len(nrow(old)))
-        if (is.null(rn_new)) rn_new <- paste0("cos_new_", seq_len(nrow(new)))
-        rownames(old) <- rn_old
-        rownames(new) <- rn_new
-        
-        all_rows <- union(rn_old, rn_new)
-        
-        pad <- function(m, ncol_target, colnames_target) {
-            out <- matrix(NA_real_, nrow = length(all_rows), ncol = ncol_target,
-                          dimnames = list(all_rows, colnames_target))
-            out[rownames(m), ] <- m
-            out
-        }
-        
-        old_p <- pad(old, ncol(old), colnames(old))
-        new_p <- pad(new, ncol(new), colnames(new))
-        cbind(old_p, new_p)
+    ucos_from_cos$ucos_outcomes_npc <- ucos_from_cos$ucos_outcomes_npc[keep, , drop = FALSE]
+  }
+  
+  # Helper: extract a uCoS×uCoS purity matrix regardless of whether
+  # ucos_purity is stored as a list of matrices (multi-uCoS) or as a
+  # 1×3 data.frame with `_corr` column names (legacy single-uCoS).
+  get_ucos_purity_mat <- function(src, stat) {
+    p <- src$ucos_purity
+    if (is.null(p)) return(NULL)
+    nm <- names(src$ucos$ucos_index)
+    if (is.data.frame(p)) {
+      col_map <- c("min_abs_cor"    = "min_abs_corr",
+                   "max_abs_cor"    = "mean_abs_corr",
+                   "median_abs_cor" = "median_abs_corr")
+      stat_col <- col_map[[stat]]
+      if (is.null(stat_col) || !(stat_col %in% colnames(p))) return(NULL)
+      n <- length(nm)
+      mm <- matrix(NA_real_, n, n, dimnames = list(nm, nm))
+      # Use the data.frame value(s) for the diagonal
+      diag(mm) <- as.numeric(p[[stat_col]])
+      return(mm)
     }
-
+    m <- p[[stat]]
+    if (is.null(m)) return(NULL)
+    if (is.null(rownames(m))) rownames(m) <- colnames(m) <- nm
+    m
+  }
+  
+  build_merged <- function(stat) {
+    a <- get_ucos_purity_mat(ucos_details,  stat)
+    b <- get_ucos_purity_mat(ucos_from_cos, stat)
+    
+    nm_a <- names(ucos_details$ucos$ucos_index)
+    nm_b <- names(ucos_from_cos$ucos$ucos_index)
+    all_ucos <- c(nm_a, nm_b)
+    n <- length(all_ucos)
+    out <- matrix(NA_real_, n, n, dimnames = list(all_ucos, all_ucos))
+    
+    if (!is.null(a) && length(nm_a)) {
+      ra <- intersect(nm_a, rownames(a))
+      if (length(ra)) out[ra, ra] <- a[ra, ra, drop = FALSE]
+    }
+    if (!is.null(b) && length(nm_b)) {
+      rb <- intersect(nm_b, rownames(b))
+      if (length(rb)) out[rb, rb] <- b[rb, rb, drop = FALSE]
+    }
+    if (length(nm_a) && length(nm_b)) {
+      out[nm_a, nm_b] <- 0
+      out[nm_b, nm_a] <- 0
+    }
+    out
+  }
+  
+  build_cos_ucos <- function(stat) {
+    old <- ucos_details$cos_ucos_purity[[stat]]
+    new <- ucos_from_cos$cos_ucos_purity[[stat]]
+    if (is.null(old) && is.null(new)) return(NULL)
+    if (is.null(old)) return(new)
+    if (is.null(new)) return(old)
+    
+    rn_old <- rownames(old); rn_new <- rownames(new)
+    if (is.null(rn_old)) rn_old <- paste0("cos_old_", seq_len(nrow(old)))
+    if (is.null(rn_new)) rn_new <- paste0("cos_new_", seq_len(nrow(new)))
+    rownames(old) <- rn_old
+    rownames(new) <- rn_new
+    
+    # `new` is built from the freshly-filtered cos_details, so its rownames
+    # are exactly the CoS that remain after this round of demotion. Any row
+    # in `old` that isn't in `rn_new` corresponds to a CoS that has just
+    # been demoted to a uCoS — drop it, otherwise it leaks an NA row into
+    # the merged matrix and keeps a stale CoS row (e.g. "cos1:y7_y10"
+    # against the new uCoS "cos1:y7").
+    keep_rows <- intersect(rn_old, rn_new)
+    
+    if (length(keep_rows) == 0) {
+      # Defensive fallback — shouldn't trigger in normal flow.
+      all_rows <- union(rn_old, rn_new)
+      pad <- function(m) {
+        o <- matrix(NA_real_, nrow = length(all_rows), ncol = ncol(m),
+                    dimnames = list(all_rows, colnames(m)))
+        o[rownames(m), ] <- m
+        o
+      }
+      return(cbind(pad(old), pad(new)))
+    }
+    
+    cbind(old[keep_rows, , drop = FALSE],
+          new[keep_rows, , drop = FALSE])
+  }
+  
   list(
     "ucos" = list(
       "ucos_index"     = c(ucos_details$ucos$ucos_index,     ucos_from_cos$ucos$ucos_index),
