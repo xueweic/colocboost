@@ -49,7 +49,9 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data) {
       z = cb_model[[i]]$z,
       ld_feature = ld_feature, 
       func_simplex = cb_model_para$func_simplex, 
-      lambda = lambda_outcome
+      lambda = lambda_outcome,
+      ref_label = cb_data$data[[X_dict]]$ref_label,
+      update_jk = update_jk 
     )
 
     x_tmp <- cb_data$data[[X_dict]]$X
@@ -162,7 +164,9 @@ get_LD_jk <- function(jk1, X = NULL, XtX = NULL, N = NULL, remain_idx = NULL, P 
 
 boost_KL_delta <- function(z, ld_feature, 
                            func_simplex = "LD_z2z",
-                           lambda = 0.5) {
+                           lambda = 0.5, 
+                           ref_label = "LD",
+                           update_jk = NULL) {
   # if (!is.null(n)){ z <- z * sqrt( (n-1)/(z^2+n-2) ) }
 
 
@@ -176,7 +180,31 @@ boost_KL_delta <- function(z, ld_feature,
     z2z <- ld_feature * z2z
     delta <- exp(z2z - max(z2z))
   } else if (func_simplex == "only_z2z") {
+    if (identical(ref_label, "No_ref")){
+      # if no LD information, construct a region around update_jk
+      # set a minimum zscore around update_jk (pvalue ~ 0.001)
+      ld_feature <- rep(0, length(z))
+      if (abs(z[update_jk]) < 3.5){ 
+        ld_feature[update_jk] <- 1
+      } else {
+        gaps <- which(abs(z) < 3.5)
+        gaps_before_jk <- gaps[gaps < update_jk]
+        if (length(gaps_before_jk) > 0) {
+          left_bound <- max(gaps_before_jk) + 1
+        } else {
+          left_bound <- update_jk-1
+        }
+        gaps_after_jk <- gaps[gaps > update_jk]
+        if (length(gaps_after_jk) > 0) {
+          right_bound <- min(gaps_after_jk) - 1
+        } else {
+          right_bound <- update_jk+1
+        }
+        ld_feature[left_bound:right_bound] <- 1
+      }
+    }
     z2z <- lambda * 0.5 * z^2 + (1 - lambda) * abs(z)
+    z2z <- ld_feature * z2z
     delta <- exp(z2z - max(z2z))
   } else if (func_simplex == "entropy") {
     delta <- rep(1, length(z))
@@ -268,7 +296,9 @@ boost_obj_last <- function(cb_data, cb_model, cb_model_para) {
         z = cb_model[[i]]$z,
         ld_feature = ld_feature, 
         func_simplex = cb_model_para$func_simplex, 
-        lambda = lambda_outcome
+        lambda = lambda_outcome,
+        ref_label = cb_data$data[[X_dict]]$ref_label,
+        update_jk = jk 
       )
 
       x_tmp <- cb_data$data[[X_dict]]$X

@@ -274,7 +274,8 @@ check_null_post <- function(cb_obj,
     # - calculate delta
     delta <- boost_KL_delta(
       z = z, ld_feature = ld_feature, 
-      func_simplex = func_simplex, lambda = lambda
+      func_simplex = func_simplex, lambda = lambda, 
+      ref_label = ref_label, update_jk = jk
     )
     scaling_factor <- if (!is.null(N)) (N - 1) else 1
     cov_Xtr <- if (!is.null(X)) {

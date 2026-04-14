@@ -138,7 +138,7 @@
 #'
 #' @family colocboost
 #' @importFrom stats na.omit
-#' @importFrom Rfast correls standardise upper_tri med
+#' @importFrom Rfast correls upper_tri med
 #' @export
 colocboost <- function(X = NULL, Y = NULL, # individual data
                        sumstat = NULL, LD = NULL, X_ref = NULL, # summary statistics: either Z, bhat, sebhat, N, var_Y,
@@ -751,7 +751,7 @@ colocboost_validate_input_data <- function(X = NULL, Y = NULL,
         } else {
           # N_ref < P: standardize and keep for on-the-fly crossprod/(N_ref-1)
           for (idx in seq_along(X_ref)) {
-            X_ref[[idx]] <- standardise(X_ref[[idx]], center = TRUE, scale = TRUE)
+            X_ref[[idx]] <- scale(X_ref[[idx]], center = TRUE, scale = TRUE)
             X_ref[[idx]][which(is.na(X_ref[[idx]]))] <- 0
           }
           ref_list <- X_ref
