@@ -176,29 +176,7 @@ boost_KL_delta <- function(z, ld_feature,
     z2z <- ld_feature * z2z
     delta <- exp(z2z - max(z2z))
   } else if (func_simplex == "only_z2z") {
-    # if no LD information, construct a region around update_jk
-    # set a minimum zscore around update_jk (pvalue ~ 0.001)
-    ld_feature <- rep(0, length(z))
-    if (abs(z[update_jk]) < 3.5){ 
-      ld_feature[update_jk] <- 1
-    } else {
-      gaps <- which(abs(z) < 3.5)
-      gaps_before_jk <- gaps[gaps < jk]
-      if (length(gaps_before_jk) > 0) {
-        left_bound <- max(gaps_before_jk) + 1
-      } else {
-        left_bound <- jk-1
-      }
-      gaps_after_jk <- gaps[gaps > jk]
-      if (length(gaps_after_jk) > 0) {
-        right_bound <- min(gaps_after_jk) - 1
-      } else {
-        right_bound <- jk+1
-      }
-      ld_feature[left_bound:right_bound] <- 1
-    }
     z2z <- lambda * 0.5 * z^2 + (1 - lambda) * abs(z)
-    z2z <- ld_feature * z2z
     delta <- exp(z2z - max(z2z))
   } else if (func_simplex == "entropy") {
     delta <- rep(1, length(z))
