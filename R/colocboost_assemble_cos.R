@@ -12,6 +12,8 @@ colocboost_assemble_cos <- function(cb_obj,
                                     median_abs_corr = NULL,
                                     min_cluster_corr = 0.8,
                                     median_cos_abs_corr = 0.8,
+                                    use_entropy = FALSE,
+                                    residual_correlation = NULL,
                                     tol = 1e-9) {
   if (!inherits(cb_obj, "colocboost")) {
     stop("Input must from colocboost function!")
@@ -43,7 +45,8 @@ colocboost_assemble_cos <- function(cb_obj,
         X = cb_data$data[[X_dict]]$X, Xcorr = cb_data$data[[X_dict]]$XtX,
         N = cb_data$data[[coloc_outcomes[iiii]]]$N, n = n_purity, coverage = sec_coverage_thresh,
         min_abs_corr = min_abs_corr, median_abs_corr = median_abs_corr,
-        miss_idx = cb_data$data[[coloc_outcomes[iiii]]]$variable_miss
+        miss_idx = cb_data$data[[coloc_outcomes[iiii]]]$variable_miss,
+        ref_label = cb_data$data[[X_dict]]$ref_label
       )
       check_purity[iiii] <- length(tmp) == 1
     }
@@ -53,7 +56,8 @@ colocboost_assemble_cos <- function(cb_obj,
       pos_purity <- which(check_purity)
       avWeight <- avWeight[, pos_purity, drop = FALSE]
       coloc_outcomes <- coloc_outcomes[pos_purity]
-      weights <- get_integrated_weight(avWeight, weight_fudge_factor = weight_fudge_factor)
+      weights <- get_integrated_weight(avWeight, weight_fudge_factor = weight_fudge_factor, 
+                                       use_entropy = use_entropy, residual_correlation = residual_correlation)
       coloc_cos <- get_in_cos(weights, coverage = coverage)
       evidence_strength <- sum(weights[coloc_cos[[1]]])
 
@@ -83,7 +87,8 @@ colocboost_assemble_cos <- function(cb_obj,
         p_tmp <- matrix(get_purity(pos,
           X = cb_data$data[[X_dict]]$X,
           Xcorr = cb_data$data[[X_dict]]$XtX,
-          N = cb_data$data[[i]]$N, n = n_purity
+          N = cb_data$data[[i]]$N, n = n_purity,
+          ref_label = cb_data$data[[X_dict]]$ref_label
         ), 1, 3)
         purity <- c(purity, list(p_tmp))
       }
@@ -148,7 +153,8 @@ colocboost_assemble_cos <- function(cb_obj,
             X = cb_data$data[[X_dict]]$X, Xcorr = cb_data$data[[X_dict]]$XtX,
             N = cb_data$data[[coloc_outcomes[iiii]]]$N, n = n_purity, coverage = sec_coverage_thresh,
             min_abs_corr = min_abs_corr, median_abs_corr = median_abs_corr,
-            miss_idx = cb_data$data[[coloc_outcomes[iiii]]]$variable_miss
+            miss_idx = cb_data$data[[coloc_outcomes[iiii]]]$variable_miss,
+            ref_label = cb_data$data[[X_dict]]$ref_label
           )
           check_purity[iiii] <- length(tmp) == 1
         }
@@ -158,7 +164,8 @@ colocboost_assemble_cos <- function(cb_obj,
           pos_purity <- which(check_purity)
           avWeight <- avWeight[, pos_purity, drop = FALSE]
           coloc_outcomes <- coloc_outcomes[pos_purity]
-          weights <- get_integrated_weight(avWeight, weight_fudge_factor = weight_fudge_factor)
+          weights <- get_integrated_weight(avWeight, weight_fudge_factor = weight_fudge_factor, 
+                                           use_entropy = use_entropy, residual_correlation = residual_correlation)
           coloc_cos <- get_in_cos(weights, coverage = coverage)
           evidence_strength <- sum(weights[coloc_cos[[1]]])
 
@@ -208,7 +215,8 @@ colocboost_assemble_cos <- function(cb_obj,
               X = cb_data$data[[X_dict]]$X, Xcorr = cb_data$data[[X_dict]]$XtX,
               N = cb_data$data[[coloc_outcomes[iiii]]]$N, n = n_purity, coverage = sec_coverage_thresh,
               min_abs_corr = min_abs_corr, median_abs_corr = median_abs_corr,
-              miss_idx = cb_data$data[[coloc_outcomes[iiii]]]$variable_miss
+              miss_idx = cb_data$data[[coloc_outcomes[iiii]]]$variable_miss,
+              ref_label = cb_data$data[[X_dict]]$ref_label
             )
             check_purity[[iiii]] <- tmp
           }
@@ -245,7 +253,8 @@ colocboost_assemble_cos <- function(cb_obj,
         for (i.w in 1:length(avWeight_coloc)) {
           w <- avWeight_coloc[[i.w]]
           if (sum(w) != 0) {
-            weights <- get_integrated_weight(w, weight_fudge_factor = weight_fudge_factor)
+            weights <- get_integrated_weight(w, weight_fudge_factor = weight_fudge_factor, 
+                                             use_entropy = use_entropy, residual_correlation = residual_correlation)
             csets <- get_in_cos(weights, coverage = coverage)
             coloc_cos[[fl]] <- unlist(csets)
             evidence_strength[[fl]] <- sum(weights[coloc_cos[[fl]]])
@@ -351,7 +360,8 @@ colocboost_assemble_cos <- function(cb_obj,
                 X = cb_data$data[[X_dict]]$X,
                 Xcorr = cb_data$data[[X_dict]]$XtX,
                 miss_idx = cb_data$data[[i]]$variable_miss,
-                P = cb_model_para$P
+                P = cb_model_para$P,
+                ref_label = cb_data$data[[X_dict]]$ref_label
               )
             }
             res <- Reduce(pmax, res)
@@ -438,7 +448,8 @@ colocboost_assemble_cos <- function(cb_obj,
           tmp <- matrix(get_purity(pos,
             X = cb_data$data[[X_dict]]$X,
             Xcorr = cb_data$data[[X_dict]]$XtX,
-            N = cb_data$data[[i3]]$N, n = n_purity
+            N = cb_data$data[[i3]]$N, n = n_purity,
+            ref_label = cb_data$data[[X_dict]]$ref_label
           ), 1, 3)
           p_tmp <- rbind(p_tmp, tmp)
         }

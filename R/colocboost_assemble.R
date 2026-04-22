@@ -36,6 +36,8 @@ colocboost_assemble <- function(cb_obj,
                                 median_cos_abs_corr = 0.8,
                                 weaker_effect = TRUE,
                                 merge_cos = TRUE,
+                                residual_correlation = NULL,
+                                use_entropy = FALSE,
                                 tol = 1e-9,
                                 output_level = 1) {
   if (!inherits(cb_obj, "colocboost")) {
@@ -84,6 +86,7 @@ colocboost_assemble <- function(cb_obj,
     cb_obj <- get_max_profile(cb_obj, check_null_max = check_null_max, 
                               check_null_max_ucos = check_null_max_ucos, 
                               check_null_method = check_null_method)
+    
     # --------- about colocalized confidence sets ---------------------------------
     out_cos <- colocboost_assemble_cos(cb_obj,
       coverage = coverage,
@@ -98,6 +101,8 @@ colocboost_assemble <- function(cb_obj,
       median_abs_corr = median_abs_corr,
       min_cluster_corr = min_cluster_corr,
       median_cos_abs_corr = median_cos_abs_corr,
+      use_entropy = use_entropy,
+      residual_correlation = residual_correlation,
       tol = tol
     )
 
@@ -132,9 +137,12 @@ colocboost_assemble <- function(cb_obj,
           }
         }
         if (!is.null(cb_obj_single$cb_data$data[[1]][["XtY"]])) {
+          X_dict <- cb_obj$cb_data$dict[i]
           if (is.null(cb_obj_single$cb_data$data[[1]]$XtX)) {
-            X_dict <- cb_obj$cb_data$dict[i]
             cb_obj_single$cb_data$data[[1]]$XtX <- cb_obj$cb_data$data[[X_dict]]$XtX
+          }
+          if (is.null(cb_obj_single$cb_data$data[[1]]$ref_label)) {
+            cb_obj_single$cb_data$data[[1]]$ref_label <- cb_obj$cb_data$data[[X_dict]]$ref_label
           }
         }
         class(cb_obj_single) <- "colocboost"
@@ -208,6 +216,8 @@ colocboost_assemble <- function(cb_obj,
 
     ############# - extract colocboost output - ####################
     # - colocalization results
+    cb_obj$cb_model_para$use_entropy <- use_entropy
+    cb_obj$cb_model_para$residual_correlation <- residual_correlation
     cb_obj$cb_model_para$weight_fudge_factor <- weight_fudge_factor
     cb_obj$cb_model_para$coverage <- coverage
     cb_obj$cb_model_para$min_abs_corr <- min_abs_corr

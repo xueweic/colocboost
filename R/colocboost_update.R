@@ -16,8 +16,6 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data) {
   for (i in pos.update) {
     update_jk <- cb_model_para$update_temp$real_update_jk[i]
     X_dict <- cb_data$dict[i]
-    # adj_dependence
-    adj_dep <- cb_data$data[[i]]$dependency
 
     ########## BEGIN: MAIN CALCULATION ###################
 
@@ -32,7 +30,8 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data) {
         XtX = cb_data$data[[X_dict]]$XtX,
         N = cb_data$data[[i]]$N,
         remain_idx = setdiff(1:cb_model_para$P, cb_data$data[[i]]$variable_miss),
-        P = cb_model_para$P
+        P = cb_model_para$P,
+        ref_label = cb_data$data[[X_dict]]$ref_label
       )
       cb_model[[i]]$ld_jk <- rbind(cb_model[[i]]$ld_jk, ld_jk)
     }
@@ -48,9 +47,11 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data) {
     }
     delta <- boost_KL_delta(
       z = cb_model[[i]]$z,
-      ld_feature = ld_feature, adj_dep = adj_dep,
+      ld_feature = ld_feature, 
       func_simplex = cb_model_para$func_simplex, 
-      lambda = lambda_outcome
+      lambda = lambda_outcome,
+      ref_label = cb_data$data[[X_dict]]$ref_label,
+      update_jk = update_jk 
     )
 
     x_tmp <- cb_data$data[[X_dict]]$X
@@ -64,15 +65,14 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data) {
     if (length(cb_data$data[[i]]$variable_miss) != 0) {
       obj_ld[cb_data$data[[i]]$variable_miss] <- 0
     }
-    exp_term <- adj_dep * obj_ld * (abs(cov_Xtr))
+    exp_term <- obj_ld * (abs(cov_Xtr))
     # - calculate individual objective function
     cb_model[[i]]$obj_path <- c(cb_model[[i]]$obj_path, tau * matrixStats::logSumExp(exp_term / tau + log(delta)))
     cb_model[[i]]$obj_single <- c(cb_model[[i]]$obj_single, abs(cov_Xtr[update_jk]))
 
     exp_term <- exp_term - max(exp_term)
     exp_abs_cor <- delta * exp(exp_term / tau)
-    # weights <- adj_dep * ld_feature / scaling_factor * exp_abs_cor / sum(exp_abs_cor)
-    weights <- adj_dep * obj_ld * exp_abs_cor / sum(exp_abs_cor)
+    weights <- obj_ld * exp_abs_cor / sum(exp_abs_cor)
     weights <- weights / sum(weights)
     # cb_model[[i]]$weights_path <- rbind(cb_model[[i]]$weights_path, as.vector(weights))
     cb_model[[i]]$weights_path <- c(cb_model[[i]]$weights_path, list(as.vector(weights)))
@@ -102,44 +102,32 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data) {
       x <- cb_data$data[[X_dict]]$X
       y <- cb_data$data[[i]]$Y
       beta <- cb_model[[i]]$beta
-      profile_log <- mean((y - x %*% beta)^2) * adj_dep
+      profile_log <- mean((y - x %*% beta)^2)
     } else if (!is.null(cb_data$data[[X_dict]]$XtX)) {
       beta_scaling <- cb_model[[i]]$beta_scaling
       # - summary statistics
       xtx <- cb_data$data[[X_dict]]$XtX
+      ref_label_i <- cb_data$data[[X_dict]]$ref_label
       cb_model[[i]]$res <- rep(0, cb_model_para$P)
       if (length(cb_data$data[[i]]$variable_miss) != 0) {
         beta <- cb_model[[i]]$beta[-cb_data$data[[i]]$variable_miss]  / beta_scaling
         xty <- cb_data$data[[i]]$XtY[-cb_data$data[[i]]$variable_miss]
-        if (length(xtx) == 1){
-          XtX_beta <- beta
-          cb_model[[i]]$res[-cb_data$data[[i]]$variable_miss] <- xty - scaling_factor * beta
-        } else {
-          XtX_beta <- xtx %*% beta
-          cb_model[[i]]$res[-cb_data$data[[i]]$variable_miss] <- xty - scaling_factor * XtX_beta
-        }
+        XtX_beta <- compute_XtX_product(xtx, beta, ref_label_i)
+        cb_model[[i]]$res[-cb_data$data[[i]]$variable_miss] <- xty - scaling_factor * XtX_beta
 
       } else {
         beta <- cb_model[[i]]$beta / beta_scaling
         xty <- cb_data$data[[i]]$XtY
-        if (length(xtx) == 1){
-          XtX_beta <- beta
-          cb_model[[i]]$res <- xty - scaling_factor * beta
-        } else {
-          XtX_beta <- xtx %*% beta
-          cb_model[[i]]$res <- xty - scaling_factor * XtX_beta
-        }
+        XtX_beta <- compute_XtX_product(xtx, beta, ref_label_i)
+        cb_model[[i]]$res <- xty - scaling_factor * XtX_beta
       }
       # - cache XtX %*% beta for reuse in get_correlation (avoids redundant O(P^2) computation)
       cb_model[[i]]$XtX_beta_cache <- XtX_beta
       # - profile-loglikelihood (reuses cached XtX_beta)
       yty <- cb_data$data[[i]]$YtY / scaling_factor
       xty <- xty / scaling_factor
-      if (length(xtx) == 1){
-        profile_log <- (yty - 2 * sum(beta * xty) + sum(beta^2)) * adj_dep
-      } else {
-        profile_log <- (yty - 2 * sum(beta * xty) + sum(XtX_beta * beta)) * adj_dep
-      }
+      profile_log <- (yty - 2 * sum(beta * xty) + sum(XtX_beta * beta))
+      
     }
     cb_model[[i]]$profile_loglike_each <- c(cb_model[[i]]$profile_loglike_each, profile_log)
   }
@@ -149,7 +137,7 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data) {
 
 
 # - calculate LD for update_jk
-get_LD_jk <- function(jk1, X = NULL, XtX = NULL, N = NULL, remain_idx = NULL, P = NULL) {
+get_LD_jk <- function(jk1, X = NULL, XtX = NULL, N = NULL, remain_idx = NULL, P = NULL, ref_label = "LD") {
   if (!is.null(X)) {
     corr <- suppressWarnings({
       Rfast::correls(X[, jk1], X)[, "correlation"]
@@ -158,8 +146,14 @@ get_LD_jk <- function(jk1, X = NULL, XtX = NULL, N = NULL, remain_idx = NULL, P 
   } else if (!is.null(XtX)) {
     jk1.remain <- which(remain_idx == jk1)
     corr <- rep(0, P)
-    if (length(XtX) == 1 | length(jk1.remain)==0){
+    if (identical(ref_label, "No_ref") | length(jk1.remain) == 0) {
       corr[remain_idx] <- 1
+    } else if (identical(ref_label, "X_ref")) {
+      corr_common <- suppressWarnings({
+        Rfast::correls(XtX[, jk1.remain], XtX)[, "correlation"]
+      })
+      corr_common[which(is.na(corr_common))] <- 0
+      corr[remain_idx] <- corr_common
     } else {
       corr[remain_idx] <- XtX[, jk1.remain]
     }
@@ -168,24 +162,49 @@ get_LD_jk <- function(jk1, X = NULL, XtX = NULL, N = NULL, remain_idx = NULL, P 
 }
 
 
-boost_KL_delta <- function(z, ld_feature, adj_dep,
+boost_KL_delta <- function(z, ld_feature, 
                            func_simplex = "LD_z2z",
-                           lambda = 0.5) {
+                           lambda = 0.5, 
+                           ref_label = "LD",
+                           update_jk = NULL) {
   # if (!is.null(n)){ z <- z * sqrt( (n-1)/(z^2+n-2) ) }
 
 
   if (func_simplex == "Range_Z") {
     z2z <- lambda * 0.5 * z^2 + (1 - lambda) * abs(z)
     z2z <- (z2z - min(z2z)) / (max(z2z) - min(z2z)) * 5
-    z2z <- adj_dep * ld_feature * z2z
+    z2z <- ld_feature * z2z
     delta <- exp(z2z - max(z2z))
   } else if (func_simplex == "LD_z2z") {
     z2z <- lambda * 0.5 * z^2 + (1 - lambda) * abs(z)
-    z2z <- adj_dep * ld_feature * z2z
+    z2z <- ld_feature * z2z
     delta <- exp(z2z - max(z2z))
   } else if (func_simplex == "only_z2z") {
+    if (identical(ref_label, "No_ref")){
+      # if no LD information, construct a region around update_jk
+      # set a minimum zscore around update_jk (pvalue ~ 0.001)
+      ld_feature <- rep(0, length(z))
+      if (abs(z[update_jk]) < 3.5){ 
+        ld_feature[update_jk] <- 1
+      } else {
+        gaps <- which(abs(z) < 3.5)
+        gaps_before_jk <- gaps[gaps < update_jk]
+        if (length(gaps_before_jk) > 0) {
+          left_bound <- max(gaps_before_jk) + 1
+        } else {
+          left_bound <- update_jk-1
+        }
+        gaps_after_jk <- gaps[gaps > update_jk]
+        if (length(gaps_after_jk) > 0) {
+          right_bound <- min(gaps_after_jk) - 1
+        } else {
+          right_bound <- update_jk+1
+        }
+        ld_feature[left_bound:right_bound] <- 1
+      }
+    }
     z2z <- lambda * 0.5 * z^2 + (1 - lambda) * abs(z)
-    z2z <- adj_dep * z2z
+    z2z <- ld_feature * z2z
     delta <- exp(z2z - max(z2z))
   } else if (func_simplex == "entropy") {
     delta <- rep(1, length(z))
@@ -252,8 +271,6 @@ boost_obj_last <- function(cb_data, cb_model, cb_model_para) {
       abs_cor <- abs(correlation)
       jk <- which(abs_cor == max(abs_cor))
       jk <- ifelse(length(jk) == 1, jk, sample(jk, 1))
-      # adj_dependence
-      adj_dep <- cb_data$data[[i]]$dependency
 
       ########## MAIN CALCULATION ###################
       X_dict <- cb_data$dict[i]
@@ -262,7 +279,8 @@ boost_obj_last <- function(cb_data, cb_model, cb_model_para) {
         XtX = cb_data$data[[X_dict]]$XtX,
         N = cb_data$data[[i]]$N,
         remain_idx = setdiff(1:cb_model_para$P, cb_data$data[[i]]$variable_miss),
-        P = cb_model_para$P
+        P = cb_model_para$P,
+        ref_label = cb_data$data[[X_dict]]$ref_label
       )
       ld_feature <- sqrt(abs(ld_jk))
 
@@ -276,9 +294,11 @@ boost_obj_last <- function(cb_data, cb_model, cb_model_para) {
       }
       delta <- boost_KL_delta(
         z = cb_model[[i]]$z,
-        ld_feature = ld_feature, adj_dep = adj_dep,
+        ld_feature = ld_feature, 
         func_simplex = cb_model_para$func_simplex, 
-        lambda = lambda_outcome
+        lambda = lambda_outcome,
+        ref_label = cb_data$data[[X_dict]]$ref_label,
+        update_jk = jk 
       )
 
       x_tmp <- cb_data$data[[X_dict]]$X
@@ -293,7 +313,7 @@ boost_obj_last <- function(cb_data, cb_model, cb_model_para) {
       if (length(cb_data$data[[i]]$variable_miss) != 0) {
         obj_ld[cb_data$data[[i]]$variable_miss] <- 0
       }
-      exp_term <- adj_dep * obj_ld * (abs(cov_Xtr))
+      exp_term <-  obj_ld * (abs(cov_Xtr))
       # - calculate individual objective function
       cb_model[[i]]$obj_path <- c(cb_model[[i]]$obj_path, tau * matrixStats::logSumExp(exp_term / tau + log(delta)))
       cb_model[[i]]$obj_single <- c(cb_model[[i]]$obj_single, abs(cov_Xtr[jk]))

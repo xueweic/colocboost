@@ -14,6 +14,8 @@ get_robust_colocalization(
   npc_outcome_cutoff = 0.2,
   pvalue_cutoff = NULL,
   weight_fudge_factor = 1.5,
+  use_entropy = FALSE,
+  residual_correlation = NULL,
   coverage = 0.95
 )
 }
@@ -27,6 +29,10 @@ get_robust_colocalization(
 \item{pvalue_cutoff}{Maximum threshold of marginal p-values of colocalized variants on colocalized traits in each CoS.}
 
 \item{weight_fudge_factor}{The strength to integrate weight from different outcomes, default is 1.5}
+
+\item{use_entropy}{A logic variable to consider the heterogeneity of traits for a single-effect.}
+
+\item{residual_correlation}{The residual correlation based on the sample overlap, it is diagonal if it is NULL.}
 
 \item{coverage}{A number between 0 and 1 specifying the \dQuote{coverage} of the estimated colocalization confidence sets (CoS) (default is 0.95).}
 }

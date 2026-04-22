@@ -237,6 +237,7 @@ test_that("colocboost correctly maps focal outcome to keep_variables with dict_k
         dict_YX = dict_YX,
         Z = lapply(sumstat_list, function(s) s$beta / s$sebeta),  # z-scores
         LD = list(LD_superset),
+        ref_label = "LD",
         N_sumstat = lapply(sumstat_list, function(s) s$n[1]),
         dict_sumstatLD = dict_sumstatLD,
         Var_y = NULL,

@@ -12,6 +12,7 @@ colocboost(
   Y = NULL,
   sumstat = NULL,
   LD = NULL,
+  X_ref = NULL,
   dict_YX = NULL,
   dict_sumstatLD = NULL,
   outcome_names = NULL,
@@ -62,6 +63,7 @@ colocboost(
   check_null_max_ucos = 0.015,
   weaker_effect = TRUE,
   LD_free = FALSE,
+  use_entropy = FALSE,
   output_level = 1,
   cos_npc_cutoff = 0.2,
   npc_outcome_cutoff = 0.2,
@@ -81,14 +83,23 @@ The columns of data.frame should include either \code{z} or \code{beta}/\code{se
 \code{var_y} is the variance of phenotype (default is 1 meaning that the Y is in the \dQuote{standardized} scale).}
 
 \item{LD}{A list of correlation matrix indicating the LD matrix for each genotype. It also could be a single matrix if all sumstats were
-obtained from the same genotypes.}
+obtained from the same genotypes. Provide either \code{LD} or \code{X_ref}, not both.
+If neither is provided, LD-free mode is used.}
+
+\item{X_ref}{A reference panel genotype matrix (N_ref x P) or a list of matrices, as an alternative to providing a precomputed
+\code{LD} matrix. Column names must include variant names matching those in \code{sumstat}.
+When the number of reference panel samples is less than the number of variants (N_ref < P),
+this avoids storing the full P x P LD matrix and reduces memory usage.
+When N_ref >= P, LD is precomputed from \code{X_ref} internally.
+Provide either \code{LD} or \code{X_ref}, not both. If neither is provided, LD-free mode is used.}
 
 \item{dict_YX}{A L by 2 matrix of dictionary for \code{X} and \code{Y} if there exist subsets of outcomes corresponding to the same X matrix.
 The first column should be 1:L for L outcomes. The second column should be the index of \code{X} corresponding to the outcome.
 The innovation: do not provide the same matrix in \code{X} to reduce the computational burden.}
 
-\item{dict_sumstatLD}{A L by 2 matrix of dictionary for \code{sumstat} and \code{LD} if there exist subsets of outcomes corresponding to the same sumstat.
-The first column should be 1:L for L sumstat The second column should be the index of \code{LD} corresponding to the sumstat.
+\item{dict_sumstatLD}{A L by 2 matrix of dictionary for \code{sumstat} and \code{LD} (or \code{X_ref}) if there exist subsets of outcomes
+corresponding to the same sumstat.
+The first column should be 1:L for L sumstat The second column should be the index of \code{LD} (or \code{X_ref}) corresponding to the sumstat.
 The innovation: do not provide the same matrix in \code{LD} to reduce the computational burden.}
 
 \item{outcome_names}{The names of outcomes, which has the same order for Y.}
@@ -193,6 +204,8 @@ to merge colocalized sets, which may resulting in a huge set.}
 \item{weaker_effect}{If \code{weaker_effect = TRUE}, consider the weaker single effect due to coupling effects}
 
 \item{LD_free}{When \code{LD_free = FALSE}, objective function doesn't include LD information.}
+
+\item{use_entropy}{A logic variable to consider the heterogeneity of traits for a single-effect.}
 
 \item{output_level}{When \code{output_level = 1}, return basic cos details for colocalization results
 When \code{output_level = 2}, return the ucos details for the single specific effects.
