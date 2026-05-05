@@ -313,8 +313,8 @@ get_robust_colocalization <- function(cb_output,
       }
     }
     w_outcome <- colnames(w)
-    config_outcome <- paste0("outcome", config_idx)
-    pos <- which(w_outcome %in% config_outcome)
+    w_outcome_idx <- as.integer(gsub("^(outcome|Y)", "", w_outcome))
+    pos <- which(!is.na(match(w_outcome_idx, config_idx)))
     ww = w[, pos, drop = FALSE]
     colnames(ww) <- gsub("outcome", "Y", colnames(ww))
     ww
