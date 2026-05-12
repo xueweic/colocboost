@@ -711,7 +711,10 @@ plot_initial <- function(cb_plot_input, y = "log10p",
   # - set data and x-lab and y-lab
   if (y == "log10p") {
     plot_data <- lapply(cb_plot_input$Zscores, function(z) {
-      -log10(2 * pnorm(-abs(z)))
+      y_val <- -log10(2 * pnorm(-abs(z)))
+      max_finite <- max(y_val[is.finite(y_val)], na.rm = TRUE)
+      y_val[!is.finite(y_val)] <- max_finite
+      return(y_val)
     })
     ylab <- "-log10(p)"
   } else if (y == "z_original") {
@@ -765,7 +768,11 @@ plot_initial <- function(cb_plot_input, y = "log10p",
     ymin <- rep(args$ylim[1], length(args$y))
   } else {
     ymax <- NULL
-    ymin <- rep(0, length(args$y))
+    if (y %in% c("z_original", "coef")) {
+      ymin <- sapply(plot_data, function(p) min(p[is.finite(p)], na.rm = TRUE) * 1.05)
+    } else {
+      ymin <- rep(0, length(args$y))
+    }
     
     # Check if ylim_each is FALSE but no ylim is provided
     if (!ylim_each) {
@@ -784,9 +791,7 @@ plot_initial <- function(cb_plot_input, y = "log10p",
       }
       return(ymax)
     })
-    if (y == "coef") {
-      ymin <- sapply(plot_data, function(p) min(p) * 1.05)
-    }
+      
   }
   args$ymax <- ymax
   args$ymin <- ymin
