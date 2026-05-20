@@ -474,7 +474,7 @@ get_between_purity <- function(pos1, pos2, X = NULL, Xcorr = NULL, miss_idx = NU
     X_sub2 <- scale(X[, pos2, drop = FALSE], center = T, scale = F)
     value <- abs(get_matrix_mult(X_sub1, X_sub2))
   } else {
-    if (identical(ref_label, "No_ref") || sum(Xcorr) == 1) {
+    if (identical(ref_label, "No_ref") || (length(Xcorr) == 1 && Xcorr == 1)) {
       value <- 0
     } else {
       if (length(miss_idx) != 0) {
