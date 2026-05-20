@@ -163,11 +163,16 @@ colocboost_init_model <- function(cb_data,
       "ld_jk" = c(),
       "jk" = c(),
       "scaling_factor" = if (!is.null(cb_data$data[[i]]$N)) (cb_data$data[[i]]$N - 1) else 1,
-      "beta_scaling" = if (!is.null(cb_data$data[[i]]$N)) 1 else 100
+      "beta_scaling" = if (!is.null(cb_data$data[[i]]$N)) 1 else 100,
+      "XtX_beta_cache" = NULL
     )
 
     data_each <- cb_data$data[[i]]
     X_dict <- cb_data$dict[i]
+    if (!is.null(cb_data$data[[X_dict]]$XtX)) {
+      tmp$XtX_beta_cache <- rep(0, P - length(data_each$variable_miss))
+    }
+
     # - calculate change of loglikelihood for data
     tmp$change_loglike <- estimate_change_profile(
       X = cb_data$data[[X_dict]]$X, Y = data_each[["Y"]], N = data_each$N,
@@ -184,6 +189,7 @@ colocboost_init_model <- function(cb_data,
       XtX = cb_data$data[[X_dict]]$XtX,
       beta_k = tmp$beta,
       miss_idx = data_each$variable_miss,
+      XtX_beta_cache = tmp$XtX_beta_cache,
       ref_label = cb_data$data[[X_dict]]$ref_label
     )
     # - initial z-score between X and residual based on correlation
@@ -240,7 +246,8 @@ colocboost_init_para <- function(cb_data, cb_model, tau = 0.01,
                                  jk_equiv_corr = 0.8,
                                  jk_equiv_loglik = 1,
                                  func_compare = "min_max",
-                                 coloc_thresh =  0.1) {
+                                 coloc_thresh =  0.1,
+                                 ld_mismatch = "none") {
   #################  initialization #######################################
   # - sample size
   N <- sapply(cb_data$data, function(dt) dt$N)
@@ -312,7 +319,8 @@ colocboost_init_para <- function(cb_data, cb_model, tau = 0.01,
     "func_multi_test" = func_multi_test,
     "multi_test_thresh" = multi_test_thresh,
     "multi_test_max" = multi_test_max,
-    "model_used" = "original"
+    "model_used" = "original",
+    "ld_mismatch" = ld_mismatch
   )
   class(cb_model_para) <- "colocboost"
 
@@ -391,7 +399,7 @@ get_correlation <- function(X = NULL, res = NULL, XtY = NULL, N = NULL,
     }
     if (identical(ref_label, "No_ref")) {
       var_r <- YtY - 2 * sum(beta_k * XtY) + sum(beta_k^2)
-    } else if (!is.null(XtX_beta_cache)) {
+    } else if (!is.null(XtX_beta_cache) && length(XtX_beta_cache) == length(beta_k)) {
       var_r <- YtY - 2 * sum(beta_k * XtY) + sum(XtX_beta_cache * beta_k)
     } else {
       XtX_beta_val <- compute_XtX_product(XtX, beta_k, ref_label)
@@ -591,7 +599,8 @@ process_sumstat <- function(Z, N, Var_y, SeBhat,
       "XtY" = NULL,
       "YtY" = NULL,
       "N" = N[[i]],
-      "variable_miss" = NULL
+      "variable_miss" = NULL,
+      "R_finite_B" = NULL
     )
 
     # Get current status
