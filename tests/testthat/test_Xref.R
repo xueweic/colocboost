@@ -113,6 +113,27 @@ test_that("X_ref with N_ref >= P precomputes LD and produces valid results", {
   expect_equal(length(result_xref$data_info$variables), 30)
 })
 
+test_that("X_ref superset is trimmed before LD precomputation", {
+  test_data <- generate_xref_test_data(n_ref = 80, p = 20)
+  extra_ref <- matrix(rnorm(nrow(test_data$X_ref) * 35), nrow(test_data$X_ref), 35)
+  colnames(extra_ref) <- paste0("EXTRA", seq_len(ncol(extra_ref)))
+  X_ref_superset <- cbind(test_data$X_ref, extra_ref)
+
+  validated <- suppressMessages(
+    colocboost_validate_input_data(
+      sumstat = test_data$sumstat,
+      X_ref = X_ref_superset
+    )
+  )
+
+  expected_variants <- unique(unlist(lapply(test_data$sumstat, function(ss) ss$variant)))
+  expect_equal(validated$ref_label, "LD")
+  expect_null(validated$X_ref)
+  expect_equal(ncol(validated$LD[[1]]), length(expected_variants))
+  expect_setequal(colnames(validated$LD[[1]]), expected_variants)
+  expect_false(any(grepl("^EXTRA", colnames(validated$LD[[1]]))))
+})
+
 
 # ============================================================================
 # Test 3: X_ref with N_ref < P keeps X_ref for on-the-fly computation
