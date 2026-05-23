@@ -734,6 +734,32 @@ colocboost_validate_input_data <- function(X = NULL, Y = NULL,
       } else {
         if (is.data.frame(X_ref)) X_ref <- as.matrix(X_ref)
         if (is.matrix(X_ref)) X_ref <- list(X_ref)
+
+        # Trim X_ref supersets before any expensive reference processing.
+        # ColocBoost later matches each sumstat by variant name, so columns
+        # absent from every mapped sumstat cannot affect the fit.
+        get_needed_sumstat_variants <- function(ref_idx) {
+          if (length(X_ref) == 1) {
+            ss_idx <- seq_along(sumstat)
+          } else if (length(X_ref) == length(sumstat)) {
+            ss_idx <- ref_idx
+          } else if (!is.null(dict_sumstatLD) && !is.null(dim(dict_sumstatLD))) {
+            ss_idx <- unique(dict_sumstatLD[dict_sumstatLD[, 2] == ref_idx, 1])
+          } else {
+            return(NULL)
+          }
+          unique(unlist(lapply(sumstat[ss_idx], function(ss) ss$variant), use.names = FALSE))
+        }
+        for (idx in seq_along(X_ref)) {
+          xref_variants <- colnames(X_ref[[idx]])
+          if (is.null(xref_variants)) next
+          needed_variants <- get_needed_sumstat_variants(idx)
+          if (is.null(needed_variants) || length(needed_variants) == 0) next
+          keep_variants <- intersect(xref_variants, needed_variants)
+          if (length(keep_variants) > 0 && length(keep_variants) < ncol(X_ref[[idx]])) {
+            X_ref[[idx]] <- X_ref[[idx]][, keep_variants, drop = FALSE]
+          }
+        }
         
         # When N_ref >= P, precompute LD (avoids repeated O(N_ref*P) in boosting loop)
         # When N_ref < P, keep X_ref for on-the-fly computation (avoids P*P memory)

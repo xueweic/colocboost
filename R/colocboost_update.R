@@ -110,15 +110,27 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data) {
       ref_label_i <- cb_data$data[[X_dict]]$ref_label
       cb_model[[i]]$res <- rep(0, cb_model_para$P)
       if (length(cb_data$data[[i]]$variable_miss) != 0) {
-        beta <- cb_model[[i]]$beta[-cb_data$data[[i]]$variable_miss]  / beta_scaling
-        xty <- cb_data$data[[i]]$XtY[-cb_data$data[[i]]$variable_miss]
-        XtX_beta <- compute_XtX_product(xtx, beta, ref_label_i)
-        cb_model[[i]]$res[-cb_data$data[[i]]$variable_miss] <- xty - scaling_factor * XtX_beta
-
+        obs_idx <- setdiff(seq_len(cb_model_para$P), cb_data$data[[i]]$variable_miss)
+        beta <- cb_model[[i]]$beta[obs_idx] / beta_scaling
+        xty <- cb_data$data[[i]]$XtY[obs_idx]
+        delta_beta <- step1 * beta_grad[obs_idx] / beta_scaling
+        XtX_beta_cache <- cb_model[[i]]$XtX_beta_cache
+        if (!is.null(XtX_beta_cache) && length(XtX_beta_cache) == length(beta)) {
+          XtX_beta <- XtX_beta_cache + compute_XtX_product(xtx, delta_beta, ref_label_i)
+        } else {
+          XtX_beta <- compute_XtX_product(xtx, beta, ref_label_i)
+        }
+        cb_model[[i]]$res[obs_idx] <- xty - scaling_factor * XtX_beta
       } else {
         beta <- cb_model[[i]]$beta / beta_scaling
         xty <- cb_data$data[[i]]$XtY
-        XtX_beta <- compute_XtX_product(xtx, beta, ref_label_i)
+        delta_beta <- step1 * beta_grad / beta_scaling
+        XtX_beta_cache <- cb_model[[i]]$XtX_beta_cache
+        if (!is.null(XtX_beta_cache) && length(XtX_beta_cache) == length(beta)) {
+          XtX_beta <- XtX_beta_cache + compute_XtX_product(xtx, delta_beta, ref_label_i)
+        } else {
+          XtX_beta <- compute_XtX_product(xtx, beta, ref_label_i)
+        }
         cb_model[[i]]$res <- xty - scaling_factor * XtX_beta
       }
       # - cache XtX %*% beta for reuse in get_correlation (avoids redundant O(P^2) computation)
