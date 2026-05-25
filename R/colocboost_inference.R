@@ -120,34 +120,67 @@ get_hierarchical_clusters <- function(cormat, min_cluster_corr = 0.8) {
 #' @noRd
 get_modularity <- function(Weight, B) {
   if (dim(Weight)[1] == 1) return(0)
-  
+  if (nrow(B) != nrow(Weight)) {
+    stop("B must have one row per variable in Weight")
+  }
+  if (any(rowSums(B) == 0)) {
+    stop("Each row of B must belong to one cluster")
+  }
+  index <- max.col(B, ties.method = "first")
+  get_modularity_partition(get_modularity_components(Weight), index, ncol(B))
+}
+
+get_modularity_components <- function(Weight) {
   W_pos <- Weight * (Weight > 0)
   W_neg <- Weight * (Weight < 0)
-  N <- dim(Weight)[1]
   K_pos <- colSums(W_pos)
   K_neg <- colSums(W_neg)
   m_pos <- sum(K_pos)
   m_neg <- sum(K_neg)
-  m <- m_pos + m_neg
-  
-  if (m == 0) return(0)
-  
-  # cate <- B %*% t(B)
-  cate <- tcrossprod(B)
-  
-  if (m_pos == 0 & m_neg == 0) return(0)
-  
-  if (m_pos == 0) {
+  list(
+    W_pos = W_pos,
+    W_neg = W_neg,
+    K_pos = K_pos,
+    K_neg = K_neg,
+    m_pos = m_pos,
+    m_neg = m_neg,
+    m = m_pos + m_neg
+  )
+}
+
+get_modularity_partition <- function(mod_components, index, n_cluster) {
+  if (nrow(mod_components$W_pos) == 1) return(0)
+  if (mod_components$m == 0) return(0)
+
+  index_factor <- factor(index, levels = seq_len(n_cluster))
+  block_sum <- function(W) {
+    row_sums <- rowsum(W, index_factor, reorder = TRUE)
+    vapply(seq_len(n_cluster), function(i) sum(row_sums[i, index == i]), numeric(1))
+  }
+  group_sum <- function(x) {
+    as.numeric(rowsum(matrix(x, ncol = 1), index_factor, reorder = TRUE))
+  }
+
+  A_pos <- block_sum(mod_components$W_pos)
+  A_neg <- block_sum(mod_components$W_neg)
+  D_pos <- group_sum(mod_components$K_pos)
+  D_neg <- group_sum(mod_components$K_neg)
+
+  if (mod_components$m_pos == 0 & mod_components$m_neg == 0) return(0)
+
+  if (mod_components$m_pos == 0) {
     Q_positive <- 0
-    Q_negative <- sum((W_neg - K_neg %*% t(K_neg) / m_neg) * cate) / m_neg
-  } else if (m_neg == 0) {
-    Q_positive <- sum((W_pos - K_pos %*% t(K_pos) / m_pos) * cate) / m_pos
+    Q_negative <- sum(A_neg - D_neg^2 / mod_components$m_neg) / mod_components$m_neg
+  } else if (mod_components$m_neg == 0) {
+    Q_positive <- sum(A_pos - D_pos^2 / mod_components$m_pos) / mod_components$m_pos
     Q_negative <- 0
   } else {
-    Q_positive <- sum((W_pos - K_pos %*% t(K_pos) / m_pos) * cate) / m_pos
-    Q_negative <- sum((W_neg - K_neg %*% t(K_neg) / m_neg) * cate) / m_neg
+    Q_positive <- sum(A_pos - D_pos^2 / mod_components$m_pos) / mod_components$m_pos
+    Q_negative <- sum(A_neg - D_neg^2 / mod_components$m_neg) / mod_components$m_neg
   }
-  Q <- m_pos / m * Q_positive - m_neg / m * Q_negative
+
+  Q <- mod_components$m_pos / mod_components$m * Q_positive -
+    mod_components$m_neg / mod_components$m * Q_negative
   return(Q)
 }
 
@@ -165,15 +198,16 @@ get_n_cluster <- function(hc, Sigma, m = ncol(Sigma), min_cluster_corr = 0.8) {
     IND <- 1
     Q <- 1
   } else {
-    Q <- c()
+    Q <- numeric(m)
     if (ncol(Sigma) < 10) {
       m <- ncol(Sigma)
+      Q <- numeric(m)
     }
+    mod_components <- get_modularity_components(Sigma)
     for (i in 1:m)
     {
       index <- cutree(hc, i)
-      B <- sapply(1:i, function(t) as.numeric(index == t))
-      Q[i] <- get_modularity(Sigma, B)
+      Q[i] <- get_modularity_partition(mod_components, index, i)
     }
 
     IND <- which(Q == max(Q))

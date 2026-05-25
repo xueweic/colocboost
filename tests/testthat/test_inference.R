@@ -237,6 +237,76 @@ test_that("get_hierarchical_clusters functions correctly", {
   expect_equal(result_all_high$n_cluster, 1)
 })
 
+test_that("block-sum modularity path matches reference modularity", {
+  set.seed(20260525)
+
+  get_modularity_reference <- function(Weight, B) {
+    if (dim(Weight)[1] == 1) return(0)
+    W_pos <- Weight * (Weight > 0)
+    W_neg <- Weight * (Weight < 0)
+    K_pos <- colSums(W_pos)
+    K_neg <- colSums(W_neg)
+    m_pos <- sum(K_pos)
+    m_neg <- sum(K_neg)
+    m <- m_pos + m_neg
+    if (m == 0) return(0)
+    cate <- tcrossprod(B)
+    if (m_pos == 0 & m_neg == 0) return(0)
+    if (m_pos == 0) {
+      Q_positive <- 0
+      Q_negative <- sum((W_neg - K_neg %*% t(K_neg) / m_neg) * cate) / m_neg
+    } else if (m_neg == 0) {
+      Q_positive <- sum((W_pos - K_pos %*% t(K_pos) / m_pos) * cate) / m_pos
+      Q_negative <- 0
+    } else {
+      Q_positive <- sum((W_pos - K_pos %*% t(K_pos) / m_pos) * cate) / m_pos
+      Q_negative <- sum((W_neg - K_neg %*% t(K_neg) / m_neg) * cate) / m_neg
+    }
+    m_pos / m * Q_positive - m_neg / m * Q_negative
+  }
+
+  get_n_cluster_reference <- function(hc, Sigma, m = ncol(Sigma), min_cluster_corr = 0.8) {
+    if (min(Sigma) > min_cluster_corr) {
+      return(list(n_cluster = 1, Qmodularity = 1))
+    }
+    if (ncol(Sigma) < 10) {
+      m <- ncol(Sigma)
+    }
+    Q <- numeric(m)
+    for (i in seq_len(m)) {
+      index <- cutree(hc, i)
+      B <- sapply(seq_len(i), function(t) as.numeric(index == t))
+      Q[i] <- get_modularity_reference(Sigma, B)
+    }
+    IND <- which(Q == max(Q))
+    if (length(IND) > 1) IND <- IND[1]
+    list(n_cluster = IND, Qmodularity = Q)
+  }
+
+  for (p in c(8, 20, 50)) {
+    Sigma <- matrix(rnorm(p * p), p, p)
+    Sigma <- (Sigma + t(Sigma)) / 2
+    diag(Sigma) <- 1
+    hc <- hclust(as.dist(1 - Sigma))
+
+    current <- get_n_cluster(hc, Sigma, m = p, min_cluster_corr = 0.999)
+    reference <- get_n_cluster_reference(hc, Sigma, m = p, min_cluster_corr = 0.999)
+
+    expect_equal(current$n_cluster, reference$n_cluster)
+    expect_equal(current$Qmodularity, reference$Qmodularity, tolerance = 1e-10)
+
+    for (k in c(1, ceiling(p / 3), p)) {
+      index <- cutree(hc, k)
+      B <- sapply(seq_len(k), function(t) as.numeric(index == t))
+      direct <- get_modularity_reference(Sigma, B)
+      components <- get_modularity_components(Sigma)
+      block_sum <- get_modularity_partition(components, index, k)
+      expect_equal(block_sum, direct, tolerance = 1e-10)
+      expect_equal(get_modularity(Sigma, B), direct, tolerance = 1e-10)
+    }
+  }
+})
+
 
 # Test get_ambiguous_colocalization function
 test_that("get_ambiguous_colocalization identifies ambiguous colocalizations correctly", {
