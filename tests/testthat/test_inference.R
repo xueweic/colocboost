@@ -598,7 +598,7 @@ test_that("get_robust_ucos handles npc_outcome_cutoff = 0 correctly", {
   # With npc_outcome_cutoff = 0 and no pvalue_cutoff, should return unchanged
   expect_message(
     result <- get_robust_ucos(cb_res, npc_outcome_cutoff = 0),
-    "All possible uncolocalized events are reported"
+    "positive relative evidence"
   )
   
   # Should be essentially unchanged
@@ -606,6 +606,33 @@ test_that("get_robust_ucos handles npc_outcome_cutoff = 0 correctly", {
     length(result$ucos_details$ucos$ucos_index),
     length(cb_res$ucos_details$ucos$ucos_index)
   )
+})
+
+test_that("get_robust_ucos removes zero npc_outcome even with zero cutoff", {
+
+  # Generate test data
+  cb_res <- generate_ucos_test_data(output_level = 2)
+
+  # Skip if no ucos were detected
+  skip_if(is.null(cb_res$ucos_details), "No ucos detected in test data")
+
+  n_ucos_original <- length(cb_res$ucos_details$ucos$ucos_index)
+  cb_res$ucos_details$ucos_outcomes_npc$npc_outcome[1] <- 0
+
+  expect_message(
+    result <- get_robust_ucos(cb_res, npc_outcome_cutoff = 0),
+    "positive relative evidence"
+  )
+
+  if (n_ucos_original == 1) {
+    expect_null(result$ucos_details)
+  } else {
+    expect_equal(
+      length(result$ucos_details$ucos$ucos_index),
+      n_ucos_original - 1
+    )
+    expect_false(any(result$ucos_details$ucos_outcomes_npc$npc_outcome == 0))
+  }
 })
 
 test_that("get_robust_ucos handles missing ucos_details", {

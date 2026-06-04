@@ -517,8 +517,7 @@ get_robust_ucos <- function(cb_output,
   }
 
   if (npc_outcome_cutoff == 0 && is.null(pvalue_cutoff)) {
-    message("All possible uncolocalized events are reported regardless of their relative evidence (npc_outcome_cutoff = 0).")
-    return(cb_output)
+    message("All possible uncolocalized events with positive relative evidence are reported (npc_outcome_cutoff = 0).")
   } else {
     if (is.null(pvalue_cutoff)) {
       message(paste0(
@@ -580,7 +579,7 @@ get_robust_ucos <- function(cb_output,
   ucolocset_names <- ucos_min_npc_outcome <- c()
   for (i in 1:length(ucos_details$ucos$ucos_index)) {
     npc_outcome <- ucos_details$ucos_outcomes_npc$npc_outcome[i]
-    pos_pass <- which(npc_outcome >= npc_outcome_cutoff)
+    pos_pass <- which(npc_outcome >= npc_outcome_cutoff & npc_outcome > 0)
     if (!is.null(pvalue_cutoff)) {
       ucos_tmp <- ucos_details$ucos$ucos_index[[i]]
       ucos_trait <- ucos_details$ucos_outcomes$outcome_index[[i]]
@@ -592,8 +591,6 @@ get_robust_ucos <- function(cb_output,
       pos_pass_pvalue <- which(minPV <= pvalue_cutoff)
       if (length(pos_pass_pvalue) == 0) {
         pos_pass <- NULL
-      } else {
-        pos_pass <- 1
       }
     }
     if (length(pos_pass) == 0) {
