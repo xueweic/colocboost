@@ -424,7 +424,7 @@ colocboost <- function(X = NULL, Y = NULL, # individual data
 #'   \item{sumstat}{Processed list of summary statistics data.frames}
 #'   \item{LD}{Processed list of LD matrices}
 #'   \item{X_ref}{Processed list of reference genotype matrices}
-#'   \item{ref_label}{Style of reference matrics}
+#'   \item{ref_label}{Style of reference matrices}
 #'   \item{sumstatLD_dict}{Dictionary mapping sumstat to LD}
 #'   \item{keep_variable_sumstat}{List of variant names for each sumstat}
 #'   \item{Z}{List of z-scores for each outcome}
@@ -514,7 +514,7 @@ colocboost_validate_input_data <- function(X = NULL, Y = NULL,
     })
     keep_variable_individual <- lapply(X, colnames)
     if (!is.list(X) & !is.list(Y)) {
-      warning("Error: Input X and Y must be the list containing genotype matrics and all phenotype vectors!")
+      warning("Error: Input X and Y must be the list containing genotype matrices and all phenotype vectors!")
       return(NULL)
     } else {
       if (length(X) == 1) {
@@ -968,4 +968,3 @@ colocboost_validate_input_data <- function(X = NULL, Y = NULL,
     npc_outcome_cutoff = npc_outcome_cutoff_updated
   ))
 }
-

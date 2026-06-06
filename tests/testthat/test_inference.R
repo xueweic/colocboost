@@ -107,6 +107,38 @@ generate_ucos_test_data <- function(n = 500, p = 60, L = 3, seed = 42, output_le
   return(result)
 }
 
+generate_cos_test_result <- function(n = 250, p = 30, L = 3, seed = 20260606) {
+  set.seed(seed)
+
+  sigma <- 0.9^abs(outer(seq_len(p), seq_len(p), "-"))
+  X <- MASS::mvrnorm(n, rep(0, p), sigma)
+  colnames(X) <- paste0("SNP", seq_len(p))
+
+  true_beta <- matrix(0, p, L)
+  true_beta[8, 1] <- 1.2
+  true_beta[8, 2] <- 1.1
+  true_beta[22, 3] <- 1.2
+
+  Y <- matrix(0, n, L)
+  for (l in seq_len(L)) {
+    Y[, l] <- X %*% true_beta[, l] + rnorm(n, 0, 0.6)
+  }
+
+  suppressWarnings({
+    result <- colocboost(
+      X = replicate(L, X, simplify = FALSE),
+      Y = lapply(seq_len(L), function(l) Y[, l]),
+      M = 80,
+      output_level = 3,
+      cos_npc_cutoff = 0,
+      npc_outcome_cutoff = 0,
+      pvalue_cutoff = NULL
+    )
+  })
+
+  return(result)
+}
+
 
 
 # Test for get_strong_colocalization
@@ -123,6 +155,61 @@ test_that("get_robust_colocalization filters results correctly", {
   
   # With p-value threshold
   expect_error(suppressWarnings(get_robust_colocalization(cb_res, pvalue_cutoff = 0.05)), NA)
+})
+
+test_that("get_robust_colocalization handles validation and early return branches", {
+
+  cb_res <- generate_cos_test_result()
+  expect_false(is.null(cb_res$cos_details))
+
+  expect_error(
+    get_robust_colocalization("not_a_colocboost_object"),
+    "colocboost object"
+  )
+
+  no_cos <- cb_res
+  no_cos$cos_details <- NULL
+  expect_message(
+    no_cos_result <- get_robust_colocalization(no_cos),
+    "No colocalization results"
+  )
+  expect_null(no_cos_result$cos_details)
+
+  expect_warning(
+    bad_pvalue_result <- get_robust_colocalization(cb_res, pvalue_cutoff = 1.5),
+    "pvalue cutoff"
+  )
+  expect_equal(bad_pvalue_result, cb_res)
+
+  expect_message(
+    all_events_result <- get_robust_colocalization(
+      cb_res,
+      cos_npc_cutoff = 0,
+      npc_outcome_cutoff = 0
+    ),
+    "All possible colocalization events"
+  )
+  expect_equal(all_events_result, cb_res)
+})
+
+test_that("get_robust_colocalization removes CoS with zero npc_outcome", {
+
+  cb_res <- generate_cos_test_result()
+  expect_false(is.null(cb_res$cos_details))
+
+  cb_res$cos_details$cos_outcomes_npc[[1]]$npc_outcome <- 0
+
+  expect_message(
+    filtered <- get_robust_colocalization(
+      cb_res,
+      cos_npc_cutoff = 0.2,
+      npc_outcome_cutoff = 0
+    ),
+    "Extracting colocalization results"
+  )
+
+  expect_s3_class(filtered, "colocboost")
+  expect_null(filtered$cos_details)
 })
 
 # Test for get_hierarchical_clusters
@@ -598,7 +685,7 @@ test_that("get_robust_ucos handles npc_outcome_cutoff = 0 correctly", {
   # With npc_outcome_cutoff = 0 and no pvalue_cutoff, should return unchanged
   expect_message(
     result <- get_robust_ucos(cb_res, npc_outcome_cutoff = 0),
-    "All possible uncolocalized events are reported"
+    "positive relative evidence"
   )
   
   # Should be essentially unchanged
@@ -606,6 +693,33 @@ test_that("get_robust_ucos handles npc_outcome_cutoff = 0 correctly", {
     length(result$ucos_details$ucos$ucos_index),
     length(cb_res$ucos_details$ucos$ucos_index)
   )
+})
+
+test_that("get_robust_ucos removes zero npc_outcome even with zero cutoff", {
+
+  # Generate test data
+  cb_res <- generate_ucos_test_data(output_level = 2)
+
+  # Skip if no ucos were detected
+  skip_if(is.null(cb_res$ucos_details), "No ucos detected in test data")
+
+  n_ucos_original <- length(cb_res$ucos_details$ucos$ucos_index)
+  cb_res$ucos_details$ucos_outcomes_npc$npc_outcome[1] <- 0
+
+  expect_message(
+    result <- get_robust_ucos(cb_res, npc_outcome_cutoff = 0),
+    "positive relative evidence"
+  )
+
+  if (n_ucos_original == 1) {
+    expect_null(result$ucos_details)
+  } else {
+    expect_equal(
+      length(result$ucos_details$ucos$ucos_index),
+      n_ucos_original - 1
+    )
+    expect_false(any(result$ucos_details$ucos_outcomes_npc$npc_outcome == 0))
+  }
 })
 
 test_that("get_robust_ucos handles missing ucos_details", {
