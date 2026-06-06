@@ -99,6 +99,26 @@ generate_sumstat_test_data <- function(n = 100, p = 20, L = 2, seed = 42) {
 # Create summary statistics test data
 test_sumstat_data <- generate_sumstat_test_data()
 
+make_validation_x <- function(n = 6, p = 4) {
+  X <- matrix(seq_len(n * p), nrow = n, ncol = p)
+  colnames(X) <- paste0("SNP", seq_len(p))
+  X
+}
+
+make_validation_ld <- function(p = 4) {
+  LD <- diag(p)
+  colnames(LD) <- rownames(LD) <- paste0("SNP", seq_len(p))
+  LD
+}
+
+make_validation_sumstat <- function(p = 4) {
+  data.frame(
+    z = seq(0.1, 0.4, length.out = p),
+    n = 100,
+    variant = paste0("SNP", seq_len(p))
+  )
+}
+
 # Test 1: Basic summary statistics input
 test_that("colocboost runs with basic summary statistics format", {
   # Run colocboost with sumstat and single LD matrix
@@ -355,3 +375,165 @@ test_that("colocboost errors with no common variants", {
   expect_true(any(grepl("is empty after filtering", warnings)))
 })
 
+test_that("colocboost_validate_input_data covers individual input validation edge cases", {
+  X <- make_validation_x()
+  y <- seq_len(nrow(X))
+  Y3 <- list(y, y + 1, y + 2)
+
+  X_unequal_1 <- matrix(seq_len(24), nrow = 6, ncol = 4)
+  X_unequal_2 <- matrix(seq_len(30), nrow = 6, ncol = 5)
+  expect_warning(
+    expect_null(colocboost_validate_input_data(
+      X = list(X_unequal_1, X_unequal_2),
+      Y = list(y, y + 1)
+    )),
+    "same number of variables"
+  )
+
+  X_dup <- X
+  colnames(X_dup) <- c("SNP1", "SNP1", "SNP2", "SNP3")
+  expect_message(
+    validated_dup <- colocboost_validate_input_data(X = X_dup, Y = y),
+    "Removed duplicate columns from X matrix"
+  )
+  expect_equal(validated_dup$keep_variable_individual[[1]], c("SNP1", "SNP2", "SNP3"))
+
+  expect_warning(
+    expect_null(colocboost_validate_input_data(
+      X = list(X, X),
+      Y = Y3
+    )),
+    "dict_YX"
+  )
+
+  expect_warning(
+    expect_null(colocboost_validate_input_data(
+      X = list(X, X),
+      Y = Y3,
+      dict_YX = matrix(c(1, 1, 2, 2), ncol = 2, byrow = TRUE)
+    )),
+    "matched X for outcome 3"
+  )
+
+  expect_warning(
+    expect_null(colocboost_validate_input_data(
+      X = list(X, X),
+      Y = Y3,
+      dict_YX = matrix(c(1, 1, 1, 2, 2, 2, 3, 1), ncol = 2, byrow = TRUE)
+    )),
+    "different matched X for outcome 1"
+  )
+
+  expect_warning(
+    expect_null(colocboost_validate_input_data(
+      X = list(X, X),
+      Y = Y3,
+      dict_YX = matrix(c(1, 1, 2, 2, 3, 3), ncol = 2, byrow = TRUE)
+    )),
+    "enough X matrices"
+  )
+
+  X_na <- X
+  X_na[1, 1] <- NA
+  expect_warning(
+    expect_null(colocboost_validate_input_data(X = X_na, Y = y)),
+    "Input X must not contain missing values"
+  )
+})
+
+test_that("colocboost_validate_input_data covers summary reference mapping validation", {
+  LD <- make_validation_ld()
+  sumstat3 <- rep(list(make_validation_sumstat()), 3)
+  LD2 <- list(LD, LD)
+
+  expect_warning(
+    expect_null(colocboost_validate_input_data(sumstat = sumstat3, LD = LD2)),
+    "dict_sumstatLD"
+  )
+
+  expect_warning(
+    expect_null(colocboost_validate_input_data(
+      sumstat = sumstat3,
+      LD = LD2,
+      dict_sumstatLD = matrix(c(1, 1, 2, 2), ncol = 2, byrow = TRUE)
+    )),
+    "matched.*sumstat"
+  )
+
+  expect_warning(
+    expect_null(colocboost_validate_input_data(
+      sumstat = sumstat3,
+      LD = LD2,
+      dict_sumstatLD = matrix(c(1, 1, 1, 2, 2, 2, 3, 1), ncol = 2, byrow = TRUE)
+    )),
+    "multiple matched"
+  )
+
+  expect_warning(
+    expect_null(colocboost_validate_input_data(
+      sumstat = sumstat3,
+      LD = LD2,
+      dict_sumstatLD = matrix(c(1, 1, 2, 2, 3, 3), ncol = 2, byrow = TRUE)
+    )),
+    "enough.*matrices"
+  )
+
+  expect_warning(
+    expect_null(colocboost_validate_input_data(
+      sumstat = list(make_validation_sumstat()),
+      LD = diag(3)
+    )),
+    "has no variant names"
+  )
+})
+
+test_that("colocboost_validate_input_data covers summary statistic value validation", {
+  LD <- make_validation_ld()
+  variants <- paste0("SNP", 1:4)
+
+  expect_warning(
+    expect_null(colocboost_validate_input_data(
+      sumstat = list(data.frame(beta = 1:4, n = 100, variant = variants)),
+      LD = LD
+    )),
+    "either z"
+  )
+
+  expect_warning(
+    expect_null(colocboost_validate_input_data(
+      sumstat = list(data.frame(beta = c(1, NA, 3, 4), sebeta = 1, n = 100, variant = variants)),
+      LD = LD
+    )),
+    "cannot have missing values"
+  )
+
+  expect_warning(
+    expect_null(colocboost_validate_input_data(
+      sumstat = list(data.frame(beta = 1:4, sebeta = c(1, 1, 0, 1), n = 100, variant = variants)),
+      LD = LD
+    )),
+    "zero or negative"
+  )
+
+  sumstat_na_z <- make_validation_sumstat()
+  sumstat_na_z$z[1] <- NA
+  expect_warning(
+    validated_na_z <- colocboost_validate_input_data(sumstat = list(sumstat_na_z), LD = LD),
+    "contains NA values"
+  )
+  expect_false(anyNA(validated_na_z$Z[[1]]))
+
+  sumstat_bad_n <- make_validation_sumstat()
+  sumstat_bad_n$n[1] <- 1
+  expect_warning(
+    expect_null(colocboost_validate_input_data(sumstat = list(sumstat_bad_n), LD = LD)),
+    "Sample size N"
+  )
+
+  sumstat_bad_var_y <- make_validation_sumstat()
+  sumstat_bad_var_y$var_y <- -1
+  expect_warning(
+    expect_null(colocboost_validate_input_data(sumstat = list(sumstat_bad_var_y), LD = LD)),
+    "var_y"
+  )
+})

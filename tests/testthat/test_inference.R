@@ -125,6 +125,62 @@ test_that("get_robust_colocalization filters results correctly", {
   expect_error(suppressWarnings(get_robust_colocalization(cb_res, pvalue_cutoff = 0.05)), NA)
 })
 
+test_that("get_robust_colocalization handles validation and early return branches", {
+
+  cb_res <- generate_test_result()
+
+  expect_error(
+    get_robust_colocalization("not_a_colocboost_object"),
+    "colocboost object"
+  )
+
+  no_cos <- cb_res
+  no_cos$cos_details <- NULL
+  expect_message(
+    no_cos_result <- get_robust_colocalization(no_cos),
+    "No colocalization results"
+  )
+  expect_null(no_cos_result$cos_details)
+
+  expect_warning(
+    bad_pvalue_result <- get_robust_colocalization(cb_res, pvalue_cutoff = 1.5),
+    "pvalue cutoff"
+  )
+  expect_equal(bad_pvalue_result, cb_res)
+
+  expect_message(
+    all_events_result <- get_robust_colocalization(
+      cb_res,
+      cos_npc_cutoff = 0,
+      npc_outcome_cutoff = 0
+    ),
+    "All possible colocalization events"
+  )
+  expect_equal(all_events_result, cb_res)
+})
+
+test_that("get_robust_colocalization removes CoS with zero npc_outcome", {
+
+  cb_res <- generate_test_result()
+  skip_if(is.null(cb_res$cos_details), "No CoS detected in test data")
+
+  cb_res$cos_details$cos_outcomes_npc[[1]]$npc_outcome <- 0
+
+  expect_message(
+    filtered <- get_robust_colocalization(
+      cb_res,
+      cos_npc_cutoff = 0.2,
+      npc_outcome_cutoff = 0
+    ),
+    "Extracting colocalization results"
+  )
+
+  expect_s3_class(filtered, "colocboost")
+  expect_null(filtered$cos_details)
+  expect_true("ucos_details" %in% names(filtered))
+  expect_false(is.null(filtered$ucos_details))
+})
+
 # Test for get_hierarchical_clusters
 test_that("get_hierarchical_clusters functions correctly", {
   # Test case 1: Simple 2x2 correlation matrix with high correlation
