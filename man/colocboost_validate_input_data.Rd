@@ -68,7 +68,7 @@ A list containing:
 \item{sumstat}{Processed list of summary statistics data.frames}
 \item{LD}{Processed list of LD matrices}
 \item{X_ref}{Processed list of reference genotype matrices}
-\item{ref_label}{Style of reference matrics}
+\item{ref_label}{Style of reference matrices}
 \item{sumstatLD_dict}{Dictionary mapping sumstat to LD}
 \item{keep_variable_sumstat}{List of variant names for each sumstat}
 \item{Z}{List of z-scores for each outcome}

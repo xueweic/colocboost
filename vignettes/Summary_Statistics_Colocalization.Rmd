@@ -90,6 +90,19 @@ res$cos_details$cos$cos_index
 colocboost_plot(res)
 ```
 
+Alternatively, you can provide the reference panel genotype matrix directly through `X_ref`, which avoids storing the full LD matrix:
+
+```{r one-X-ref}
+# Use reference genotype directly instead of precomputing LD
+X_ref <- Ind_5traits$X[[1]]
+
+# Run colocboost
+res <- colocboost(sumstat = Sumstat_5traits$sumstat, X_ref = X_ref)
+
+# Identified CoS
+res$cos_details$cos$cos_index
+```
+
 
 ### Results Interpretation
 
@@ -233,5 +246,4 @@ res$cos_details$cos$cos_index
 ```
 
 See more details about data format to implement LD-free ColocBoost and LD-mismatch diagnosis in [LD mismatch and LD-free Colocalization](https://statfungen.github.io/colocboost/articles/LD_Free_Colocalization.html)).
-
 

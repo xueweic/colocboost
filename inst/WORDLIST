@@ -7,6 +7,7 @@ HyPrColoc       # Hypothesis Prioritization in multi-trait Colocalization method
 SuSiE           # Sum of Single Effects regression model
 
 # Statistical and Genetic Terms
+bim             # PLINK BIM variant information file
 eQTL            # Expression Quantitative Trait Loci
 GWAS            # Genome-Wide Association Study
 INDELs          # Insertions and Deletions
@@ -31,11 +32,14 @@ GTEx            # Genotype-Tissue Expression project
 Micromamba      # Lightweight Conda implementation
 Nealelab        # Lab developing genetics GWAS summary statistics
 PLINK           # Whole genome association analysis toolset
+RAISS           # Summary-statistics imputation method
 tabix           # Tool for indexing genomic data
 UKBB            # UK Biobank dataset
+YAML            # Human-readable configuration file format
 medRxiv         # A preprint resource
 pixi            # An environment manager
 conda           # Package and environment management system
+xz              # Compression format
 
 # Researcher Names
 Jager           # Philip L. de Jager
@@ -48,18 +52,23 @@ et              # and more
 al              # and more
 
 # Technical Terms
+changelog       # Release change log
 cis             # Referring to nearby location of a regulatory element
 chrom           # Chromosome
 decayrate       # Decay rate, an input parameter in our package
 doi             # Digital Object Identifier
+func            # Function abbreviation used in parameter names
 grey            # One color name in R
 iteratively     # Performed through iterations
+loglik          # Log-likelihood abbreviation used in parameter names
 lfsr            # Local False Sign Rate
 lth             # Lower threshold
 modularity      # Property of network structure
 omics           # Collective biological data fields
 phenotypes      # Observable traits
 pos             # Position in genome
+precomputed     # Computed in advance
+precomputes     # Computes in advance
 probabilistically # Based on probability theory
 qc              # Quality Control
 rcond           # Reciprocal condition number
