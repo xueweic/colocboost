@@ -255,7 +255,7 @@ get_robust_colocalization <- function(cb_output,
   for (i in 1:length(cos_details$cos$cos_index)) {
     cos_npc_config <- cos_details$cos_outcomes_npc[[i]]
     npc_outcome <- cos_npc_config$npc_outcome
-    pos_pass <- which(npc_outcome >= npc_outcome_cutoff)
+    pos_pass <- which(npc_outcome >= npc_outcome_cutoff & npc_outcome > 0)
     if (!is.null(pvalue_cutoff)) {
       cos_tmp <- cos_details$cos$cos_index[[i]]
       cos_trait <- cos_details$cos_outcomes$outcome_index[[i]]
