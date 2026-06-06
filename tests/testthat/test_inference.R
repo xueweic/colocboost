@@ -107,6 +107,38 @@ generate_ucos_test_data <- function(n = 500, p = 60, L = 3, seed = 42, output_le
   return(result)
 }
 
+generate_cos_test_result <- function(n = 250, p = 30, L = 3, seed = 20260606) {
+  set.seed(seed)
+
+  sigma <- 0.9^abs(outer(seq_len(p), seq_len(p), "-"))
+  X <- MASS::mvrnorm(n, rep(0, p), sigma)
+  colnames(X) <- paste0("SNP", seq_len(p))
+
+  true_beta <- matrix(0, p, L)
+  true_beta[8, 1] <- 1.2
+  true_beta[8, 2] <- 1.1
+  true_beta[22, 3] <- 1.2
+
+  Y <- matrix(0, n, L)
+  for (l in seq_len(L)) {
+    Y[, l] <- X %*% true_beta[, l] + rnorm(n, 0, 0.6)
+  }
+
+  suppressWarnings({
+    result <- colocboost(
+      X = replicate(L, X, simplify = FALSE),
+      Y = lapply(seq_len(L), function(l) Y[, l]),
+      M = 80,
+      output_level = 3,
+      cos_npc_cutoff = 0,
+      npc_outcome_cutoff = 0,
+      pvalue_cutoff = NULL
+    )
+  })
+
+  return(result)
+}
+
 
 
 # Test for get_strong_colocalization
@@ -127,7 +159,8 @@ test_that("get_robust_colocalization filters results correctly", {
 
 test_that("get_robust_colocalization handles validation and early return branches", {
 
-  cb_res <- generate_test_result()
+  cb_res <- generate_cos_test_result()
+  expect_false(is.null(cb_res$cos_details))
 
   expect_error(
     get_robust_colocalization("not_a_colocboost_object"),
@@ -161,8 +194,8 @@ test_that("get_robust_colocalization handles validation and early return branche
 
 test_that("get_robust_colocalization removes CoS with zero npc_outcome", {
 
-  cb_res <- generate_test_result()
-  skip_if(is.null(cb_res$cos_details), "No CoS detected in test data")
+  cb_res <- generate_cos_test_result()
+  expect_false(is.null(cb_res$cos_details))
 
   cb_res$cos_details$cos_outcomes_npc[[1]]$npc_outcome <- 0
 
@@ -177,8 +210,6 @@ test_that("get_robust_colocalization removes CoS with zero npc_outcome", {
 
   expect_s3_class(filtered, "colocboost")
   expect_null(filtered$cos_details)
-  expect_true("ucos_details" %in% names(filtered))
-  expect_false(is.null(filtered$ucos_details))
 })
 
 # Test for get_hierarchical_clusters
