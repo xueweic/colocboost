@@ -1,14 +1,30 @@
-## colocboost 1.0.8 release comments
+## colocboost 1.0.9 release comments
 
-This is an update to colocboost 1.0.7.
+This is a CRAN-requested patch update to colocboost 1.0.8.
 
-This release includes:
+This patch includes:
 
-* Added X_ref support as a memory-efficient alternative to precomputed LD matrices for summary-statistics workflows.
-* Added and refined robust post-filtering for colocalization and trait-specific uncolocalized events.
-* Improved computational efficiency for repeated matrix products in reference-panel workflows.
-* Improved plotting robustness for extreme association signals and coefficient or z-score displays.
-* Updated documentation and vignettes, including the bioinformatics pipeline vignette.
+* Fixed the CRAN-reported macOS arm64 test issue in the uCoS robustness tests.
+  The tests now use a stronger simulation setting and aligned inputs for
+  `get_robust_ucos()` and `get_ucos_evidence()`, so they no longer depend on
+  weak or platform-sensitive simulated signals.
+
+No R source code or package dependency changes were made for this CRAN-requested
+patch.
+
+## CRAN-requested macOS arm64 fix
+
+CRAN reported test failures for colocboost 1.0.8 on macOS arm64 and requested a
+correction before 2026-06-21. The failing test checked robust trait-specific
+uncolocalized event filtering and evidence calculation. The issue has been
+addressed by strengthening the simulation used in the test suite and by using
+matched `cb_obj` and `cb_res` inputs for the evidence check.
+
+CRAN also pointed to the M1mac check service for arm64 issues:
+https://www.stats.ox.ac.uk/pub/bdr/M1mac/README.txt. CRAN noted that this
+service runs a much older OS/toolchain and that toolchain differences often
+matter. This submission therefore fixes the test design itself, rather than
+relying on a platform-specific workaround.
 
 ## R CMD check results
 
@@ -24,11 +40,8 @@ This NOTE is expected. The installed size is mainly due to reduced example datas
 
 ## Previous comments
 
-* This is an important update for the latest release colocboost_1.0.5. We resolved an computational issue caused by the latest update.
-* This package implements methods described in our paper "ColocBoost" (Cao et al., 2025), added in DESCRIPTION
-* Fixed issues requested by CRAN in previous submission:
-  - Reduced tarball less than 5 MB
-  - Fixed reset users' options issues
-  - Added proper COPYRIGHT HOLDER and ORGANIZATION to LICENSE
-  - Added explanation of acronyms used in this package to inst/WORDLIST
-* The examples and vignettes use small datasets to avoid long check times
+* This package implements methods described in our paper "ColocBoost"
+  (Cao et al., 2025), now cited in DESCRIPTION.
+* Previous CRAN-requested fixes addressed tarball size, user option handling,
+  LICENSE metadata, and accepted package/domain terms in inst/WORDLIST.
+* The examples and vignettes use small datasets to avoid long check times.

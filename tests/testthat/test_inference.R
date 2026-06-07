@@ -59,48 +59,52 @@ generate_test_result <- function(n = 100, p = 50, L = 2, seed = 42) {
 }
 
 
-# Utility function to generate test data with uncolocalized effects
-generate_ucos_test_data <- function(n = 500, p = 60, L = 3, seed = 42, output_level = 3) {
+generate_ucos_input_data <- function(n = 300, p = 40, L = 3, seed = 42) {
   set.seed(seed)
   
   # Generate X with LD structure
-  sigma <- matrix(0, p, p)
-  for (i in 1:p) {
-    for (j in 1:p) {
-      sigma[i, j] <- 0.9^abs(i - j)
-    }
-  }
+  sigma <- 0.9^abs(outer(seq_len(p), seq_len(p), "-"))
   X <- MASS::mvrnorm(n, rep(0, p), sigma)
-  colnames(X) <- paste0("SNP", 1:p)
+  colnames(X) <- paste0("SNP", seq_len(p))
   
   # Generate true effects with both colocalized and trait-specific effects
   true_beta <- matrix(0, p, L)
   
-  # Colocalized effect: SNP10 affects traits 1 and 2
-  true_beta[10, 1] <- 0.7
-  true_beta[10, 2] <- 0.6
+  # Colocalized effect: SNP8 affects traits 1 and 2
+  true_beta[8, 1] <- 1.1
+  true_beta[8, 2] <- 1.0
   
-  # Trait-specific (uncolocalized) effects
-  true_beta[30, 1] <- 0.5  # SNP30 only affects trait 1
-  true_beta[45, 2] <- 0.6  # SNP45 only affects trait 2
-  true_beta[50, 3] <- 0.7  # SNP50 only affects trait 3
+  # Strong trait-specific (uncolocalized) effects
+  true_beta[18, 1] <- 1.2
+  true_beta[28, 2] <- 1.2
+  true_beta[36, 3] <- 1.2
   
-  # Generate Y with some noise
   Y <- matrix(0, n, L)
-  for (l in 1:L) {
-    Y[, l] <- X %*% true_beta[, l] + rnorm(n, 0, 1)
+  for (l in seq_len(L)) {
+    Y[, l] <- X %*% true_beta[, l] + rnorm(n, 0, 0.5)
   }
   
+  list(X = X, Y = Y, n = n, p = p, L = L)
+}
+
+# Utility function to generate test data with uncolocalized effects
+generate_ucos_test_data <- function(n = 300, p = 40, L = 3, seed = 42, output_level = 3) {
+  sim_data <- generate_ucos_input_data(n = n, p = p, L = L, seed = seed)
+
   # Prepare input for colocboost
-  Y_input <- lapply(1:L, function(l) Y[,l])
-  X_input <- replicate(L, X, simplify = FALSE)
+  Y_input <- lapply(seq_len(L), function(l) sim_data$Y[, l])
+  X_input <- replicate(L, sim_data$X, simplify = FALSE)
   
   # Run colocboost with output_level to get ucos_details
   suppressWarnings({
     result <- colocboost(
       X = X_input, 
       Y = Y_input,
-      output_level = output_level
+      M = 120,
+      output_level = output_level,
+      cos_npc_cutoff = 0,
+      npc_outcome_cutoff = 0,
+      pvalue_cutoff = NULL
     )
   })
   
@@ -592,8 +596,7 @@ test_that("get_robust_ucos basic functionality works", {
   # Generate test data with ucos
   cb_res <- generate_ucos_test_data(output_level = 2)
   
-  # Skip if no ucos were detected
-  skip_if(is.null(cb_res$ucos_details), "No ucos detected in test data")
+  expect_false(is.null(cb_res$ucos_details))
   
   # Basic call with default parameters
   result <- get_robust_ucos(cb_res)
@@ -611,8 +614,7 @@ test_that("get_robust_ucos filters by npc_outcome_cutoff", {
   # Generate test data
   cb_res <- generate_ucos_test_data(output_level = 2)
   
-  # Skip if no ucos were detected
-  skip_if(is.null(cb_res$ucos_details), "No ucos detected in test data")
+  expect_false(is.null(cb_res$ucos_details))
   
   # Get original number of ucos
   n_ucos_original <- length(cb_res$ucos_details$ucos$ucos_index)
@@ -636,8 +638,7 @@ test_that("get_robust_ucos filters by pvalue_cutoff", {
   # Generate test data
   cb_res <- generate_ucos_test_data(output_level = 2)
   
-  # Skip if no ucos were detected
-  skip_if(is.null(cb_res$ucos_details), "No ucos detected in test data")
+  expect_false(is.null(cb_res$ucos_details))
   
   # Apply lenient p-value filtering
   expect_message(
@@ -661,8 +662,7 @@ test_that("get_robust_ucos filters by both npc_outcome_cutoff and pvalue_cutoff"
   # Generate test data
   cb_res <- generate_ucos_test_data(output_level = 2)
   
-  # Skip if no ucos were detected
-  skip_if(is.null(cb_res$ucos_details), "No ucos detected in test data")
+  expect_false(is.null(cb_res$ucos_details))
   
   # Apply both filters
   expect_message(
@@ -679,8 +679,7 @@ test_that("get_robust_ucos handles npc_outcome_cutoff = 0 correctly", {
   # Generate test data
   cb_res <- generate_ucos_test_data(output_level = 2)
   
-  # Skip if no ucos were detected
-  skip_if(is.null(cb_res$ucos_details), "No ucos detected in test data")
+  expect_false(is.null(cb_res$ucos_details))
   
   # With npc_outcome_cutoff = 0 and no pvalue_cutoff, should return unchanged
   expect_message(
@@ -700,8 +699,7 @@ test_that("get_robust_ucos removes zero npc_outcome even with zero cutoff", {
   # Generate test data
   cb_res <- generate_ucos_test_data(output_level = 2)
 
-  # Skip if no ucos were detected
-  skip_if(is.null(cb_res$ucos_details), "No ucos detected in test data")
+  expect_false(is.null(cb_res$ucos_details))
 
   n_ucos_original <- length(cb_res$ucos_details$ucos$ucos_index)
   cb_res$ucos_details$ucos_outcomes_npc$npc_outcome[1] <- 0
@@ -757,8 +755,7 @@ test_that("get_robust_ucos validates pvalue_cutoff range", {
   # Generate test data
   cb_res <- generate_ucos_test_data(output_level = 2)
   
-  # Skip if no ucos were detected
-  skip_if(is.null(cb_res$ucos_details), "No ucos detected in test data")
+  expect_false(is.null(cb_res$ucos_details))
   
   # pvalue_cutoff > 1 should warn
   expect_warning(
@@ -779,8 +776,7 @@ test_that("get_robust_ucos correctly removes all ucos when all fail cutoff", {
   # Generate test data
   cb_res <- generate_ucos_test_data(output_level = 2)
   
-  # Skip if no ucos were detected
-  skip_if(is.null(cb_res$ucos_details), "No ucos detected in test data")
+  expect_false(is.null(cb_res$ucos_details))
   
   # Apply impossible cutoff
   result <- get_robust_ucos(cb_res, npc_outcome_cutoff = 1.0)
@@ -797,8 +793,7 @@ test_that("get_robust_ucos maintains data structure integrity", {
   # Generate test data
   cb_res <- generate_ucos_test_data(output_level = 2)
   
-  # Skip if no ucos were detected
-  skip_if(is.null(cb_res$ucos_details), "No ucos detected in test data")
+  expect_false(is.null(cb_res$ucos_details))
   
   # Apply moderate filtering
   result <- get_robust_ucos(cb_res, npc_outcome_cutoff = 0.2)
@@ -834,8 +829,7 @@ test_that("get_robust_ucos preserves names after filtering", {
   # Generate test data
   cb_res <- generate_ucos_test_data(output_level = 2)
   
-  # Skip if no ucos were detected
-  skip_if(is.null(cb_res$ucos_details), "No ucos detected in test data")
+  expect_false(is.null(cb_res$ucos_details))
   
   # Apply filtering
   result <- get_robust_ucos(cb_res, npc_outcome_cutoff = 0.2)
@@ -925,42 +919,23 @@ test_that("get_robust_ucos handles edge case with single ucos", {
 
 # Helper to generate proper cb_obj structure for testing get_ucos_evidence
 # Following test_model.R generate_test_model pattern
-generate_test_cb_obj_with_ucos <- function(n = 100, p = 20, L = 2, seed = 42) {
-  set.seed(seed)
-  
-  # Generate X with LD structure
-  sigma <- matrix(0, p, p)
-  for (i in 1:p) {
-    for (j in 1:p) {
-      sigma[i, j] <- 0.9^abs(i - j)
-    }
-  }
-  X <- MASS::mvrnorm(n, rep(0, p), sigma)
-  colnames(X) <- paste0("SNP", 1:p)
-  
-  # Generate true effects with trait-specific (ucos) effects
-  true_beta <- matrix(0, p, L)
-  true_beta[5, 1] <- 0.5  # SNP5 affects trait 1
-  true_beta[5, 2] <- 0.4  # SNP5 also affects trait 2 (colocalized)
-  true_beta[10, 2] <- 0.3 # SNP10 only affects trait 2 (trait-specific)
-  
-  # Generate Y with some noise
-  Y <- matrix(0, n, L)
-  for (l in 1:L) {
-    Y[, l] <- X %*% true_beta[, l] + rnorm(n, 0, 1)
-  }
-  
+generate_test_cb_obj_with_ucos <- function(n = 300, p = 40, L = 3, seed = 42) {
+  sim_data <- generate_ucos_input_data(n = n, p = p, L = L, seed = seed)
+
   # Convert Y to list
-  Y_list <- list(Y[,1], Y[,2])
-  X_list <- list(X, X)
+  Y_list <- lapply(seq_len(L), function(l) sim_data$Y[, l])
+  X_list <- replicate(L, sim_data$X, simplify = FALSE)
   
   # Run colocboost to get diagnostic_details
   suppressWarnings({
     result <- colocboost(
       X = X_list, 
       Y = Y_list,
-      M = 5,
-      output_level = 3
+      M = 120,
+      output_level = 3,
+      cos_npc_cutoff = 0,
+      npc_outcome_cutoff = 0,
+      pvalue_cutoff = NULL
     )$diagnostic_details
   })
   
@@ -971,7 +946,7 @@ generate_test_cb_obj_with_ucos <- function(n = 100, p = 20, L = 2, seed = 42) {
   result$cb_data <- colocboost_init_data(
     X = X_list,
     Y = Y_list,
-    dict_YX = c(1, 2),
+    dict_YX = seq_len(L),
     Z = NULL,
     LD = NULL,
     X_ref = NULL,
@@ -997,118 +972,57 @@ test_that("get_ucos_evidence returns correct structure", {
   # Generate proper cb_obj structure following test_model.R pattern
   cb_obj <- generate_test_cb_obj_with_ucos()
   
-  # Also run colocboost to get ucos_details
-  set.seed(42)
-  n <- 100
-  p <- 20
-  L <- 2
-  
-  sigma <- matrix(0, p, p)
-  for (i in 1:p) {
-    for (j in 1:p) {
-      sigma[i, j] <- 0.9^abs(i - j)
-    }
-  }
-  X <- MASS::mvrnorm(n, rep(0, p), sigma)
-  colnames(X) <- paste0("SNP", 1:p)
-  
-  true_beta <- matrix(0, p, L)
-  true_beta[5, 1] <- 0.5
-  true_beta[5, 2] <- 0.4
-  true_beta[10, 2] <- 0.3
-  
-  Y <- matrix(0, n, L)
-  for (l in 1:L) {
-    Y[, l] <- X %*% true_beta[, l] + rnorm(n, 0, 1)
-  }
-  
-  Y_list <- list(Y[,1], Y[,2])
-  X_list <- list(X, X)
-  
-  suppressWarnings({
-    cb_res <- colocboost(
-      X = X_list, 
-      Y = Y_list,
-      M = 5,
-      output_level = 2
-    )
-  })
-  
-  # Skip if no ucos were detected
-  skip_if(is.null(cb_res$ucos_details), "No ucos detected in test data")
-  
-  # Try to access the function from the package namespace
-  if (exists("get_ucos_evidence", envir = asNamespace("colocboost"), mode = "function")) {
-    get_ucos_evidence <- get("get_ucos_evidence", envir = asNamespace("colocboost"))
-    
-    # Prepare ucoloc_info from the ucos_details
-    ucoloc_info <- list(
-      ucos = cb_res$ucos_details$ucos$ucos_index,
-      outcome = cb_res$ucos_details$ucos_outcomes$outcome_index,
-      outcome_name = cb_res$ucos_details$ucos_outcomes$outcome_name
-    )
-    
-    # Call get_ucos_evidence with the proper cb_obj structure
-    result <- get_ucos_evidence(cb_obj, ucoloc_info)
-    
-    # Check structure
-    expect_true(is.data.frame(result))
-    
-    # Check expected columns
-    expected_cols <- c("outcome", "outcomes_index", "relative_logLR", "npc_outcome")
-    expect_true(all(expected_cols %in% colnames(result)))
-    
-    # Check that npc_outcome is in [0, 1]
-    expect_true(all(result$npc_outcome >= 0 & result$npc_outcome <= 1))
-    
-    # Check that relative_logLR is non-negative
-    expect_true(all(result$relative_logLR >= 0))
-    
-  } else {
-    skip("get_ucos_evidence not accessible for testing")
-  }
+  cb_res <- generate_ucos_test_data(output_level = 2)
+  expect_false(is.null(cb_res$ucos_details))
+
+  get_ucos_evidence <- get("get_ucos_evidence", envir = asNamespace("colocboost"))
+
+  # Prepare ucoloc_info from the ucos_details
+  ucoloc_info <- list(
+    ucos = cb_res$ucos_details$ucos$ucos_index,
+    outcome = cb_res$ucos_details$ucos_outcomes$outcome_index,
+    outcome_name = cb_res$ucos_details$ucos_outcomes$outcome_name
+  )
+
+  # Call get_ucos_evidence with the proper cb_obj structure
+  result <- get_ucos_evidence(cb_obj, ucoloc_info)
+
+  # Check structure
+  expect_true(is.data.frame(result))
+
+  # Check expected columns
+  expected_cols <- c("outcome", "outcomes_index", "relative_logLR", "npc_outcome")
+  expect_true(all(expected_cols %in% colnames(result)))
+
+  # Check that npc_outcome is in [0, 1]
+  expect_true(all(result$npc_outcome >= 0 & result$npc_outcome <= 1))
+
+  # Check that relative_logLR is non-negative
+  expect_true(all(result$relative_logLR >= 0))
 })
 
 test_that("get_ucos_evidence handles individual-level data", {
   
-  # Generate test data
-  set.seed(123)
-  n <- 200
-  p <- 30
-  L <- 2
-  
-  sigma <- matrix(0, p, p)
-  for (i in 1:p) {
-    for (j in 1:p) {
-      sigma[i, j] <- 0.9^abs(i - j)
-    }
-  }
-  X <- MASS::mvrnorm(n, rep(0, p), sigma)
-  colnames(X) <- paste0("SNP", 1:p)
-  
-  true_beta <- matrix(0, p, L)
-  true_beta[10, 1] <- 0.7
-  true_beta[20, 2] <- 0.6
-  
-  Y <- matrix(0, n, L)
-  for (l in 1:L) {
-    Y[, l] <- X %*% true_beta[, l] + rnorm(n, 0, 1)
-  }
-  
-  Y_list <- lapply(1:L, function(l) Y[,l])
-  X_list <- replicate(L, X, simplify = FALSE)
+  # Generate strong test data
+  sim_data <- generate_ucos_input_data(seed = 123)
+  L <- sim_data$L
+  Y_list <- lapply(seq_len(L), function(l) sim_data$Y[, l])
+  X_list <- replicate(L, sim_data$X, simplify = FALSE)
   
   # Run colocboost to get ucos_details
   suppressWarnings({
     cb_res <- colocboost(
       X = X_list, 
       Y = Y_list,
-      M = 5,
-      output_level = 3
+      M = 120,
+      output_level = 3,
+      cos_npc_cutoff = 0,
+      npc_outcome_cutoff = 0,
+      pvalue_cutoff = NULL
     )
   })
   
-  skip_if(is.null(cb_res$ucos_details), "No ucos detected in test data")
+  expect_false(is.null(cb_res$ucos_details))
   
   # Build proper cb_obj structure following test_model.R
   cb_obj <- cb_res$diagnostic_details
@@ -1118,7 +1032,7 @@ test_that("get_ucos_evidence handles individual-level data", {
   cb_obj$cb_data <- colocboost_init_data(
     X = X_list,
     Y = Y_list,
-    dict_YX = c(1, 2),
+    dict_YX = seq_len(L),
     Z = NULL,
     LD = NULL,
     X_ref = NULL,
@@ -1131,60 +1045,38 @@ test_that("get_ucos_evidence handles individual-level data", {
   )
   class(cb_obj) <- "colocboost"
   
-  # Try to access the function from the package namespace
-  if (exists("get_ucos_evidence", envir = asNamespace("colocboost"), mode = "function")) {
-    get_ucos_evidence <- get("get_ucos_evidence", envir = asNamespace("colocboost"))
-    
-    ucoloc_info <- list(
-      ucos = cb_res$ucos_details$ucos$ucos_index,
-      outcome = cb_res$ucos_details$ucos_outcomes$outcome_index,
-      outcome_name = cb_res$ucos_details$ucos_outcomes$outcome_name
-    )
-    
-    # Should work with individual-level data
-    expect_error(
-      result <- get_ucos_evidence(cb_obj, ucoloc_info),
-      NA
-    )
-    
-    expect_true(is.data.frame(result))
-    
-  } else {
-    skip("get_ucos_evidence not accessible for testing")
-  }
+  get_ucos_evidence <- get("get_ucos_evidence", envir = asNamespace("colocboost"))
+
+  ucoloc_info <- list(
+    ucos = cb_res$ucos_details$ucos$ucos_index,
+    outcome = cb_res$ucos_details$ucos_outcomes$outcome_index,
+    outcome_name = cb_res$ucos_details$ucos_outcomes$outcome_name
+  )
+
+  # Should work with individual-level data
+  expect_error(
+    result <- get_ucos_evidence(cb_obj, ucoloc_info),
+    NA
+  )
+
+  expect_true(is.data.frame(result))
 })
 
 test_that("get_ucos_evidence handles summary statistics data", {
   
-  # Generate test data
-  set.seed(456)
-  n <- 200
-  p <- 30
-  L <- 2
-  
-  sigma <- matrix(0, p, p)
-  for (i in 1:p) {
-    for (j in 1:p) {
-      sigma[i, j] <- 0.9^abs(i - j)
-    }
-  }
-  X <- MASS::mvrnorm(n, rep(0, p), sigma)
-  colnames(X) <- paste0("SNP", 1:p)
-  
-  true_beta <- matrix(0, p, L)
-  true_beta[10, 1] <- 0.7
-  true_beta[20, 2] <- 0.6
-  
-  Y <- matrix(0, n, L)
-  for (l in 1:L) {
-    Y[, l] <- X %*% true_beta[, l] + rnorm(n, 0, 1)
-  }
+  # Generate strong test data
+  sim_data <- generate_ucos_input_data(seed = 456)
+  n <- sim_data$n
+  p <- sim_data$p
+  L <- sim_data$L
+  X <- sim_data$X
+  Y <- sim_data$Y
   
   # Calculate summary statistics
   beta <- matrix(0, p, L)
   se <- matrix(0, p, L)
-  for (i in 1:L) {
-    for (j in 1:p) {
+  for (i in seq_len(L)) {
+    for (j in seq_len(p)) {
       fit <- summary(lm(Y[,i] ~ X[,j]))$coef
       if (nrow(fit) == 2) {
         beta[j,i] <- fit[2,1]
@@ -1193,7 +1085,7 @@ test_that("get_ucos_evidence handles summary statistics data", {
     }
   }
   
-  sumstat_list <- lapply(1:L, function(i) {
+  sumstat_list <- lapply(seq_len(L), function(i) {
     data.frame(
       beta = beta[,i],
       sebeta = se[,i],
@@ -1209,12 +1101,15 @@ test_that("get_ucos_evidence handles summary statistics data", {
     cb_res <- colocboost(
       sumstat = sumstat_list,
       LD = LD_matrix,
-      M = 5,
-      output_level = 3
+      M = 120,
+      output_level = 3,
+      cos_npc_cutoff = 0,
+      npc_outcome_cutoff = 0,
+      pvalue_cutoff = NULL
     )
   })
   
-  skip_if(is.null(cb_res$ucos_details), "No ucos detected in test data")
+  expect_false(is.null(cb_res$ucos_details))
   
   # Build proper cb_obj structure
   cb_obj <- cb_res$diagnostic_details
@@ -1231,34 +1126,28 @@ test_that("get_ucos_evidence handles summary statistics data", {
     X_ref = NULL,
     ref_label = "LD",
     N_sumstat = lapply(sumstat_list, function(s) s$n[1]),
-    dict_sumstatLD = c(1, 1),
+    dict_sumstatLD = rep(1, L),
     Var_y = NULL,
     SeBhat = NULL,
     keep_variables = lapply(sumstat_list, function(s) s$variant)
   )
   class(cb_obj) <- "colocboost"
   
-  # Try to access the function
-  if (exists("get_ucos_evidence", envir = asNamespace("colocboost"), mode = "function")) {
-    get_ucos_evidence <- get("get_ucos_evidence", envir = asNamespace("colocboost"))
-    
-    ucoloc_info <- list(
-      ucos = cb_res$ucos_details$ucos$ucos_index,
-      outcome = cb_res$ucos_details$ucos_outcomes$outcome_index,
-      outcome_name = cb_res$ucos_details$ucos_outcomes$outcome_name
-    )
-    
-    # Should work with summary statistics
-    expect_error(
-      result <- get_ucos_evidence(cb_obj, ucoloc_info),
-      NA
-    )
-    
-    expect_true(is.data.frame(result))
-    
-  } else {
-    skip("get_ucos_evidence not accessible for testing")
-  }
+  get_ucos_evidence <- get("get_ucos_evidence", envir = asNamespace("colocboost"))
+
+  ucoloc_info <- list(
+    ucos = cb_res$ucos_details$ucos$ucos_index,
+    outcome = cb_res$ucos_details$ucos_outcomes$outcome_index,
+    outcome_name = cb_res$ucos_details$ucos_outcomes$outcome_name
+  )
+
+  # Should work with summary statistics
+  expect_error(
+    result <- get_ucos_evidence(cb_obj, ucoloc_info),
+    NA
+  )
+
+  expect_true(is.data.frame(result))
 })
 
 # ============================================================================
@@ -1268,45 +1157,11 @@ test_that("get_ucos_evidence handles summary statistics data", {
 test_that("get_robust_ucos and get_ucos_evidence work together", {
   
   # Generate proper cb_obj
-  cb_obj <- generate_test_cb_obj_with_ucos(n = 150, p = 30, L = 2, seed = 555)
+  cb_obj <- generate_test_cb_obj_with_ucos(seed = 555)
   
-  # Also generate cb_res for filtering
-  set.seed(555)
-  n <- 150
-  p <- 30
-  L <- 2
-  
-  sigma <- matrix(0, p, p)
-  for (i in 1:p) {
-    for (j in 1:p) {
-      sigma[i, j] <- 0.9^abs(i - j)
-    }
-  }
-  X <- MASS::mvrnorm(n, rep(0, p), sigma)
-  colnames(X) <- paste0("SNP", 1:p)
-  
-  true_beta <- matrix(0, p, L)
-  true_beta[8, 1] <- 0.6
-  true_beta[18, 2] <- 0.5
-  
-  Y <- matrix(0, n, L)
-  for (l in 1:L) {
-    Y[, l] <- X %*% true_beta[, l] + rnorm(n, 0, 1)
-  }
-  
-  Y_list <- lapply(1:L, function(l) Y[,l])
-  X_list <- replicate(L, X, simplify = FALSE)
-  
-  suppressWarnings({
-    cb_res <- colocboost(
-      X = X_list, 
-      Y = Y_list,
-      M = 5,
-      output_level = 2
-    )
-  })
-  
-  skip_if(is.null(cb_res$ucos_details), "No ucos detected in test data")
+  # Also generate cb_res from the same strong simulation for filtering
+  cb_res <- generate_ucos_test_data(seed = 555, output_level = 2)
+  expect_false(is.null(cb_res$ucos_details))
   
   # Apply filtering
   filtered_res <- get_robust_ucos(cb_res, npc_outcome_cutoff = 0.2)
@@ -1314,30 +1169,23 @@ test_that("get_robust_ucos and get_ucos_evidence work together", {
   # Check that the result is valid
   expect_s3_class(filtered_res, "colocboost")
   
-  # If ucos remain, check that we can extract evidence
-  if (!is.null(filtered_res$ucos_details)) {
-    
-    if (exists("get_ucos_evidence", envir = asNamespace("colocboost"), mode = "function")) {
-      get_ucos_evidence <- get("get_ucos_evidence", envir = asNamespace("colocboost"))
-      
-      ucoloc_info <- list(
-        ucos = filtered_res$ucos_details$ucos$ucos_index,
-        outcome = filtered_res$ucos_details$ucos_outcomes$outcome_index,
-        outcome_name = filtered_res$ucos_details$ucos_outcomes$outcome_name
-      )
-      
-      expect_error(
-        evidence <- get_ucos_evidence(cb_obj, ucoloc_info),
-        NA
-      )
-      
-      # All npc values should meet the cutoff (or be 0 if removed)
-      expect_true(all(evidence$npc_outcome >= 0.2 | evidence$npc_outcome == 0))
-      
-    } else {
-      skip("get_ucos_evidence not accessible for testing")
-    }
-  }
+  expect_false(is.null(filtered_res$ucos_details))
+
+  get_ucos_evidence <- get("get_ucos_evidence", envir = asNamespace("colocboost"))
+
+  ucoloc_info <- list(
+    ucos = filtered_res$ucos_details$ucos$ucos_index,
+    outcome = filtered_res$ucos_details$ucos_outcomes$outcome_index,
+    outcome_name = filtered_res$ucos_details$ucos_outcomes$outcome_name
+  )
+
+  expect_error(
+    evidence <- get_ucos_evidence(cb_obj, ucoloc_info),
+    NA
+  )
+
+  # All npc values should meet the cutoff (or be 0 if removed)
+  expect_true(all(evidence$npc_outcome >= 0.2 | evidence$npc_outcome == 0))
 })
 
 test_that("get_robust_ucos with different cutoffs produces expected ordering", {
@@ -1345,9 +1193,8 @@ test_that("get_robust_ucos with different cutoffs produces expected ordering", {
   # Generate test data
   cb_res <- generate_ucos_test_data(output_level = 2)
   
-  # Skip if no ucos
-  skip_if(is.null(cb_res$ucos_details), "No ucos detected in test data")
-  skip_if(length(cb_res$ucos_details$ucos$ucos_index) < 2, "Need at least 2 ucos for this test")
+  expect_false(is.null(cb_res$ucos_details))
+  expect_gte(length(cb_res$ucos_details$ucos$ucos_index), 2)
   
   # Apply progressively stricter cutoffs
   cutoffs <- c(0.1, 0.3, 0.5, 0.7, 0.9)
