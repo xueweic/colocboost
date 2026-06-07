@@ -14,7 +14,7 @@ vignette: >
 - *May 2, 2025*: `colocboost` R package is available on [CRAN](https://CRAN.R-project.org/package=colocboost).
 
 ## Software updates
-- `v1.0.8` Improvements to summary-statistics workflows, trait-specific result filtering, and computational efficiency.
+- `v1.0.9` Improvements to summary-statistics workflows, trait-specific result filtering, and computational efficiency.
   - Added `X_ref` support as a memory-efficient alternative to precomputed LD matrices for large summary-statistics analyses.
   - Added `get_robust_ucos` to recalibrate and summarize robust trait-specific, uncolocalized events.
   - Improved computational efficiency for repeated matrix products in large reference-panel workflows.
