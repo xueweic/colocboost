@@ -554,70 +554,80 @@ check_pair_jkeach <- function(jk_each,
                               jk_equiv_corr = 0.8,
                               jk_equiv_loglik = 0.001) {
 
+  n_pair <- length(jk_each)
+  if (n_pair <= 1) {
+    return(matrix(0, nrow = n_pair, ncol = n_pair))
+  }
 
   #' @importFrom stats cor
   get_LD_jk_each <- function(jk_each,
                              X = NULL, XtX = NULL, N = NULL,
                              remain_jk = NULL, ref_label = "LD") {
+    jk_unique <- unique(jk_each)
+    unique_idx <- match(jk_each, jk_unique)
+
     if (!is.null(X)) {
-      LD_temp <- suppressWarnings({
-        get_cormat(X[, jk_each])
+      LD_unique <- suppressWarnings({
+        get_cormat(X[, jk_unique, drop = FALSE])
       })
-      LD_temp[which(is.na(LD_temp))] <- 0
-      # LD_temp <- LD_temp[1, 2]
+      LD_temp <- LD_unique[unique_idx, unique_idx, drop = FALSE]
     } else if (!is.null(XtX)) {
       if (identical(ref_label, "No_ref")) {
         LD_temp <- matrix(0, length(jk_each), length(jk_each))
       } else {
-        jk.remain <- match(jk_each, remain_jk)
+        jk.remain <- match(jk_unique, remain_jk)
         if (identical(ref_label, "X_ref")) {
-          LD_temp <- suppressWarnings({ get_cormat(XtX[, jk.remain]) })
+          LD_unique <- suppressWarnings({
+            get_cormat(XtX[, jk.remain, drop = FALSE])
+          })
         } else {
-          LD_temp <- XtX[jk.remain, jk.remain]
+          LD_unique <- XtX[jk.remain, jk.remain, drop = FALSE]
         }
-        LD_temp[which(is.na(LD_temp))] <- 0
+        LD_temp <- LD_unique[unique_idx, unique_idx, drop = FALSE]
       }
     }
     return(LD_temp)
   }
 
-  detect_func <- function(idx, LD_all, jk_i, jk_j, i, j){
-    change_log_jk_i <- model_update[[idx]]$change_loglike[jk_i]
-    change_log_jk_j <- model_update[[idx]]$change_loglike[jk_j]
-    change_each <- abs(change_log_jk_i - change_log_jk_j)
-    LD_temp <- LD_all[[idx]][i, j]
-    return((change_each <= jk_equiv_loglik) & (abs(LD_temp) >= jk_equiv_corr))
+  get_ld_key <- function(idx) {
+    ref_idx <- X_dict[idx]
+    ref_label <- cb_data$data[[ref_idx]]$ref_label
+    missing_key <- paste(data_update[[idx]]$variable_miss, collapse = ",")
+    paste(ref_idx, ref_label, length(model_update[[idx]]$res), missing_key, sep = "|")
   }
 
   data_update <- cb_data$data[pos.update]
-  LD_all <- lapply(1:length(jk_each), function(idx){
-    get_LD_jk_each(jk_each,
-                   X = cb_data$data[[X_dict[idx]]]$X,
-                   XtX = cb_data$data[[X_dict[idx]]]$XtX,
-                   N = data_update[[idx]]$N,
-                   remain_jk = setdiff(1:length(model_update[[idx]]$res), data_update[[idx]]$variable_miss),
-                   ref_label = cb_data$data[[X_dict[idx]]]$ref_label
-    )
-  })
-
-  # -- check if jk_i ~ jk_j
-  change_each_pair <- matrix(FALSE, nrow = length(jk_each), ncol = length(jk_each))
-  for (i in 1:length(jk_each)) {
-    jk_i <- jk_each[i]
-    for (j in i:length(jk_each)) {
-      if (j != i) {
-        jk_j <- jk_each[j]
-        change_each_pair[i, j] <- detect_func(idx = i, LD_all, jk_i, jk_j, i, j)
-        # if jk_i and jk_j are equivalent on dataset i, then we don't need to check dataset j
-        if ( !change_each_pair[i, j] ){
-          change_each_pair[j, i] <- detect_func(idx = j, LD_all, jk_i, jk_j, i, j)
-        }
-      } else {
-        change_each_pair[i, j] <- FALSE
-      }
+  ld_keys <- vapply(seq_along(jk_each), get_ld_key, character(1))
+  ld_cache <- list()
+  for (idx in seq_along(jk_each)) {
+    ld_key <- ld_keys[idx]
+    if (is.null(ld_cache[[ld_key]])) {
+      ref_idx <- X_dict[idx]
+      ld_cache[[ld_key]] <- get_LD_jk_each(jk_each,
+        X = cb_data$data[[ref_idx]]$X,
+        XtX = cb_data$data[[ref_idx]]$XtX,
+        N = data_update[[idx]]$N,
+        remain_jk = setdiff(seq_along(model_update[[idx]]$res), data_update[[idx]]$variable_miss),
+        ref_label = cb_data$data[[ref_idx]]$ref_label
+      )
+      ld_cache[[ld_key]][which(is.na(ld_cache[[ld_key]]))] <- 0
     }
   }
-  change_each_pair <- change_each_pair + t(change_each_pair)
+
+  # -- check if jk_i ~ jk_j
+  change_loglike <- t(vapply(seq_along(jk_each), function(idx) {
+    model_update[[idx]]$change_loglike[jk_each]
+  }, numeric(length(jk_each))))
+  change_ok <- abs(sweep(change_loglike, 1, diag(change_loglike), "-")) <= jk_equiv_loglik
+
+  detected <- matrix(FALSE, nrow = n_pair, ncol = n_pair)
+  for (ld_key in unique(ld_keys)) {
+    rows <- which(ld_keys == ld_key)
+    ld_ok <- abs(ld_cache[[ld_key]][rows, , drop = FALSE]) >= jk_equiv_corr
+    detected[rows, ] <- change_ok[rows, , drop = FALSE] & ld_ok
+  }
+  diag(detected) <- FALSE
+  change_each_pair <- (detected | t(detected)) * 1
   return(change_each_pair)
 }
 
