@@ -728,6 +728,44 @@ test_that("get_LD_jk and get_LD_jk1_jk2 dispatch correctly for X_ref", {
   expect_equal(ld_pair_noref, 0)
 })
 
+test_that("colocboost stores update-jk LD cache as a named list", {
+  set.seed(42)
+  n <- 80
+  p <- 25
+  sigma <- 0.8^abs(outer(1:p, 1:p, "-"))
+  X <- MASS::mvrnorm(n, rep(0, p), sigma)
+  colnames(X) <- paste0("SNP", seq_len(p))
+  Y <- cbind(X[, 5] * 0.8 + rnorm(n), X[, 5] * 0.7 + rnorm(n))
+
+  sumstat <- lapply(seq_len(ncol(Y)), function(i) {
+    beta <- se <- z <- numeric(p)
+    for (j in seq_len(p)) {
+      fit <- summary(lm(Y[, i] ~ X[, j]))$coef
+      beta[j] <- fit[2, 1]
+      se[j] <- fit[2, 2]
+      z[j] <- beta[j] / se[j]
+    }
+    data.frame(beta = beta, sebeta = se, z = z, n = n, variant = colnames(X))
+  })
+
+  suppressWarnings(suppressMessages({
+    result <- colocboost(
+      sumstat = sumstat,
+      LD = cor(X),
+      M = 15,
+      output_level = 3,
+      stop_thresh = 0
+    )
+  }))
+
+  cb_model <- result$diagnostic_details$cb_model
+  for (model in cb_model) {
+    expect_type(model$ld_jk, "list")
+    expect_true(all(nzchar(names(model$ld_jk))))
+    expect_equal(length(model$ld_jk), length(unique(model$jk)))
+  }
+})
+
 
 # ============================================================================
 # Test 22: ref_label is never NULL in internal cb_data after processing

@@ -851,7 +851,7 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
     cb$change_loglike <- cb$change_loglike[ordered]
     cb$correlation <- as.numeric(cb$correlation[ordered])
     cb$z <- as.numeric(cb$z[ordered])
-    cb$ld_jk <- cb$ld_jk[, ordered]
+    cb$ld_jk <- lapply(cb$ld_jk, function(x) x[ordered])
     cb$z_univariate <- as.numeric(cb$z_univariate[ordered])
     cb$beta_hat <- as.numeric(cb$beta_hat[ordered])
     cb$multi_correction <- as.numeric(cb$multi_correction[ordered])
@@ -1094,4 +1094,3 @@ pseudo_inverse <- function(mat) {
     diag(1 / eig$values[1:keep], keep, keep) %*%
     t(eig$vectors[, 1:keep, drop = FALSE])
 }
-

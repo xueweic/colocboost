@@ -20,10 +20,9 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data) {
     ########## BEGIN: MAIN CALCULATION ###################
 
     # - calucalate LD between update_jk and other variables
-    if (update_jk %in% unlist(cb_model[[i]]$jk)) {
-      pos <- which(unlist(cb_model[[i]]$jk) == update_jk)
-      ld_jk <- cb_model[[i]]$ld_jk[pos, ]
-    } else {
+    ld_jk_key <- as.character(update_jk)
+    ld_jk <- cb_model[[i]]$ld_jk[[ld_jk_key]]
+    if (is.null(ld_jk)) {
       cb_model[[i]]$jk <- c(cb_model[[i]]$jk, update_jk)
       ld_jk <- get_LD_jk(update_jk,
         X = cb_data$data[[X_dict]]$X,
@@ -33,7 +32,7 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data) {
         P = cb_model_para$P,
         ref_label = cb_data$data[[X_dict]]$ref_label
       )
-      cb_model[[i]]$ld_jk <- rbind(cb_model[[i]]$ld_jk, ld_jk)
+      cb_model[[i]]$ld_jk[[ld_jk_key]] <- ld_jk
     }
     ld_feature <- sqrt(abs(ld_jk))
 
