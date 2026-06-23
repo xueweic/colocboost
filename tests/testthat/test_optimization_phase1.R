@@ -823,3 +823,141 @@ test_that("merge_ucos candidate pairs preserve pairwise intersect output", {
   expect_equal(length(candidate_result$cos$cos$cos), 1L)
   expect_equal(length(candidate_result$ucos$ucos_each), 3L)
 })
+
+test_that("duplicate purity contexts are collapsed for post-assembly checks", {
+  cb_data <- list(
+    data = lapply(seq_len(4), function(i) {
+      list(
+        X = NULL,
+        XtX = diag(5),
+        variable_miss = if (i <= 2) integer(0) else 5L,
+        ref_label = "LD"
+      )
+    }),
+    dict = rep(1L, 4)
+  )
+
+  unique_outcomes <- get(".cb_unique_purity_outcomes", envir = asNamespace("colocboost"))(
+    cb_data,
+    seq_len(4)
+  )
+
+  expect_equal(unique_outcomes, c(1L, 3L))
+})
+
+test_that("merge_cos_ucos reuses duplicate purity contexts", {
+  p <- 6
+  L <- 3
+  cb_obj <- list(
+    cb_data = list(
+      data = lapply(seq_len(L), function(i) {
+        list(
+          X = NULL,
+          XtX = diag(p),
+          variable_miss = integer(0),
+          ref_label = "LD"
+        )
+      }),
+      dict = rep(1L, L)
+    ),
+    cb_model_para = list(P = p, L = L)
+  )
+  class(cb_obj) <- "colocboost"
+
+  out_cos <- list(cos = list(
+    cos = list(cos1 = c(1, 2)),
+    coloc_outcomes = list(1L),
+    avWeight = list(matrix(runif(p), nrow = p, dimnames = list(NULL, "outcome1"))),
+    cs_change = matrix(0.1, nrow = 1, ncol = L)
+  ))
+  out_ucos <- list(
+    ucos_each = list(ucos1 = c(2, 3)),
+    avW_ucos_each = matrix(runif(p), nrow = p, dimnames = list(NULL, "ucos1")),
+    change_obj_each = matrix(0.2, nrow = 1, ncol = L),
+    purity_each = matrix(1, nrow = 1, ncol = 3),
+    ucos_outcome = 2L
+  )
+
+  ns <- asNamespace("colocboost")
+  original_between <- get("get_between_purity", envir = ns)
+  between_calls <- 0L
+  unlockBinding("get_between_purity", ns)
+  assign("get_between_purity", function(...) {
+    between_calls <<- between_calls + 1L
+    c(min_abs_cor = 0.9, max_abs_cor = 1, median_abs_cor = 0.9)
+  }, envir = ns)
+  lockBinding("get_between_purity", ns)
+  on.exit({
+    unlockBinding("get_between_purity", ns)
+    assign("get_between_purity", original_between, envir = ns)
+    lockBinding("get_between_purity", ns)
+  }, add = TRUE)
+
+  result <- get("merge_cos_ucos", envir = ns)(
+    cb_obj,
+    out_cos,
+    out_ucos,
+    median_cos_abs_corr = 0.8
+  )
+
+  expect_equal(between_calls, 1L)
+  expect_null(result$ucos$ucos_each)
+  expect_equal(result$cos$cos$coloc_outcomes[[1]], c(1L, 2L))
+})
+
+test_that("merge_cos_ucos skips purity checks for disjoint different-outcome sets", {
+  p <- 6
+  L <- 2
+  cb_obj <- list(
+    cb_data = list(
+      data = lapply(seq_len(L), function(i) {
+        list(
+          X = NULL,
+          XtX = diag(p),
+          variable_miss = integer(0),
+          ref_label = "LD"
+        )
+      }),
+      dict = rep(1L, L)
+    ),
+    cb_model_para = list(P = p, L = L)
+  )
+  class(cb_obj) <- "colocboost"
+
+  out_cos <- list(cos = list(
+    cos = list(cos1 = c(1, 2)),
+    coloc_outcomes = list(1L),
+    avWeight = list(matrix(runif(p), nrow = p, dimnames = list(NULL, "outcome1"))),
+    cs_change = matrix(0.1, nrow = 1, ncol = L)
+  ))
+  out_ucos <- list(
+    ucos_each = list(ucos1 = c(4, 5)),
+    avW_ucos_each = matrix(runif(p), nrow = p, dimnames = list(NULL, "ucos1")),
+    change_obj_each = matrix(0.2, nrow = 1, ncol = L),
+    purity_each = matrix(1, nrow = 1, ncol = 3),
+    ucos_outcome = 2L
+  )
+
+  ns <- asNamespace("colocboost")
+  original_between <- get("get_between_purity", envir = ns)
+  unlockBinding("get_between_purity", ns)
+  assign("get_between_purity", function(...) {
+    stop("disjoint different-outcome sets should not require between-purity")
+  }, envir = ns)
+  lockBinding("get_between_purity", ns)
+  on.exit({
+    unlockBinding("get_between_purity", ns)
+    assign("get_between_purity", original_between, envir = ns)
+    lockBinding("get_between_purity", ns)
+  }, add = TRUE)
+
+  result <- get("merge_cos_ucos", envir = ns)(
+    cb_obj,
+    out_cos,
+    out_ucos,
+    median_cos_abs_corr = 0.8
+  )
+
+  expect_equal(length(result$ucos$ucos_each), 1L)
+  expect_equal(result$cos$cos$coloc_outcomes[[1]], 1L)
+})

@@ -13,12 +13,33 @@
 #' @rdname colocboost_refine_cos
 #' @keywords cb_refine_cos
 #' @noRd
+.cb_unique_purity_outcomes <- function(cb_data, outcomes) {
+  if (length(outcomes) == 0L) {
+    return(integer(0))
+  }
+
+  keys <- vapply(outcomes, function(i) {
+    ref_idx <- cb_data$dict[i]
+    ref_label <- cb_data$data[[ref_idx]]$ref_label
+    ref_label <- if (is.null(ref_label)) "" else ref_label
+    missing_idx <- cb_data$data[[i]]$variable_miss
+    missing_idx <- if (is.null(missing_idx)) integer(0) else missing_idx
+    paste(ref_idx, ref_label, paste(missing_idx, collapse = ","), sep = "|")
+  }, character(1))
+
+  outcomes[!duplicated(keys)]
+}
+
 merge_cos_ucos <- function(cb_obj, out_cos, out_ucos, coverage = 0.95,
                            min_abs_corr = 0.5, tol = 1e-9,
                            median_cos_abs_corr = 0.8) {
   change_obj_each <- out_ucos$change_obj_each
   coloc_sets <- out_cos$cos$cos
   ucos_each <- out_ucos$ucos_each
+  purity_outcomes <- .cb_unique_purity_outcomes(
+    cb_obj$cb_data,
+    seq_len(cb_obj$cb_model_para$L)
+  )
 
   # - remove overlap between coloc_sets and single_sets
   is_overlap <- is_highLD <- c()
@@ -60,8 +81,11 @@ merge_cos_ucos <- function(cb_obj, out_cos, out_ucos, coverage = 0.95,
         # - if fine_y not in coloc_y, we check overlap and also min_purity
         change_obj_coloc <- out_cos$cos$cs_change
         cset1 <- coloc_sets[[i]]
+        if (length(intersect(cset1, cset2)) == 0L) {
+          next
+        }
         res <- list()
-        for (ii in 1:cb_obj$cb_model_para$L) {
+        for (ii in purity_outcomes) {
           X_dict <- cb_obj$cb_data$dict[ii]
           res[[ii]] <- get_between_purity(cset1, cset2,
             X = cb_obj$cb_data$data[[X_dict]]$X,

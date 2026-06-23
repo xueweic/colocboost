@@ -22,6 +22,7 @@ colocboost_assemble_cos <- function(cb_obj,
   cb_model <- cb_obj$cb_model
   cb_model_para <- cb_obj$cb_model_para
   cb_data <- cb_obj$cb_data
+  purity_outcomes <- .cb_unique_purity_outcomes(cb_data, seq_len(cb_model_para$L))
 
   # define the confident sets for colocalization
   update <- cb_model_para$update_status
@@ -349,12 +350,15 @@ colocboost_assemble_cos <- function(cb_obj,
         # calculate between purity
         ncsets <- length(coloc_sets)
         min_between <- max_between <- ave_between <- matrix(0, nrow = ncsets, ncol = ncsets)
-        for (i.between in 1:(ncsets - 1)) {
-          for (j.between in (i.between + 1):ncsets) {
+        overlap_pairs <- .merge_ucos_overlap_pairs(coloc_sets)
+        if (nrow(overlap_pairs) > 0L) {
+          for (pair_idx in seq_len(nrow(overlap_pairs))) {
+            i.between <- overlap_pairs[pair_idx, 1L]
+            j.between <- overlap_pairs[pair_idx, 2L]
             cset1 <- coloc_sets[[i.between]]
             cset2 <- coloc_sets[[j.between]]
             res <- list()
-            for (i in 1:cb_model_para$L) {
+            for (i in purity_outcomes) {
               X_dict <- cb_data$dict[i]
               res[[i]] <- get_between_purity(cset1, cset2,
                 X = cb_data$data[[X_dict]]$X,
