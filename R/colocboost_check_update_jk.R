@@ -5,6 +5,62 @@
 #'
 #' @return update_status and real_update_jk for each trait
 #' @noRd
+.cb_append_update_history <- function(cb_model_para, update_jk, update_status, real_update_jk) {
+  used <- attr(cb_model_para, "update_history_n")
+  used <- if (is.null(used)) 0L else used
+  capacity <- attr(cb_model_para, "update_history_capacity")
+  required <- used + 1L
+
+  if (is.null(capacity) || capacity < required) {
+    new_capacity <- max(128L, required, if (is.null(capacity)) 0L else capacity * 2L)
+    L <- cb_model_para$L
+
+    update_status_new <- matrix(0, nrow = L, ncol = new_capacity)
+    real_update_jk_new <- matrix(NA_real_, nrow = new_capacity, ncol = L)
+    jk_new <- matrix(NA_real_, nrow = new_capacity, ncol = L + 1L)
+
+    if (used > 0L) {
+      used_idx <- seq_len(used)
+      update_status_new[, used_idx] <- cb_model_para$update_status[, used_idx, drop = FALSE]
+      real_update_jk_new[used_idx, ] <- cb_model_para$real_update_jk[used_idx, , drop = FALSE]
+      jk_new[used_idx, ] <- cb_model_para$jk[used_idx, , drop = FALSE]
+    }
+
+    cb_model_para$update_status <- update_status_new
+    cb_model_para$real_update_jk <- real_update_jk_new
+    cb_model_para$jk <- jk_new
+    attr(cb_model_para, "update_history_capacity") <- new_capacity
+  }
+
+  cb_model_para$update_status[, required] <- update_status
+  cb_model_para$real_update_jk[required, ] <- real_update_jk
+  cb_model_para$jk[required, ] <- update_jk
+  attr(cb_model_para, "update_history_n") <- required
+  cb_model_para
+}
+
+.cb_trim_update_history <- function(cb_model_para) {
+  used <- attr(cb_model_para, "update_history_n")
+  if (is.null(used)) {
+    return(cb_model_para)
+  }
+
+  if (used == 0L) {
+    cb_model_para$update_status <- c()
+    cb_model_para$real_update_jk <- c()
+    cb_model_para$jk <- c()
+  } else {
+    used_idx <- seq_len(used)
+    cb_model_para$update_status <- cb_model_para$update_status[, used_idx, drop = FALSE]
+    cb_model_para$real_update_jk <- cb_model_para$real_update_jk[used_idx, , drop = FALSE]
+    cb_model_para$jk <- cb_model_para$jk[used_idx, , drop = FALSE]
+  }
+
+  attr(cb_model_para, "update_history_n") <- NULL
+  attr(cb_model_para, "update_history_capacity") <- NULL
+  cb_model_para
+}
+
 colocboost_check_update_jk <- function(cb_model, cb_model_para, cb_data) {
   
   pos.update <- which(cb_model_para$update_y == 1)
@@ -299,9 +355,12 @@ boost_check_update_jk_nofocal <- function(cb_model, cb_model_para, cb_data) {
   }
 
   # - update cb_model and report results
-  cb_model_para$jk <- rbind(cb_model_para$jk, update_jk)
-  cb_model_para$update_status <- cbind(cb_model_para$update_status, as.matrix(update_status))
-  cb_model_para$real_update_jk <- rbind(cb_model_para$real_update_jk, real_update_jk)
+  cb_model_para <- .cb_append_update_history(
+    cb_model_para,
+    update_jk = update_jk,
+    update_status = update_status,
+    real_update_jk = real_update_jk
+  )
 
   update_temp <- list(
     "update_status" = update_status,
@@ -478,9 +537,12 @@ boost_check_update_jk_focal <- function(cb_model, cb_model_para, cb_data,
   }
 
   # - update cb_model and report results
-  cb_model_para$jk <- rbind(cb_model_para$jk, update_jk)
-  cb_model_para$update_status <- cbind(cb_model_para$update_status, as.matrix(update_status))
-  cb_model_para$real_update_jk <- rbind(cb_model_para$real_update_jk, real_update_jk)
+  cb_model_para <- .cb_append_update_history(
+    cb_model_para,
+    update_jk = update_jk,
+    update_status = update_status,
+    real_update_jk = real_update_jk
+  )
 
   update_temp <- list(
     "update_status" = update_status,

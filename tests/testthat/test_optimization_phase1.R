@@ -555,7 +555,7 @@ test_that("colocboost_update reuses LD_jk for outcomes sharing reference data", 
   expect_true(all(vapply(updated, function(model) "6" %in% names(model$ld_jk), logical(1))))
 })
 
-test_that("individual update uses crossprod without changing profile loglikelihood", {
+test_that("individual profile log equals explicit and residual calculations", {
   fixture <- make_shared_update_fixture(n_outcomes = 1, update_jk = 5)
   fixture$cb_model[[1]]$ld_jk[["5"]] <- rep(1, fixture$cb_model_para$P)
   matmul_count <- 0L
@@ -571,11 +571,24 @@ test_that("individual update uses crossprod without changing profile loglikeliho
 
   updated <- colocboost_update(fixture$cb_model, fixture$cb_model_para, fixture$cb_data)
   profile_log <- tail(updated[[1]]$profile_loglike_each, n = 1)
+  X_plain <- matrix(fixture$cb_data$data[[1]]$X, nrow = nrow(fixture$cb_data$data[[1]]$X))
+  explicit_profile <- mean((fixture$cb_data$data[[1]]$Y - X_plain %*% updated[[1]]$beta)^2)
+  residual_profile <- mean(updated[[1]]$res^2)
 
-  expect_equal(matmul_count, 2L)
+  expect_equal(matmul_count, 1L)
   expect_equal(
     as.numeric(profile_log),
-    mean((fixture$cb_data$data[[1]]$Y - fixture$cb_data$data[[1]]$X %*% updated[[1]]$beta)^2),
+    explicit_profile,
+    tolerance = 1e-12
+  )
+  expect_equal(
+    as.numeric(profile_log),
+    residual_profile,
+    tolerance = 1e-12
+  )
+  expect_equal(
+    explicit_profile,
+    residual_profile,
     tolerance = 1e-12
   )
 })
@@ -960,4 +973,36 @@ test_that("merge_cos_ucos skips purity checks for disjoint different-outcome set
 
   expect_equal(length(result$ucos$ucos_each), 1L)
   expect_equal(result$cos$cos$coloc_outcomes[[1]], 1L)
+})
+
+test_that("chunked update history preserves legacy matrix output", {
+  updates <- list(
+    list(update_status = c(1, 0, -1), real_update_jk = c(5, NA, 7), jk = c(5, 5, NA, 7)),
+    list(update_status = c(0, 1, 1), real_update_jk = c(NA, 4, 4), jk = c(4, NA, 4, 4)),
+    list(update_status = c(-1, 0, 0), real_update_jk = c(2, NA, NA), jk = c(2, 2, NA, NA))
+  )
+
+  legacy <- list(update_status = c(), real_update_jk = c(), jk = c())
+  chunked <- list(L = 3, update_status = c(), real_update_jk = c(), jk = c())
+
+  for (update in updates) {
+    legacy$update_status <- cbind(legacy$update_status, as.matrix(update$update_status))
+    legacy$real_update_jk <- rbind(legacy$real_update_jk, update$real_update_jk)
+    legacy$jk <- rbind(legacy$jk, update$jk)
+    chunked <- get(".cb_append_update_history", envir = asNamespace("colocboost"))(
+      chunked,
+      update_jk = update$jk,
+      update_status = update$update_status,
+      real_update_jk = update$real_update_jk
+    )
+  }
+
+  expect_gt(attr(chunked, "update_history_capacity"), length(updates))
+  chunked <- get(".cb_trim_update_history", envir = asNamespace("colocboost"))(chunked)
+
+  expect_equal(chunked$update_status, legacy$update_status)
+  expect_equal(chunked$real_update_jk, legacy$real_update_jk)
+  expect_equal(chunked$jk, legacy$jk)
+  expect_null(attr(chunked, "update_history_capacity"))
+  expect_null(attr(chunked, "update_history_n"))
 })

@@ -116,10 +116,7 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data) {
       prediction_beta <- cb_data$data[[X_dict]]$X %*% (beta_grad)
       cb_model[[i]]$res <- cb_model[[i]]$res - step1 * prediction_beta
       # - profile-loglikelihood
-      x <- cb_data$data[[X_dict]]$X
-      y <- cb_data$data[[i]]$Y
-      beta <- cb_model[[i]]$beta
-      profile_log <- mean((y - x %*% beta)^2)
+      profile_log <- mean(cb_model[[i]]$res^2)
     } else if (!is.null(cb_data$data[[X_dict]]$XtX)) {
       beta_scaling <- cb_model[[i]]$beta_scaling
       # - summary statistics

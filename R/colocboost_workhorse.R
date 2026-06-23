@@ -254,6 +254,7 @@ colocboost_workhorse <- function(cb_data,
       cb_model_para$coveraged <- FALSE
     }
 
+    cb_model_para <- .cb_trim_update_history(cb_model_para)
 
     # -- remove redundant parameters
     rm_elements <- c("update_temp", "update_y")

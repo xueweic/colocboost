@@ -162,7 +162,9 @@ merge_cos_ucos <- function(cb_obj, out_cos, out_ucos, coverage = 0.95,
     if (length(idx) < 2L) {
       return(NULL)
     }
-    t(utils::combn(idx, 2L))
+    do.call(rbind, lapply(seq_len(length(idx) - 1L), function(i) {
+      cbind(idx[i], idx[(i + 1L):length(idx)])
+    }))
   })
   pairs <- pairs[!vapply(pairs, is.null, logical(1))]
   if (length(pairs) == 0L) {
