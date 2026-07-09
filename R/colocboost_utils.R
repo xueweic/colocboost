@@ -87,7 +87,7 @@ merge_cos_ucos <- function(cb_obj, out_cos, out_ucos, coverage = 0.95,
         res <- list()
         for (ii in purity_outcomes) {
           X_dict <- cb_obj$cb_data$dict[ii]
-          res[[ii]] <- get_between_purity(cset1, cset2,
+          res[[length(res) + 1L]] <- get_between_purity(cset1, cset2,
             X = cb_obj$cb_data$data[[X_dict]]$X,
             Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
             miss_idx = cb_obj$cb_data$data[[ii]]$variable_miss,

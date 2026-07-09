@@ -253,6 +253,106 @@ test_that("optimization works with 3 outcomes", {
   expect_equal(result$data_info$n_outcomes, 3)
 })
 
+test_that("post-assembly purity optimization handles non-contiguous outcomes", {
+  X <- matrix(rep(seq_len(8), 4), nrow = 8, ncol = 4)
+  colnames(X) <- paste0("SNP", 1:4)
+  cb_obj <- list(
+    cb_data = list(
+      dict = c(1, 1, 3),
+      data = list(
+        list(X = X, XtX = NULL, variable_miss = integer(0), ref_label = "individual", N = nrow(X)),
+        list(X = X, XtX = NULL, variable_miss = integer(0), ref_label = "individual", N = nrow(X)),
+        list(X = X, XtX = NULL, variable_miss = integer(0), ref_label = "individual", N = nrow(X))
+      )
+    ),
+    cb_model_para = list(L = 3, P = ncol(X))
+  )
+  out_cos <- list(cos = list(
+    cos = list(c(1, 2)),
+    avWeight = list(matrix(c(0.7, 0.3, 0, 0), ncol = 1,
+                           dimnames = list(colnames(X), "outcome1"))),
+    coloc_outcomes = list(1),
+    cs_change = matrix(0, nrow = 1, ncol = 3)
+  ))
+  out_ucos <- list(
+    ucos_each = list(c(2, 3)),
+    ucos_outcome = 3,
+    avW_ucos_each = matrix(c(0, 0.7, 0.3, 0), ncol = 1,
+                           dimnames = list(colnames(X), "Y3")),
+    change_obj_each = matrix(0, nrow = 1, ncol = 3),
+    purity_each = matrix(1, nrow = 1, ncol = 3)
+  )
+
+  expect_error({
+    merged <- merge_cos_ucos(cb_obj, out_cos, out_ucos,
+                             coverage = 0.8, median_cos_abs_corr = 0.8)
+    expect_equal(merged$cos$cos$coloc_outcomes[[1]], c(1, 3))
+  }, NA)
+})
+
+test_that("colocboost_assemble_cos handles non-contiguous purity outcomes", {
+  p <- 4
+  L <- 3
+  LD <- matrix(0.95, nrow = p, ncol = p)
+  diag(LD) <- 1
+  cb_obj <- list(
+    cb_data = list(
+      dict = c(1L, 1L, 3L),
+      data = lapply(seq_len(L), function(i) {
+        list(X = NULL, XtX = LD, variable_miss = integer(0),
+             ref_label = "LD", N = 20)
+      })
+    ),
+    cb_model = list(
+      list(weights_path = rbind(c(0.6, 0.4, 0, 0), c(0.6, 0, 0.4, 0))),
+      list(weights_path = rbind(c(0.5, 0.5, 0, 0))),
+      list(weights_path = rbind(c(0.5, 0, 0.5, 0)))
+    ),
+    cb_model_para = list(
+      L = L,
+      P = p,
+      update_status = rbind(c(1, 1), c(1, 0), c(0, 1))
+    )
+  )
+  class(cb_obj) <- "colocboost"
+
+  ns <- asNamespace("colocboost")
+  original_check_null <- get("check_null_post", envir = ns)
+  original_between <- get("get_between_purity", envir = ns)
+  unlockBinding("check_null_post", ns)
+  assign("check_null_post", function(cb_obj, coloc_sets_temp, ...) {
+    list(
+      cs_change = matrix(1, nrow = length(coloc_sets_temp), ncol = L),
+      is_non_null = seq_along(coloc_sets_temp)
+    )
+  }, envir = ns)
+  lockBinding("check_null_post", ns)
+  unlockBinding("get_between_purity", ns)
+  assign("get_between_purity", function(...) {
+    c(min_abs_cor = 0.9, max_abs_cor = 1, median_abs_cor = 0.9)
+  }, envir = ns)
+  lockBinding("get_between_purity", ns)
+  on.exit({
+    unlockBinding("check_null_post", ns)
+    assign("check_null_post", original_check_null, envir = ns)
+    lockBinding("check_null_post", ns)
+    unlockBinding("get_between_purity", ns)
+    assign("get_between_purity", original_between, envir = ns)
+    lockBinding("get_between_purity", ns)
+  }, add = TRUE)
+
+  expect_error({
+    assembled <- colocboost_assemble_cos(
+      cb_obj,
+      coverage = 0.8,
+      min_abs_corr = 0,
+      median_cos_abs_corr = 0.8
+    )
+    expect_equal(length(assembled$cos$cos), 1L)
+    expect_equal(assembled$cos$coloc_outcomes[[1]], c(1L, 2L, 3L))
+  }, NA)
+})
+
 # ---- Test: Missing variants ----
 
 test_that("optimization handles missing variants correctly", {
