@@ -1,4 +1,10 @@
 #' @importFrom stats as.dist cutree hclust
+.group_coloc_candidates <- function(update, pos.coloc) {
+  signatures <- apply(update[, pos.coloc, drop = FALSE], 2, paste0, collapse = ",")
+  group_ids <- match(signatures, unique(signatures))
+  split(seq_along(pos.coloc), group_ids)
+}
+
 colocboost_assemble_cos <- function(cb_obj,
                                     coverage = 0.95,
                                     weight_fudge_factor = 1.5,
@@ -125,22 +131,15 @@ colocboost_assemble_cos <- function(cb_obj,
       }
     }
   } else {
-    coloc_candidate <- update[, pos.coloc]
-    coloc_candidate <- apply(coloc_candidate, 2, paste0, collapse = ",")
-    coloc_temp <- table(coloc_candidate)
-    # iterations for each colocalization sets
-    pos_coloc_sets <- lapply(1:length(coloc_temp), function(x) {
-      which(coloc_candidate == names(coloc_temp)[x])
-    })
-    names(pos_coloc_sets) <- names(coloc_temp)
+    pos_coloc_sets <- .group_coloc_candidates(update, pos.coloc)
     # - define coloc_sets
     coloc_sets <- avWeight_coloc_sets <-
       total_change_Loglik_coloc <- evidence_strength_coloc <-
       cs_change_coloc <- coloc_outcomes_sets <- list()
     flag <- 0
-    for (i in 1:length(coloc_temp)) {
+    for (i in seq_along(pos_coloc_sets)) {
       pos_temp_coloc_each <- pos_coloc_sets[[i]]
-      coloc_outcomes <- which(unlist(strsplit(names(coloc_temp)[i], ",")) == 1)
+      coloc_outcomes <- which(update[, pos.coloc[pos_temp_coloc_each[1]]] == 1)
 
       # - if only one iteration for this coloc_set
       if (length(pos_temp_coloc_each) == 1) {
