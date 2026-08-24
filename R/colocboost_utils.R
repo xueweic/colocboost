@@ -761,7 +761,7 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL) {
       coloc_out$purity <- purity_all[is_pure,,drop = FALSE]
       colocset_names <- colocset_names[is_pure]
     }
-    vcp <- as.vector(1 - apply(1 - do.call(cbind, int_weight), 1, prod))
+    vcp <- as.vector(1 - apply(1 - do.call(cbind, unname(int_weight)), 1, prod))
     names(vcp) <- data_info$variables
     
     
