@@ -586,11 +586,14 @@ test_that("get_robust_ucos works with X_ref results", {
       sumstat = test_data$sumstat,
       X_ref = test_data$X_ref,
       M = 10,
-      output_level = 2
+      output_level = 2,
+      pvalue_cutoff = NULL,
+      cos_npc_cutoff = 0,
+      npc_outcome_cutoff = 0
     )
   }))
   
-  skip_if(is.null(result$ucos_details), "No ucos detected")
+  expect_false(is.null(result$ucos_details))
   
   expect_error(
     suppressMessages(

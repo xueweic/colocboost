@@ -23,9 +23,9 @@ generate_test_result <- function(n = 100, p = 20, L = 2, seed = 42) {
     true_beta[10, 1] <- 1 # SNP10 also affects the trait
   } else {
     # Multi-trait case
-    true_beta[5, 1] <- 1  # SNP5 affects trait 1
-    true_beta[5, 2] <- 1  # SNP5 also affects trait 2 (colocalized)
-    true_beta[10, 2] <- 0.5 # SNP10 only affects trait 2
+    true_beta[5, 1] <- 2  # SNP5 affects trait 1
+    true_beta[5, 2] <- 2  # SNP5 also affects trait 2 (colocalized)
+    true_beta[10, 2] <- 1.2 # SNP10 only affects trait 2
   }
   
   # Generate Y with some noise
@@ -401,8 +401,7 @@ test_that("get_cos extracts CoS correctly with generated test results", {
   expect_named(result_median_purity, c("cos", "cos_purity"))
   
   # Test empty colocalization results
-  empty_cb_output <- cb_output
-  empty_cb_output$cos_details$cos <- NULL
+  empty_cb_output <- list(cos_details = list(cos = NULL))
   
   expect_warning(
     result_empty <- get_cos(empty_cb_output, coverage = 0.95),
@@ -895,4 +894,3 @@ test_that("get_hierarchical_clusters handles extreme correlation structures", {
   expect_named(result_mixed, c("cluster", "Q_modularity"))
   expect_equal(nrow(result_mixed$cluster), P_mixed)
 })
-
