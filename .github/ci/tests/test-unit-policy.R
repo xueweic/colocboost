@@ -9,6 +9,35 @@ fixture_package <- file.path(
 )
 rscript <- file.path(R.home("bin"), "Rscript")
 
+test_that("the Pixi R task excludes user startup and user libraries", {
+  prefix <- normalizePath(
+    Sys.getenv("CONDA_PREFIX"),
+    winslash = "/",
+    mustWork = TRUE
+  )
+  path_entries <- strsplit(
+    Sys.getenv("PATH"),
+    .Platform$path.sep,
+    fixed = TRUE
+  )[[1L]]
+  library_paths <- normalizePath(.libPaths(), winslash = "/", mustWork = TRUE)
+
+  expect_identical(
+    normalizePath(path_entries[[1L]], winslash = "/", mustWork = TRUE),
+    normalizePath(file.path(prefix, "bin"), winslash = "/", mustWork = TRUE)
+  )
+  expect_true(length(library_paths) >= 1L)
+  expect_true(all(startsWith(library_paths, paste0(prefix, "/"))))
+  expect_identical(
+    normalizePath(Sys.getenv("R_LIBS_USER"), winslash = "/", mustWork = TRUE),
+    normalizePath(
+      file.path(prefix, "lib", "R", "library"),
+      winslash = "/",
+      mustWork = TRUE
+    )
+  )
+})
+
 make_waiver <- function(
   id = "fixture-waiver",
   context = "r-cmd-check-installed",

@@ -33,21 +33,23 @@ cmd = "python .github/ci/validate_manifest.py .github/ci/check-matrix.yml"
 cwd = "."
 
 [tasks.ci-contract-tests]
-cmd = "pytest -q .github/ci/tests"
+cmd = "python -B .github/ci/run-contract-tests.py"
 cwd = "."
+env = { PYTHONDONTWRITEBYTECODE = "1" }
 
 [tasks.ci-prepare]
-cmd = "python .github/ci/artifact_contract.py create --tarball={{ tarball }} --metadata={{ metadata }} --source-sha={{ source_sha }} --event-sha={{ event_sha }}"
+cmd = '''python .github/ci/artifact_contract.py create --tarball='{{ tarball | replace("'", "'\"'\"'") }}' --metadata='{{ metadata | replace("'", "'\"'\"'") }}' --source-sha='{{ source_sha | replace("'", "'\"'\"'") }}' --event-sha='{{ event_sha | replace("'", "'\"'\"'") }}' '''
 cwd = "."
 args = ["tarball", "metadata", "source_sha", "event_sha"]
 
 [tasks.ci-unit]
-cmd = "Rscript .github/ci/run-unit-tests.R --package=. --load-package={{ mode }} --context={{ environment_id }} --policy=.github/ci/check-policy.yml --output={{ output }}"
+cmd = '''Rscript --vanilla .github/ci/run-unit-tests.R --package=. --load-package='{{ mode | replace("'", "'\"'\"'") }}' --context='{{ environment_id | replace("'", "'\"'\"'") }}' --policy=.github/ci/check-policy.yml --output='{{ output | replace("'", "'\"'\"'") }}' '''
 cwd = "."
 args = ["mode", "output", "environment_id"]
+env = { LC_ALL = "C", R_ENVIRON_USER = "{% if pixi.is_win %}NUL{% else %}/dev/null{% endif %}", R_PROFILE_USER = "{% if pixi.is_win %}NUL{% else %}/dev/null{% endif %}", R_LIBS_USER = "$CONDA_PREFIX/lib/R/library" }
 
 [tasks.ci-check]
-cmd = "python .github/ci/run_driver.py --manifest=.github/ci/check-matrix.yml --environment-id={{ environment_id }} --driver={{ driver }} --executable={{ executable }} --tarball={{ tarball }} --metadata={{ metadata }} --source-sha={{ source_sha }} --event-sha={{ event_sha }} --evidence={{ evidence }} {% if r_entrypoint %}--r-entrypoint={{ r_entrypoint }} {% endif %}--"
+cmd = '''python .github/ci/run_driver.py --manifest=.github/ci/check-matrix.yml --environment-id='{{ environment_id | replace("'", "'\"'\"'") }}' --driver='{{ driver | replace("'", "'\"'\"'") }}' --executable='{{ executable | replace("'", "'\"'\"'") }}' --tarball='{{ tarball | replace("'", "'\"'\"'") }}' --metadata='{{ metadata | replace("'", "'\"'\"'") }}' --source-sha='{{ source_sha | replace("'", "'\"'\"'") }}' --event-sha='{{ event_sha | replace("'", "'\"'\"'") }}' --evidence='{{ evidence | replace("'", "'\"'\"'") }}' {% if r_entrypoint %}--r-entrypoint='{{ r_entrypoint | replace("'", "'\"'\"'") }}' {% endif %}--'''
 cwd = "."
 args = [
   "environment_id",
@@ -84,9 +86,9 @@ r-susier = "*"
 r-yaml = "*"
 
 [feature.local-r44.tasks]
-test = { cmd = "Rscript .github/ci/run-unit-tests.R --package=. --load-package=source --context=local-r44 --policy=.github/ci/check-policy.yml --output=.pixi/local-r44/unit-results.json", cwd = "." }
-check = { cmd = """Rscript --vanilla -e "devtools::check(args = '--as-cran', build_args = character(), manual = TRUE)"""", cwd = ".", env = { LC_ALL = "C" } }
-ci-r-contract-tests = { cmd = "Rscript .github/ci/tests/test-unit-policy.R", cwd = "." }
+test = { cmd = "Rscript --vanilla .github/ci/run-unit-tests.R --package=. --load-package=source --context=local-r44 --policy=.github/ci/check-policy.yml --output=.pixi/local-r44/unit-results.json", cwd = ".", env = { LC_ALL = "C", R_ENVIRON_USER = "/dev/null", R_PROFILE_USER = "/dev/null", R_LIBS_USER = "$CONDA_PREFIX/lib/R/library" } }
+check = { cmd = "Rscript --vanilla .github/ci/run-local-check.R", cwd = ".", env = { LC_ALL = "C", R_ENVIRON_USER = "/dev/null", R_PROFILE_USER = "/dev/null", R_LIBS_USER = "$CONDA_PREFIX/lib/R/library" } }
+ci-r-contract-tests = { cmd = "Rscript --vanilla .github/ci/tests/test-unit-policy.R", cwd = ".", env = { LC_ALL = "C", R_ENVIRON_USER = "/dev/null", R_PROFILE_USER = "/dev/null", R_LIBS_USER = "$CONDA_PREFIX/lib/R/library" } }
 
 [feature.local-r45]
 platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64"]
@@ -107,9 +109,9 @@ r-susier = "*"
 r-yaml = "*"
 
 [feature.local-r45.tasks]
-test = { cmd = "Rscript .github/ci/run-unit-tests.R --package=. --load-package=source --context=local-r45 --policy=.github/ci/check-policy.yml --output=.pixi/local-r45/unit-results.json", cwd = "." }
-check = { cmd = """Rscript --vanilla -e "devtools::check(args = '--as-cran', build_args = character(), manual = TRUE)"""", cwd = ".", env = { LC_ALL = "C" } }
-ci-r-contract-tests = { cmd = "Rscript .github/ci/tests/test-unit-policy.R", cwd = "." }
+test = { cmd = "Rscript --vanilla .github/ci/run-unit-tests.R --package=. --load-package=source --context=local-r45 --policy=.github/ci/check-policy.yml --output=.pixi/local-r45/unit-results.json", cwd = ".", env = { LC_ALL = "C", R_ENVIRON_USER = "/dev/null", R_PROFILE_USER = "/dev/null", R_LIBS_USER = "$CONDA_PREFIX/lib/R/library" } }
+check = { cmd = "Rscript --vanilla .github/ci/run-local-check.R", cwd = ".", env = { LC_ALL = "C", R_ENVIRON_USER = "/dev/null", R_PROFILE_USER = "/dev/null", R_LIBS_USER = "$CONDA_PREFIX/lib/R/library" } }
+ci-r-contract-tests = { cmd = "Rscript --vanilla .github/ci/tests/test-unit-policy.R", cwd = ".", env = { LC_ALL = "C", R_ENVIRON_USER = "/dev/null", R_PROFILE_USER = "/dev/null", R_LIBS_USER = "$CONDA_PREFIX/lib/R/library" } }
 
 [environments]
 local-r44 = { features = ["local-r44"] }

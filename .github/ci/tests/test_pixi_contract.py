@@ -1,7 +1,9 @@
 import hashlib
+import json
 import os
 import shutil
 import subprocess
+import sys
 import tomllib
 from pathlib import Path
 
@@ -13,6 +15,8 @@ ROOT = Path(__file__).resolve().parents[3]
 PIXI_MANIFEST = ROOT / "pixi.toml"
 PIXI_LOCK = ROOT / "pixi.lock"
 LEGACY_MANIFEST = ROOT / ".github" / "environment" / "pixi.toml"
+LOCAL_CHECK_WRAPPER = ROOT / ".github" / "ci" / "run-local-check.R"
+CONTRACT_TEST_WRAPPER = ROOT / ".github" / "ci" / "run-contract-tests.py"
 
 HELPER_PLATFORMS = {
     "linux-64",
@@ -42,6 +46,17 @@ R_DEPENDENCIES = {
     "r-mass",
     "r-susier",
     "r-yaml",
+}
+R_TASK_ENV = {
+    "LC_ALL": "C",
+    "R_ENVIRON_USER": "/dev/null",
+    "R_PROFILE_USER": "/dev/null",
+    "R_LIBS_USER": "$CONDA_PREFIX/lib/R/library",
+}
+CI_UNIT_R_TASK_ENV = {
+    **R_TASK_ENV,
+    "R_ENVIRON_USER": "{% if pixi.is_win %}NUL{% else %}/dev/null{% endif %}",
+    "R_PROFILE_USER": "{% if pixi.is_win %}NUL{% else %}/dev/null{% endif %}",
 }
 LEGACY_BODY_SHA256 = (
     "4137647ef8016144e2b98e4c94b529ae9c20133a92cdfec9254c803568e7ab61"
@@ -134,13 +149,47 @@ def test_top_level_task_interfaces_are_explicit(manifest):
     assert commands["ci-validate"] == (
         "python .github/ci/validate_manifest.py .github/ci/check-matrix.yml"
     )
-    assert commands["ci-contract-tests"] == "pytest -q .github/ci/tests"
+    assert commands["ci-contract-tests"] == (
+        "python -B .github/ci/run-contract-tests.py"
+    )
+    assert tasks["ci-contract-tests"].get("env") == {
+        "PYTHONDONTWRITEBYTECODE": "1"
+    }
     assert ".github/ci/artifact_contract.py create" in commands["ci-prepare"]
     assert ".github/ci/run-unit-tests.R" in commands["ci-unit"]
+    assert commands["ci-unit"].startswith("Rscript --vanilla ")
+    assert tasks["ci-unit"].get("env") == CI_UNIT_R_TASK_ENV
     assert ".github/ci/run_driver.py" in commands["ci-check"]
     assert commands["ci-check"].rstrip().endswith("--")
     assert commands["ci-summary"] == "python .github/ci/aggregate_results.py"
     assert all(task.get("cwd") == "." for task in tasks.values())
+
+
+def test_typed_task_values_are_shell_quoted(manifest):
+    tasks = manifest["tasks"]
+    required_quoted_values = {
+        "ci-prepare": ("tarball", "metadata", "source_sha", "event_sha"),
+        "ci-unit": ("mode", "output", "environment_id"),
+        "ci-check": (
+            "environment_id",
+            "driver",
+            "executable",
+            "tarball",
+            "metadata",
+            "source_sha",
+            "event_sha",
+            "evidence",
+            "r_entrypoint",
+        ),
+    }
+    quote_filter = " | replace(\"'\", \"'\\\"'\\\"'\")"
+    for task_name, values in required_quoted_values.items():
+        command = task_command(tasks[task_name])
+        for value in values:
+            assert f"'{{{{ {value}{quote_filter} }}}}'" in command, (
+                task_name,
+                value,
+            )
 
 
 @pytest.mark.parametrize("feature", ["local-r44", "local-r45"])
@@ -149,23 +198,64 @@ def test_local_r_tasks_keep_strict_policy_and_full_check(manifest, feature):
     assert set(tasks) == {"test", "check", "ci-r-contract-tests"}
 
     test_command = task_command(tasks["test"])
+    assert test_command.startswith("Rscript --vanilla ")
     assert ".github/ci/run-unit-tests.R" in test_command
     assert f"--context={feature}" in test_command
     assert "--policy=.github/ci/check-policy.yml" in test_command
     assert f".pixi/{feature}/unit-results.json" in test_command
 
     assert task_command(tasks["ci-r-contract-tests"]) == (
-        "Rscript .github/ci/tests/test-unit-policy.R"
+        "Rscript --vanilla .github/ci/tests/test-unit-policy.R"
     )
+    assert all(task.get("env") == R_TASK_ENV for task in tasks.values())
     check_command = task_command(tasks["check"])
-    assert tasks["check"].get("env") == {"LC_ALL": "C"}
-    assert check_command.startswith("Rscript --vanilla ")
-    assert "devtools::check" in check_command
-    assert "manual = TRUE" in check_command
-    assert "build_args = character()" in check_command
+    assert check_command == "Rscript --vanilla .github/ci/run-local-check.R"
+    assert "devtools::check" not in check_command
     assert "--no-manual" not in check_command
     assert "--no-build-vignettes" not in check_command
     assert "--ignore-vignettes" not in check_command
+
+
+def test_local_check_wrapper_keeps_full_uncompromised_policy():
+    assert LOCAL_CHECK_WRAPPER.is_file(), "the local check wrapper is missing"
+    source = LOCAL_CHECK_WRAPPER.read_text(encoding="utf-8")
+    assert "devtools::check" in source
+    assert "--as-cran" in source
+    assert "manual = TRUE" in source
+    assert "build_args = character()" in source
+    assert "--no-manual" not in source
+    assert "--no-build-vignettes" not in source
+    assert "--ignore-vignettes" not in source
+
+
+def test_contract_runner_suppresses_pytest_and_bytecode_caches(tmp_path):
+    assert CONTRACT_TEST_WRAPPER.is_file(), "the contract-test wrapper is missing"
+    project = tmp_path / "contract project;literal$"
+    tests = project / ".github" / "ci" / "tests"
+    tests.mkdir(parents=True)
+    wrapper = project / ".github" / "ci" / CONTRACT_TEST_WRAPPER.name
+    shutil.copy2(CONTRACT_TEST_WRAPPER, wrapper)
+    (tests / "test_sample.py").write_text(
+        "def test_sample():\n    assert True\n",
+        encoding="utf-8",
+    )
+    environment = os.environ.copy()
+    environment["PYTHONDONTWRITEBYTECODE"] = "1"
+
+    completed = subprocess.run(
+        [sys.executable, "-B", os.fspath(wrapper)],
+        cwd=project,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert "1 passed" in completed.stdout
+    assert not list(project.rglob(".pytest_cache"))
+    assert not list(project.rglob("__pycache__"))
+    assert not list(project.rglob("*.pyc"))
 
 
 def test_lock_covers_every_declared_environment_platform(manifest):
@@ -209,13 +299,54 @@ def run_pixi_dry(task, *arguments):
     )
 
 
+def run_pixi(task, *arguments):
+    pixi = shutil.which("pixi") or "/Users/xueweic/.pixi/bin/pixi"
+    if not Path(pixi).is_file():
+        pytest.skip("Pixi is not installed")
+    return subprocess.run(
+        [
+            pixi,
+            "run",
+            "--locked",
+            "--manifest-path",
+            os.fspath(PIXI_MANIFEST),
+            task,
+            *arguments,
+        ],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+
+def test_ci_prepare_preserves_practical_shell_metacharacters_in_paths(tmp_path):
+    directory = tmp_path / "paths with spaces;dollar$HOME&ampersand'apostrophe"
+    directory.mkdir()
+    tarball = directory / "package $HOME;literal&'quote.tar.gz"
+    metadata = directory / "metadata $HOME;literal&'quote.json"
+    tarball.write_bytes(b"task-6 path quoting fixture")
+
+    completed = run_pixi(
+        "ci-prepare",
+        os.fspath(tarball),
+        os.fspath(metadata),
+        "a" * 40,
+        "b" * 40,
+    )
+
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    document = json.loads(metadata.read_text(encoding="utf-8"))
+    assert document["filename"] == tarball.name
+
+
 def test_pixi_renders_typed_task_arguments_and_passthrough():
     unit = run_pixi_dry("ci-unit", "source", "unit.json", "local-r44")
     assert unit.returncode == 0, unit.stderr
     unit_output = unit.stdout + unit.stderr
-    assert "--load-package=source" in unit_output
-    assert "--output=unit.json" in unit_output
-    assert "--context=local-r44" in unit_output
+    assert "--load-package='source'" in unit_output
+    assert "--output='unit.json'" in unit_output
+    assert "--context='local-r44'" in unit_output
 
     prepare = run_pixi_dry(
         "ci-prepare",
@@ -226,8 +357,8 @@ def test_pixi_renders_typed_task_arguments_and_passthrough():
     )
     assert prepare.returncode == 0, prepare.stderr
     prepare_output = prepare.stdout + prepare.stderr
-    assert "--tarball=package.tar.gz" in prepare_output
-    assert "--metadata=metadata.json" in prepare_output
+    assert "--tarball='package.tar.gz'" in prepare_output
+    assert "--metadata='metadata.json'" in prepare_output
 
     check = run_pixi_dry(
         "ci-check",
@@ -247,7 +378,7 @@ def test_pixi_renders_typed_task_arguments_and_passthrough():
     )
     assert check.returncode == 0, check.stderr
     check_output = check.stdout + check.stderr
-    assert "--r-entrypoint=r-cmd" in check_output
+    assert "--r-entrypoint='r-cmd'" in check_output
     assert "-- check --as-cran {tarball}" in check_output
 
     missing_argument = run_pixi_dry("ci-unit", "source", "unit.json")
