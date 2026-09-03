@@ -1,0 +1,59 @@
+version: 1
+
+unit_tests:
+  allowed_skips:
+    - id: installed-model-init-data
+      context: r-cmd-check-installed
+      file: test_model.R
+      test_title: colocboost_init_data correctly initializes data
+      reason: colocboost_init_data not directly accessible
+      expected_count: 1
+      rationale: The legacy installed-package test cannot access this unexported internal; source-mode tests exercise it.
+      expires: '2027-03-03'
+    - id: installed-model-dictionary-mapping
+      context: r-cmd-check-installed
+      file: test_model.R
+      test_title: colocboost correctly maps focal outcome to keep_variables with dict_keep_variables
+      reason: colocboost_init_data not directly accessible for integration test
+      expected_count: 1
+      rationale: The legacy installed-package integration branch cannot access this unexported internal; source-mode tests exercise it.
+      expires: '2027-03-03'
+    - id: installed-model-assemble
+      context: r-cmd-check-installed
+      file: test_model.R
+      test_title: colocboost_assemble processes model results
+      reason: colocboost_assemble not directly accessible
+      expected_count: 1
+      rationale: The legacy installed-package test cannot access this unexported internal; source-mode tests exercise it.
+      expires: '2027-03-03'
+    - id: installed-model-workhorse
+      context: r-cmd-check-installed
+      file: test_model.R
+      test_title: colocboost_workhorse performs boosting iterations
+      reason: colocboost_workhorse not directly accessible
+      expected_count: 1
+      rationale: The legacy installed-package test cannot access this unexported internal; source-mode tests exercise it.
+      expires: '2027-03-03'
+    - id: installed-utils-dictionary-mapping
+      context: r-cmd-check-installed
+      file: test_utils.R
+      test_title: colocboost_init_data handles complex dictionary mappings
+      reason: colocboost_init_data not directly accessible
+      expected_count: 1
+      rationale: The legacy installed-package test cannot access this unexported internal; source-mode tests exercise it.
+      expires: '2027-03-03'
+
+r_cmd_check:
+  allowed_notes: []
+
+numerical_backends:
+  mkl:
+    required_library_patterns:
+      - '(?i)(?:^|/)libmkl_intel_lp64(?:\.so(?:\.\d+)*)?(?:$|\s)'
+      - '(?i)(?:^|/)libmkl_core(?:\.so(?:\.\d+)*)?(?:$|\s)'
+      - '(?i)(?:^|/)libmkl_sequential(?:\.so(?:\.\d+)*)?(?:$|\s)'
+    forbidden_library_patterns:
+      - '(?i)(?:^|/)libmkl_(?:intel|gnu|tbb)_thread(?:\.so(?:\.\d+)*)?(?:$|\s)'
+      - '(?i)(?:^|/)libopenblas(?:\.so(?:\.\d+)*)?(?:$|\s)'
+      - '(?i)(?:^|/)lib(?:s?atlas)(?:\.so(?:\.\d+)*)?(?:$|\s)'
+      - '(?i)(?:^|/)libblis(?:\.so(?:\.\d+)*)?(?:$|\s)'

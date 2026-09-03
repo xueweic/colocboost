@@ -1,0 +1,389 @@
+version: 1
+
+coverage:
+  # Primary CRAN flavors. Every row consumes the single tarball built by prepare.
+  - id: r-devel-linux-x86-64-debian-clang
+    group: primary
+    cran_name: r-devel-linux-x86_64-debian-clang
+    state: proxy
+    driver: native-wrapper
+    image: ghcr.io/r-hub/containers/clang22@sha256:f4193769412c461365849dd664b3d42bd2a0aebe520eab3ae6cd426a19d8b71e
+    proof: [source-tarball-sha256, container-system-r, r-executable, r-version, r-devel-revision, operating-system, compiler, clang-22, flang-22, libcxx, architecture, locale]
+    limitation: Ubuntu and libc++ proxy the CRAN Debian testing environment; no active exact Debian/Clang CRAN image exists.
+
+  - id: r-devel-linux-x86-64-debian-gcc
+    group: primary
+    cran_name: r-devel-linux-x86_64-debian-gcc
+    state: proxy
+    driver: native-wrapper
+    image: ghcr.io/r-hub/containers/ubuntu-gcc16@sha256:2e9576e51ad17a706887b7e06fc4057388765226ec795f3c7af0e7348fb8fbf1
+    proof: [source-tarball-sha256, container-system-r, r-executable, r-version, r-devel-revision, operating-system, compiler, gcc-16, architecture, locale]
+    limitation: Ubuntu proxies the CRAN Debian testing environment; ubuntu-gcc16 is selected explicitly instead of deprecated ubuntu-gcc12.
+
+  - id: r-devel-linux-x86-64-fedora-clang
+    group: primary
+    cran_name: r-devel-linux-x86_64-fedora-clang
+    state: proxy
+    driver: native-wrapper
+    image: ghcr.io/r-hub/containers/clang22@sha256:f4193769412c461365849dd664b3d42bd2a0aebe520eab3ae6cd426a19d8b71e
+    proof: [source-tarball-sha256, container-system-r, r-executable, r-version, r-devel-revision, operating-system, compiler, clang-22, flang-22, libcxx, architecture, locale]
+    limitation: Ubuntu and libc++ proxy Fedora and do not reproduce the current CRAN Fedora/Clang toolchain exactly.
+
+  - id: r-devel-linux-x86-64-fedora-gcc
+    group: primary
+    cran_name: r-devel-linux-x86_64-fedora-gcc
+    state: direct
+    driver: native-wrapper
+    image: ghcr.io/r-hub/containers/gcc16@sha256:1127418efe3938f0e72fc29c55596a8cdde03293928b60aeb0ac44b6586960d2
+    proof: [source-tarball-sha256, container-system-r, r-executable, r-version, r-devel-revision, operating-system, fedora-44, compiler, gcc-version, architecture, locale]
+
+  - id: r-devel-windows-x86-64
+    group: primary
+    cran_name: r-devel-windows-x86_64
+    state: proxy
+    driver: r-binary
+    runner: windows-2022
+    proof: [source-tarball-sha256, r-executable, r-version, r-devel-revision, operating-system, windows-server-2022, compiler, rtools-gcc, architecture, locale]
+    limitation: CRAN locale, hardware, and Rtools details differ from the GitHub Windows runner.
+
+  - id: r-patched-linux-x86-64
+    group: primary
+    cran_name: r-patched-linux-x86_64
+    state: proxy
+    driver: native-wrapper
+    image: ghcr.io/r-hub/containers/ubuntu-next@sha256:1c29eed93b0aa05fe147e476e6b3510a09fb0476460eeefbbe99a4a1eb2c3bd9
+    proof: [source-tarball-sha256, container-system-r, r-executable, r-version, r-revision, r-patched, operating-system, compiler, architecture, locale]
+    limitation: Ubuntu proxies the CRAN Debian testing environment.
+
+  - id: r-release-linux-x86-64
+    group: primary
+    cran_name: r-release-linux-x86_64
+    state: proxy
+    driver: native-wrapper
+    image: ghcr.io/r-hub/containers/ubuntu-release@sha256:714722b7ecb4307fbf88a707f83fb045181482c0c8ce6086a0e26860416ca9c2
+    proof: [source-tarball-sha256, container-system-r, r-executable, r-version, r-release, operating-system, compiler, architecture, locale]
+    limitation: Ubuntu proxies the CRAN Debian testing environment.
+
+  - id: r-release-macos-arm64
+    group: primary
+    cran_name: r-release-macos-arm64
+    state: proxy
+    driver: r-binary
+    runner: macos-15
+    proof: [source-tarball-sha256, r-executable, r-version, r-release, operating-system, macos-version, compiler, apple-and-gnu-compilers, architecture, arm64, locale]
+    limitation: GitHub runner hardware and image differ from CRAN macOS arm64.
+
+  - id: r-release-macos-x86-64
+    group: primary
+    cran_name: r-release-macos-x86_64
+    state: proxy
+    driver: r-binary
+    runner: macos-15-intel
+    proof: [source-tarball-sha256, r-executable, r-version, r-release, operating-system, macos-version, compiler, apple-and-gnu-compilers, architecture, x86-64, locale]
+    limitation: GitHub runner macOS version and hardware differ from CRAN macOS x86_64.
+
+  - id: r-release-windows-x86-64
+    group: primary
+    cran_name: r-release-windows-x86_64
+    state: proxy
+    driver: r-binary
+    runner: windows-2022
+    proof: [source-tarball-sha256, r-executable, r-version, r-release, operating-system, windows-server-2022, compiler, rtools-gcc, architecture, locale]
+    limitation: CRAN locale and hardware differ from the GitHub Windows runner.
+
+  - id: r-oldrel-macos-arm64
+    group: primary
+    cran_name: r-oldrel-macos-arm64
+    state: proxy
+    driver: r-binary
+    runner: macos-15
+    proof: [source-tarball-sha256, r-executable, r-version, r-oldrel, operating-system, macos-version, compiler, apple-and-gnu-compilers, architecture, arm64, locale]
+    limitation: GitHub runner hardware and image differ from CRAN macOS arm64.
+
+  - id: r-oldrel-macos-x86-64
+    group: primary
+    cran_name: r-oldrel-macos-x86_64
+    state: proxy
+    driver: r-binary
+    runner: macos-15-intel
+    proof: [source-tarball-sha256, r-executable, r-version, r-oldrel, operating-system, macos-version, compiler, apple-and-gnu-compilers, architecture, x86-64, locale]
+    limitation: GitHub runner image differs from CRAN macOS x86_64.
+
+  - id: r-oldrel-windows-x86-64
+    group: primary
+    cran_name: r-oldrel-windows-x86_64
+    state: proxy
+    driver: r-binary
+    runner: windows-2022
+    proof: [source-tarball-sha256, r-executable, r-version, r-oldrel, operating-system, windows-server-2022, compiler, rtools-gcc, architecture, locale]
+    limitation: CRAN locale and hardware differ from the GitHub Windows runner.
+
+  # Additional CRAN issue kinds.
+  - id: atlas
+    group: additional
+    cran_name: ATLAS
+    state: direct
+    driver: native-wrapper
+    image: ghcr.io/r-hub/containers/atlas@sha256:7597f7d0b6b2f009ae7bb425391523d8f4388223238db50d7dfb1572add63a88
+    proof: [source-tarball-sha256, container-system-r, r-executable, blas-identity, lapack-identity, la-library, process-mappings, loaded-atlas]
+
+  - id: blis
+    group: additional
+    cran_name: BLIS
+    state: proxy
+    driver: native-wrapper
+    image: local/colocboost-blis-proxy
+    proof: [source-tarball-sha256, r-executable, r-devel-revision, operating-system, compiler, architecture, loaded-blis, blis-version, single-thread]
+    limitation: Purpose-built Fedora serial BLIS is an acceptance spike because the exact current CRAN recipe is not public; failed runtime identity changes this row to uncovered.
+
+  - id: blas
+    group: additional
+    cran_name: BLAS
+    state: not-applicable
+    driver: r-binary
+    runner: ubuntu-24.04
+    proof: [source-tarball-sha256, no-package-owned-native-source, no-linkingto, no-compilation-marker, no-direct-native-call]
+    predicate:
+      input: built-source-tarball
+      command: [python, .github/ci/evaluate_native_features.py, --tarball, '{tarball}', --rule, no-native-source-linkingto-compilation-or-direct-call]
+
+  - id: c23
+    group: additional
+    cran_name: C23
+    state: not-applicable
+    driver: r-binary
+    runner: ubuntu-24.04
+    proof: [source-tarball-sha256, no-package-c-source, obsolete-special-area]
+    predicate:
+      input: built-source-tarball
+      command: [python, .github/ci/evaluate_native_features.py, --tarball, '{tarball}', --rule, no-c-source]
+
+  - id: intel
+    group: additional
+    cran_name: Intel
+    state: not-applicable
+    driver: r-binary
+    runner: ubuntu-24.04
+    proof: [source-tarball-sha256, no-package-owned-native-source, obsolete-special-area]
+    predicate:
+      input: built-source-tarball
+      command: [python, .github/ci/evaluate_native_features.py, --tarball, '{tarball}', --rule, no-package-owned-native-source]
+
+  - id: lto
+    group: additional
+    cran_name: LTO
+    state: not-applicable
+    driver: r-binary
+    runner: ubuntu-24.04
+    proof: [source-tarball-sha256, no-package-owned-native-object, no-compilation-target]
+    predicate:
+      input: built-source-tarball
+      command: [python, .github/ci/evaluate_native_features.py, --tarball, '{tarball}', --rule, no-native-object]
+
+  - id: m1mac
+    group: additional
+    cran_name: M1mac
+    state: proxy
+    driver: r-binary
+    runner: macos-15
+    proof: [source-tarball-sha256, r-executable, r-version, r-devel-revision, operating-system, macos-version, compiler, architecture, arm64]
+    limitation: GitHub arm64 hardware, flags, and system libraries differ from the CRAN M1mac check.
+
+  - id: mkl
+    group: additional
+    cran_name: MKL
+    state: direct
+    driver: native-wrapper
+    image: ghcr.io/r-hub/containers/mkl@sha256:d84847130b3ae0b9b0402208ee17360ab527df1c448c44ba045b44524b17620a
+    proof: [source-tarball-sha256, container-system-r, r-executable, r-version, operating-system, compiler, architecture, session-info, blas-identity, lapack-identity, la-library, la-version, process-mappings, loaded-mkl, blas-operation, mkl-verbose, single-thread]
+    limitation: The R-hub MKL version may differ from the exact current CRAN MKL version and is reported explicitly.
+
+  - id: openblas
+    group: additional
+    cran_name: OpenBLAS
+    state: proxy
+    driver: native-wrapper
+    image: ghcr.io/r-hub/containers/gcc16@sha256:1127418efe3938f0e72fc29c55596a8cdde03293928b60aeb0ac44b6586960d2
+    proof: [source-tarball-sha256, container-system-r, r-executable, r-devel-revision, operating-system, compiler, loaded-openblas, single-thread]
+    limitation: Proven Fedora OpenBLAS pthread mode proxies CRAN serial OpenBLAS; no dedicated active OpenBLAS image exists.
+
+  - id: strict
+    group: additional
+    cran_name: Strict
+    state: not-applicable
+    driver: r-binary
+    runner: ubuntu-24.04
+    proof: [source-tarball-sha256, no-package-owned-compilation-target, strict-r-headers-not-applicable]
+    predicate:
+      input: built-source-tarball
+      command: [python, .github/ci/evaluate_native_features.py, --tarball, '{tarball}', --rule, no-native-compilation-target]
+
+  - id: clang-asan
+    group: additional
+    cran_name: clang-ASAN
+    state: direct
+    driver: native-wrapper
+    image: ghcr.io/r-hub/containers/clang-asan@sha256:dfab3d2274151577eb705d2be9acd3391798ba4b56d384ca9df84544e5b6be96
+    proof: [source-tarball-sha256, container-system-r, r-executable, sanitizer-compiler-flags, sanitizer-linker-flags, asan-runtime, sanitizer-output-scan]
+
+  - id: clang-ubsan
+    group: additional
+    cran_name: clang-UBSAN
+    state: direct
+    driver: native-wrapper
+    image: ghcr.io/r-hub/containers/clang-ubsan@sha256:a58b00b52e9c4b210c3474eac4c28dc18bf70c912d75bb45e466410452a694e6
+    proof: [source-tarball-sha256, container-system-r, r-executable, sanitizer-compiler-flags, sanitizer-linker-flags, ubsan-runtime, undefined-behavior-output-scan]
+
+  - id: donttest
+    group: additional
+    cran_name: donttest
+    state: direct
+    driver: native-wrapper
+    image: ghcr.io/r-hub/containers/donttest@sha256:fd1942c8b8627d7e1d80582a023b2792acfa158a6edfeeeba3edd27a52c57967
+    proof: [source-tarball-sha256, container-system-r, r-executable, check-donttest-examples-true, expanded-examples-executed]
+
+  - id: gcc-asan
+    group: additional
+    cran_name: gcc-ASAN
+    state: direct
+    driver: native-wrapper
+    image: ghcr.io/r-hub/containers/gcc-asan@sha256:32c9ad423cbca983bae893c2f0f44021ddbd5ac236c29fba8078b97acd80d78f
+    proof: [source-tarball-sha256, container-system-r, r-executable, gcc-asan-flags, asan-preload, asan-runtime, sanitizer-output-scan]
+
+  - id: gcc-ubsan
+    group: additional
+    cran_name: gcc-UBSAN
+    state: direct
+    driver: native-wrapper
+    image: ghcr.io/r-hub/containers/gcc-asan@sha256:32c9ad423cbca983bae893c2f0f44021ddbd5ac236c29fba8078b97acd80d78f
+    proof: [source-tarball-sha256, container-system-r, r-executable, gcc-ubsan-flags, ubsan-preload, ubsan-runtime, sanitizer-output-scan]
+
+  - id: gcc
+    group: additional
+    cran_name: gcc
+    state: not-applicable
+    driver: r-binary
+    runner: ubuntu-24.04
+    proof: [source-tarball-sha256, no-package-owned-compiled-source]
+    predicate:
+      input: built-source-tarball
+      command: [python, .github/ci/evaluate_native_features.py, --tarball, '{tarball}', --rule, no-compiled-source]
+
+  - id: gcc15
+    group: additional
+    cran_name: gcc15
+    state: not-applicable
+    driver: r-binary
+    runner: ubuntu-24.04
+    proof: [source-tarball-sha256, no-package-owned-native-source, obsolete-special-area]
+    predicate:
+      input: built-source-tarball
+      command: [python, .github/ci/evaluate_native_features.py, --tarball, '{tarball}', --rule, no-package-owned-native-source]
+
+  - id: nold
+    group: additional
+    cran_name: noLD
+    state: direct
+    driver: native-wrapper
+    image: ghcr.io/r-hub/containers/nold@sha256:9dac23acd0e610b5fb5f82957c8136ffc6acf216a328a067795241542b3dc091
+    proof: [source-tarball-sha256, container-system-r, r-executable, opt-r-devel-nold, long-double-disabled]
+
+  - id: noomp
+    group: additional
+    cran_name: noOMP
+    state: proxy
+    driver: native-wrapper
+    image: local/colocboost-noomp-proxy
+    proof: [source-tarball-sha256, r-executable, r-devel-revision, no-openmp-compile-flags, no-openmp-link-flags, no-loaded-openmp-runtime, dependency-openmp-audit]
+    limitation: Purpose-built no-OpenMP R and rebuilt hard dependencies are an acceptance spike; failed runtime proof changes this row to uncovered.
+
+  - id: noremap
+    group: additional
+    cran_name: noRemap
+    state: not-applicable
+    driver: r-binary
+    runner: ubuntu-24.04
+    proof: [source-tarball-sha256, no-package-cpp-source, obsolete-special-area]
+    predicate:
+      input: built-source-tarball
+      command: [python, .github/ci/evaluate_native_features.py, --tarball, '{tarball}', --rule, no-cpp-source]
+
+  - id: nosuggests
+    group: additional
+    cran_name: noSuggests
+    state: direct
+    driver: native-wrapper
+    image: ghcr.io/r-hub/containers/nosuggests@sha256:588bd73470d657d0d2560a90e5fe036d191a89fde394b2c67c6423b71d7a12df
+    proof: [source-tarball-sha256, container-system-r, r-executable, depends-only-policy, allowed-test-frameworks, allowed-vignette-builders, nonexempt-suggests-absent, nonzero-installed-test-count]
+
+  - id: valgrind
+    group: additional
+    cran_name: valgrind
+    state: direct
+    driver: native-wrapper
+    image: ghcr.io/r-hub/containers/valgrind@sha256:98dfda5016513c269e33c8155ea57745d977dad4b1a703b28db82fcb1237ef9c
+    proof: [source-tarball-sha256, container-system-r, r-executable, opt-r-devel-valgrind, use-valgrind, valgrind-runtime, suppression-and-error-scan]
+
+  - id: 0len
+    group: additional
+    cran_name: 0len
+    state: not-applicable
+    driver: r-binary
+    runner: ubuntu-24.04
+    proof: [source-tarball-sha256, no-direct-native-interface, removed-official-experimental-support]
+    predicate:
+      input: built-source-tarball
+      command: [python, .github/ci/evaluate_native_features.py, --tarball, '{tarball}', --rule, no-direct-native-call]
+
+  - id: rchk
+    group: additional
+    cran_name: rchk
+    state: not-applicable
+    driver: r-binary
+    runner: ubuntu-24.04
+    proof: [source-tarball-sha256, no-package-c-cpp-object, compiled-dependencies-visible-limitation]
+    predicate:
+      input: built-source-tarball
+      command: [python, .github/ci/evaluate_native_features.py, --tarball, '{tarball}', --rule, no-c-cpp-object]
+
+  - id: rcnst
+    group: additional
+    cran_name: rcnst
+    state: proxy
+    driver: native-wrapper
+    image: ghcr.io/r-hub/containers/ubuntu-clang@sha256:b66e5f86ce6f8fa3e6afd497fabfdb3aeac79c74ee3525e8a8814de79aa2bc82
+    proof: [source-tarball-sha256, container-system-r, r-executable, r-devel-revision, r-compile-pkgs-1, r-jit-strategy-4, r-check-constants-5, constant-corruption-diagnostics]
+    limitation: No active direct rcnst image exists; an explicitly configured active R-devel lane is purpose-specific proxy coverage.
+
+  - id: rlibro
+    group: additional
+    cran_name: rlibro
+    state: proxy
+    driver: native-wrapper
+    image: local/colocboost-rlibro-proxy
+    proof: [source-tarball-sha256, r-executable, nonroot-uid, readonly-bind-mount, write-failure, installed-library-path, package-check-executed]
+    limitation: No active direct image exists; the proxy must use a real read-only bind mount and non-root check rather than chmod under root.
+
+  - id: musl
+    group: additional
+    cran_name: musl
+    state: direct
+    driver: native-wrapper
+    image: cran-linked-public-musl-reproduction
+    proof: [source-tarball-sha256, r-executable, r-version, musl-libc, alpine-version, locale, architecture]
+
+  - id: linux-arm64
+    group: additional
+    cran_name: linux-arm64
+    state: direct
+    driver: r-binary
+    runner: [ubuntu-24.04, ubuntu-24.04-arm]
+    proof: [source-tarball-sha256, r-executable, native-amd64, native-arm64, identical-rcheckserver-image, identical-tarball-and-configuration, architecture-only-comparison]
+
+  - id: vnu
+    group: additional
+    cran_name: vnu
+    state: direct
+    driver: native-wrapper
+    image: ghcr.io/r-hub/containers/vnu@sha256:03f45d5944fc092627cae2e944f16f037fed9795f8768c90d9511799098a7884
+    proof: [source-tarball-sha256, container-system-r, r-executable, vnu-special-dispatch, nu-validator-executed, zero-bad-entries, validator-output]
