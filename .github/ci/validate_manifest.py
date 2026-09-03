@@ -259,6 +259,97 @@ APPROVED_RHUB_IMAGE = {
 }
 DRIVER_ENDPOINT = {"native-wrapper": "image", "r-binary": "runner"}
 SPECIAL_NATIVE_BINDINGS = {
+    "atlas": {
+        "wrapper_path": "/usr/local/bin/r-check",
+        "wrapper_sha256": "a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090",
+        "system_r": "/opt/R/devel/bin/R",
+        "wrapper_input": "tarball-parent",
+        "check_args": ["--no-manual", "--no-build-vignettes"],
+        "runtime_profile": "atlas",
+        "expected_r_kind": "devel",
+        "expected_os": "linux",
+        "expected_architecture": "x86_64",
+        "expected_distribution": "fedora",
+        "expected_distribution_version": "42",
+    },
+    "r-devel-linux-x86-64-debian-clang": {
+        "wrapper_path": "/usr/local/bin/r-check",
+        "wrapper_sha256": "a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090",
+        "system_r": "/opt/R/devel/bin/R",
+        "wrapper_input": "tarball-parent",
+        "check_args": ["--no-manual", "--no-build-vignettes"],
+        "runtime_profile": "clang22",
+        "expected_r_kind": "devel",
+        "expected_os": "linux",
+        "expected_architecture": "x86_64",
+        "expected_distribution": "ubuntu",
+        "expected_distribution_version": "22.04",
+    },
+    "r-devel-linux-x86-64-debian-gcc": {
+        "wrapper_path": "/usr/local/bin/r-check",
+        "wrapper_sha256": "a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090",
+        "system_r": "/opt/R/devel/bin/R",
+        "wrapper_input": "tarball-parent",
+        "check_args": ["--no-manual", "--no-build-vignettes"],
+        "runtime_profile": "ubuntu-gcc16",
+        "expected_r_kind": "devel",
+        "expected_os": "linux",
+        "expected_architecture": "x86_64",
+        "expected_distribution": "ubuntu",
+        "expected_distribution_version": "24.04",
+    },
+    "r-devel-linux-x86-64-fedora-clang": {
+        "wrapper_path": "/usr/local/bin/r-check",
+        "wrapper_sha256": "a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090",
+        "system_r": "/opt/R/devel/bin/R",
+        "wrapper_input": "tarball-parent",
+        "check_args": ["--no-manual", "--no-build-vignettes"],
+        "runtime_profile": "clang22",
+        "expected_r_kind": "devel",
+        "expected_os": "linux",
+        "expected_architecture": "x86_64",
+        "expected_distribution": "ubuntu",
+        "expected_distribution_version": "22.04",
+    },
+    "r-devel-linux-x86-64-fedora-gcc": {
+        "wrapper_path": "/usr/local/bin/r-check",
+        "wrapper_sha256": "a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090",
+        "system_r": "/opt/R/devel-gcc16/bin/R",
+        "wrapper_input": "tarball-parent",
+        "check_args": ["--no-manual", "--no-build-vignettes"],
+        "runtime_profile": "gcc16",
+        "expected_r_kind": "devel",
+        "expected_os": "linux",
+        "expected_architecture": "x86_64",
+        "expected_distribution": "fedora",
+        "expected_distribution_version": "44",
+    },
+    "r-patched-linux-x86-64": {
+        "wrapper_path": "/usr/local/bin/r-check",
+        "wrapper_sha256": "a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090",
+        "system_r": "/opt/R/next/bin/R",
+        "wrapper_input": "tarball-parent",
+        "check_args": ["--no-manual", "--no-build-vignettes"],
+        "runtime_profile": "ubuntu-next",
+        "expected_r_kind": "patched",
+        "expected_os": "linux",
+        "expected_architecture": "x86_64",
+        "expected_distribution": "ubuntu",
+        "expected_distribution_version": "24.04",
+    },
+    "r-release-linux-x86-64": {
+        "wrapper_path": "/usr/local/bin/r-check",
+        "wrapper_sha256": "a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090",
+        "system_r": "/opt/R/release/bin/R",
+        "wrapper_input": "tarball-parent",
+        "check_args": [],
+        "runtime_profile": "ubuntu-release",
+        "expected_r_kind": "release",
+        "expected_os": "linux",
+        "expected_architecture": "x86_64",
+        "expected_distribution": "ubuntu",
+        "expected_distribution_version": "24.04",
+    },
     "mkl": {
         "wrapper_path": "/usr/local/bin/r-check",
         "system_r": "/opt/R/devel-mkl/bin/R",
@@ -269,6 +360,69 @@ SPECIAL_NATIVE_BINDINGS = {
         "system_r": "/opt/R/devel/bin/R",
         "wrapper_input": "tarball-parent",
     },
+}
+PLATFORM_R_BINDINGS = {
+    "r-devel-windows-x86-64": {
+        "setup_r_selector": "devel",
+        "system_r": "C:/R/bin/R.exe",
+        "check_args": ["--as-cran", "--no-manual", "--no-build-vignettes"],
+        "expected_r_kind": "devel",
+        "expected_os": "windows",
+        "expected_architecture": "x86_64",
+    },
+    "r-release-macos-arm64": {
+        "setup_r_selector": "release",
+        "system_r": "/Library/Frameworks/R.framework/Resources/bin/R",
+        "check_args": ["--as-cran", "--no-manual", "--no-build-vignettes"],
+        "expected_r_kind": "release",
+        "expected_os": "macos",
+        "expected_architecture": "aarch64",
+    },
+    "r-release-macos-x86-64": {
+        "setup_r_selector": "release",
+        "system_r": "/Library/Frameworks/R.framework/Resources/bin/R",
+        "check_args": ["--as-cran", "--no-manual", "--no-build-vignettes"],
+        "expected_r_kind": "release",
+        "expected_os": "macos",
+        "expected_architecture": "x86_64",
+    },
+    "r-release-windows-x86-64": {
+        "setup_r_selector": "release",
+        "system_r": "C:/R/bin/R.exe",
+        "check_args": ["--as-cran", "--no-manual", "--no-build-vignettes"],
+        "expected_r_kind": "release",
+        "expected_os": "windows",
+        "expected_architecture": "x86_64",
+    },
+    "r-oldrel-macos-arm64": {
+        "setup_r_selector": "oldrel-1",
+        "system_r": "/Library/Frameworks/R.framework/Resources/bin/R",
+        "check_args": ["--as-cran", "--no-manual", "--no-build-vignettes"],
+        "expected_r_kind": "release",
+        "expected_os": "macos",
+        "expected_architecture": "aarch64",
+    },
+    "r-oldrel-macos-x86-64": {
+        "setup_r_selector": "oldrel-1",
+        "system_r": "/Library/Frameworks/R.framework/Resources/bin/R",
+        "check_args": ["--as-cran", "--no-manual", "--no-build-vignettes"],
+        "expected_r_kind": "release",
+        "expected_os": "macos",
+        "expected_architecture": "x86_64",
+    },
+    "r-oldrel-windows-x86-64": {
+        "setup_r_selector": "oldrel-1",
+        "system_r": "C:/R/bin/R.exe",
+        "check_args": ["--as-cran", "--no-manual", "--no-build-vignettes"],
+        "expected_r_kind": "release",
+        "expected_os": "windows",
+        "expected_architecture": "x86_64",
+    },
+}
+EXECUTION_BINDING_FIELDS = {
+    field
+    for binding in (*SPECIAL_NATIVE_BINDINGS.values(), *PLATFORM_R_BINDINGS.values())
+    for field in binding
 }
 UNIT_LANE_FIELDS = {
     "environment_id",
@@ -473,16 +627,24 @@ def _validate_row(row: Any, index: int) -> None:
         raise ValueError(f"{row['id']} does not match approved row contract")
 
     expected_binding = SPECIAL_NATIVE_BINDINGS.get(row["id"])
-    binding_fields = {"wrapper_path", "system_r", "wrapper_input"}
+    expected_platform_binding = PLATFORM_R_BINDINGS.get(row["id"])
     if expected_binding is not None:
-        actual_binding = {field: row.get(field) for field in binding_fields}
+        actual_binding = {field: row.get(field) for field in expected_binding}
         if actual_binding != expected_binding:
             raise ValueError(
                 f"{row['id']} native wrapper binding does not match approved contract"
             )
-    elif binding_fields & set(row):
+    elif expected_platform_binding is not None:
+        actual_binding = {
+            field: row.get(field) for field in expected_platform_binding
+        }
+        if actual_binding != expected_platform_binding:
+            raise ValueError(
+                f"{row['id']} platform R binding does not match approved contract"
+            )
+    elif EXECUTION_BINDING_FIELDS & set(row):
         raise ValueError(
-            f"{row['id']} must not declare a special native wrapper binding"
+            f"{row['id']} must not declare an execution binding"
         )
 
     if row["group"] == "primary":

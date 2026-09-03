@@ -11,7 +11,8 @@ CHECKOUT = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"
 SETUP_PIXI = "prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e"
 UPLOAD = "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
 DOWNLOAD = "actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131"
-ALLOWED_ACTIONS = {CHECKOUT, SETUP_PIXI, UPLOAD, DOWNLOAD}
+SETUP_R = "r-lib/actions/setup-r@465b7d8e732ca3921382b1674c59bada9cbf3399"
+ALLOWED_ACTIONS = {CHECKOUT, SETUP_PIXI, SETUP_R, UPLOAD, DOWNLOAD}
 MKL_IMAGE = "ghcr.io/r-hub/containers/mkl@sha256:d84847130b3ae0b9b0402208ee17360ab527df1c448c44ba045b44524b17620a"
 NOSUGGESTS_IMAGE = "ghcr.io/r-hub/containers/nosuggests@sha256:588bd73470d657d0d2560a90e5fe036d191a89fde394b2c67c6423b71d7a12df"
 WRAPPER_SHA256 = {
@@ -52,15 +53,19 @@ def test_triggers_permissions_concurrency_and_job_inventory_are_exact():
         "group": "cran-preflight-${{ github.event_name }}-${{ github.ref }}",
         "cancel-in-progress": True,
     }
-    assert set(workflow["jobs"]) == {"prepare", "mkl", "nosuggests", "summary-gate"}
-    assert all("strategy" not in job for job in workflow["jobs"].values())
+    assert set(workflow["jobs"]) == {
+        "prepare", "primary-linux", "primary-platform", "mkl", "nosuggests",
+        "summary-gate",
+    }
+    assert workflow["jobs"]["primary-linux"]["strategy"]["fail-fast"] is False
+    assert workflow["jobs"]["primary-platform"]["strategy"]["fail-fast"] is False
 
 
 def test_every_job_is_inert_outside_the_fork_and_dependents_stop_when_cancelled():
     _, workflow = load_workflow()
 
     assert workflow["jobs"]["prepare"]["if"] == "${{ " + FORK_GUARD + " }}"
-    for name in ("mkl", "nosuggests"):
+    for name in ("primary-linux", "primary-platform", "mkl", "nosuggests"):
         assert workflow["jobs"][name]["if"] == (
             "${{ always() && !cancelled() && " + FORK_GUARD + " }}"
         )
@@ -69,7 +74,212 @@ def test_every_job_is_inert_outside_the_fork_and_dependents_stop_when_cancelled(
     assert summary["if"] == (
         "${{ always() && !cancelled() && " + FORK_GUARD + " }}"
     )
-    assert summary["needs"] == ["prepare", "mkl", "nosuggests"]
+    assert summary["needs"] == [
+        "prepare", "primary-linux", "primary-platform", "mkl", "nosuggests",
+    ]
+
+
+def test_primary_linux_matrix_is_exact_and_binds_native_runtime_contracts():
+    _, workflow = load_workflow()
+    job = workflow["jobs"]["primary-linux"]
+    rows = job["strategy"]["matrix"]["include"]
+    expected = {
+        "r-devel-linux-x86-64-debian-clang": ("ghcr.io/r-hub/containers/clang22@sha256:f4193769412c461365849dd664b3d42bd2a0aebe520eab3ae6cd426a19d8b71e", "/opt/R/devel/bin/R", "clang22", "standard-no-documentation", "--no-manual --no-build-vignettes"),
+        "r-devel-linux-x86-64-debian-gcc": ("ghcr.io/r-hub/containers/ubuntu-gcc16@sha256:2e9576e51ad17a706887b7e06fc4057388765226ec795f3c7af0e7348fb8fbf1", "/opt/R/devel/bin/R", "ubuntu-gcc16", "standard-no-documentation", "--no-manual --no-build-vignettes"),
+        "r-devel-linux-x86-64-fedora-clang": ("ghcr.io/r-hub/containers/clang22@sha256:f4193769412c461365849dd664b3d42bd2a0aebe520eab3ae6cd426a19d8b71e", "/opt/R/devel/bin/R", "clang22", "standard-no-documentation", "--no-manual --no-build-vignettes"),
+        "r-devel-linux-x86-64-fedora-gcc": ("ghcr.io/r-hub/containers/gcc16@sha256:1127418efe3938f0e72fc29c55596a8cdde03293928b60aeb0ac44b6586960d2", "/opt/R/devel-gcc16/bin/R", "gcc16", "standard-no-documentation", "--no-manual --no-build-vignettes"),
+        "r-patched-linux-x86-64": ("ghcr.io/r-hub/containers/ubuntu-next@sha256:1c29eed93b0aa05fe147e476e6b3510a09fb0476460eeefbbe99a4a1eb2c3bd9", "/opt/R/next/bin/R", "ubuntu-next", "standard-no-documentation", "--no-manual --no-build-vignettes"),
+        "r-release-linux-x86-64": ("ghcr.io/r-hub/containers/ubuntu-release@sha256:714722b7ecb4307fbf88a707f83fb045181482c0c8ce6086a0e26860416ca9c2", "/opt/R/release/bin/R", "ubuntu-release", "full-documentation", ""),
+    }
+    assert len(rows) == len(expected)
+    assert len({row["environment_id"] for row in rows}) == len(rows)
+    assert {row["environment_id"] for row in rows} == set(expected)
+    for row in rows:
+        image, system_r, profile, check_profile, check_args = expected[row["environment_id"]]
+        assert row["image"] == image
+        assert row["system_r"] == system_r
+        assert row["runtime_profile"] == profile
+        assert row["check_profile"] == check_profile
+        assert row["check_args"] == check_args
+        assert row["wrapper"] == "/usr/local/bin/r-check"
+        assert row["wrapper_sha256"] == "a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090"
+    assert job["container"] == {"image": "${{ matrix.image }}", "options": "--user 0"}
+    assert job["defaults"] == {"run": {"shell": "bash"}}
+
+
+def test_primary_linux_children_have_two_independent_results_and_full_diagnostics():
+    _, workflow = load_workflow()
+    job = workflow["jobs"]["primary-linux"]
+    ids = [step.get("id") for step in job["steps"]]
+    for step_id in (
+        "verify-source", "extract-source", "prepare-unit-dependencies",
+        "verify-unit-dependencies", "probe-runtime", "verify-runtime", "unit-full",
+        "adapt-unit", "unit-result-gate", "native-check", "package-result-gate",
+        "finalize-unit", "finalize-check", "upload-unit", "upload-check",
+        "upload-diagnostics", "producer-gate",
+    ):
+        assert ids.count(step_id) == 1
+    package_gate = step_with_id(job, "package-result-gate")
+    assert "UNIT_GATE_OUTCOME" not in package_gate.get("env", {})
+    assert "steps.unit-full.outcome" not in package_gate.get("env", {}).values()
+    assert package_gate["env"]["SEMANTIC_PROOF_OUTCOME"] == (
+        "${{ steps.verify-check-semantics.outcome }}"
+    )
+    unit_gate = step_with_id(job, "unit-result-gate")
+    assert "NATIVE_CHECK_OUTCOME" not in unit_gate.get("env", {})
+    for step_id in ("finalize-unit", "finalize-check", "upload-unit", "upload-check", "upload-diagnostics", "producer-gate"):
+        assert step_with_id(job, step_id)["if"] == "${{ always() }}"
+    diagnostics = step_with_id(job, "upload-diagnostics")
+    assert diagnostics["with"]["include-hidden-files"] is True
+    assert diagnostics["with"]["if-no-files-found"] == "error"
+    assert "*.Rcheck" in diagnostics["with"]["path"]
+    assert "ci-verify-runtime" in step_with_id(job, "verify-runtime")["run"]
+    release_proof = step_with_id(job, "verify-check-semantics")
+    assert "ci-special-check" in release_proof["run"]
+    assert '"$CHECK_PROFILE"' in release_proof["run"]
+    assert "matrix.environment_id" not in release_proof["run"]
+    ids = [step.get("id") for step in job["steps"]]
+    assert ids.index("verify-check-semantics") < ids.index("package-result-gate")
+    assert ids.index("finalize-unit") < ids.index("upload-unit")
+    assert ids.index("finalize-check") < ids.index("upload-check")
+    assert max(ids.index("upload-unit"), ids.index("upload-check")) < ids.index(
+        "producer-gate"
+    )
+    assert step_with_id(job, "upload-unit")["with"] == {
+        "name": "cran-preflight-result-unit-${{ matrix.environment_id }}",
+        "path": "${{ runner.temp }}/primary-linux-results/unit/result.json",
+        "if-no-files-found": "error",
+    }
+    assert step_with_id(job, "upload-check")["with"] == {
+        "name": "cran-preflight-result-package-check-${{ matrix.environment_id }}",
+        "path": "${{ runner.temp }}/primary-linux-results/package-check/result.json",
+        "if-no-files-found": "error",
+    }
+
+
+def test_primary_platform_matrix_is_exact_and_binds_setup_r_identity():
+    _, workflow = load_workflow()
+    job = workflow["jobs"]["primary-platform"]
+    rows = job["strategy"]["matrix"]["include"]
+    expected = {
+        "r-devel-windows-x86-64": (
+            "windows-2022", "devel", "C:/R/bin/R.exe", "devel", "windows",
+            "x86_64",
+        ),
+        "r-release-windows-x86-64": (
+            "windows-2022", "release", "C:/R/bin/R.exe", "release", "windows",
+            "x86_64",
+        ),
+        "r-oldrel-windows-x86-64": (
+            "windows-2022", "oldrel-1", "C:/R/bin/R.exe", "release", "windows",
+            "x86_64",
+        ),
+        "r-release-macos-arm64": (
+            "macos-15", "release",
+            "/Library/Frameworks/R.framework/Resources/bin/R", "release",
+            "macos", "aarch64",
+        ),
+        "r-oldrel-macos-arm64": (
+            "macos-15", "oldrel-1",
+            "/Library/Frameworks/R.framework/Resources/bin/R", "release",
+            "macos", "aarch64",
+        ),
+        "r-release-macos-x86-64": (
+            "macos-15-intel", "release",
+            "/Library/Frameworks/R.framework/Resources/bin/R", "release",
+            "macos", "x86_64",
+        ),
+        "r-oldrel-macos-x86-64": (
+            "macos-15-intel", "oldrel-1",
+            "/Library/Frameworks/R.framework/Resources/bin/R", "release",
+            "macos", "x86_64",
+        ),
+    }
+    assert len(rows) == len(expected)
+    for row in rows:
+        assert (
+            row["runner"], row["setup_r_selector"], row["system_r"],
+            row["expected_r_kind"], row["expected_os"],
+            row["expected_architecture"],
+        ) == expected[row["environment_id"]]
+        assert row["check_args"] == "--as-cran --no-manual --no-build-vignettes"
+    assert job["runs-on"] == "${{ matrix.runner }}"
+    assert job["defaults"] == {"run": {"shell": "pwsh"}}
+    setup_r = step_with_id(job, "setup-r")
+    assert setup_r["uses"] == SETUP_R
+    assert setup_r["continue-on-error"] is True
+    assert setup_r["with"]["r-version"] == "${{ matrix.setup_r_selector }}"
+    assert setup_r["with"]["use-public-rspm"] is True
+    identity = step_with_id(job, "verify-platform-r")
+    assert identity["env"]["SETUP_R_VERSION"] == (
+        "${{ steps.setup-r.outputs.installed-r-version }}"
+    )
+    assert '"-B", ".github/ci/verify_platform_r.py"' in identity["run"]
+    assert "pixi run --locked python @arguments" in identity["run"]
+    assert "ci-platform-r" not in identity["run"]
+
+
+def test_primary_platform_children_are_cross_platform_and_fail_closed():
+    _, workflow = load_workflow()
+    job = workflow["jobs"]["primary-platform"]
+    ids = [step.get("id") for step in job["steps"]]
+    for step_id in (
+        "initialize", "download-source", "verify-source", "extract-source",
+        "verify-platform-r", "prepare-unit-dependencies",
+        "verify-unit-dependencies", "unit-full", "adapt-unit",
+        "unit-result-gate", "prepare-check-dependencies",
+        "verify-check-dependencies", "r-binary-check", "package-result-gate",
+        "finalize-unit", "finalize-check", "upload-unit", "upload-check",
+        "upload-diagnostics", "producer-gate",
+    ):
+        assert ids.count(step_id) == 1
+    for step in job["steps"]:
+        run = step.get("run", "")
+        assert "set -" not in run
+        assert "export " not in run
+        assert " \\\n" not in run
+    assert '"-B", ".github/ci/verify_source.py"' in step_with_id(
+        job, "verify-source"
+    )["run"]
+    assert '"-B", ".github/ci/extract_source.py"' in step_with_id(
+        job, "extract-source"
+    )["run"]
+    assert '"-B", ".github/ci/run_r_binary_check.py"' in step_with_id(
+        job, "r-binary-check"
+    )["run"]
+    unit_gate = step_with_id(job, "unit-result-gate")
+    package_gate = step_with_id(job, "package-result-gate")
+    assert unit_gate["env"]["SETUP_R_OUTCOME"] == "${{ steps.setup-r.outcome }}"
+    assert package_gate["env"]["SETUP_R_OUTCOME"] == "${{ steps.setup-r.outcome }}"
+    assert "BINARY_CHECK_OUTCOME" not in unit_gate["env"]
+    assert "UNIT_OUTCOME" not in package_gate["env"]
+    assert "ADAPTER_OUTCOME" not in package_gate["env"]
+    for step_id in (
+        "finalize-unit", "finalize-check", "upload-unit", "upload-check",
+        "upload-diagnostics", "producer-gate",
+    ):
+        assert step_with_id(job, step_id)["if"] == "${{ always() }}"
+    diagnostics = step_with_id(job, "upload-diagnostics")
+    assert diagnostics["with"]["include-hidden-files"] is True
+    assert diagnostics["with"]["if-no-files-found"] == "error"
+    assert "*.Rcheck" in diagnostics["with"]["path"]
+
+
+def test_task10_primary_foundation_produces_exactly_30_terminal_keys():
+    _, workflow = load_workflow()
+    keys = set()
+    for job_name in ("primary-linux", "primary-platform"):
+        rows = workflow["jobs"][job_name]["strategy"]["matrix"]["include"]
+        for row in rows:
+            keys.add(("package-check", row["environment_id"]))
+            keys.add(("unit", row["environment_id"]))
+    for environment_id in ("mkl", "nosuggests"):
+        keys.add(("package-check", environment_id))
+        keys.add(("unit", environment_id))
+    assert len(keys) == 30
+    assert sum(kind == "package-check" for kind, _ in keys) == 15
+    assert sum(kind == "unit" for kind, _ in keys) == 15
+    assert all(kind != "applicability" for kind, _ in keys)
 
 
 def test_all_actions_are_immutable_allowlisted_and_checkout_is_safe():
@@ -355,6 +565,8 @@ def test_summary_publication_and_explicit_outcome_gate_run_after_failures():
     assert final_gate["if"] == "${{ always() }}"
     assert final_gate["env"] == {
         "PREPARE_RESULT": "${{ needs.prepare.result }}",
+        "PRIMARY_LINUX_RESULT": "${{ needs.primary-linux.result }}",
+        "PRIMARY_PLATFORM_RESULT": "${{ needs.primary-platform.result }}",
         "MKL_RESULT": "${{ needs.mkl.result }}",
         "NOSUGGESTS_RESULT": "${{ needs.nosuggests.result }}",
         "SOURCE_DOWNLOAD_OUTCOME": "${{ steps.download-source.outcome }}",

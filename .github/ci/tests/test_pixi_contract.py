@@ -131,6 +131,13 @@ def test_top_level_task_interfaces_are_explicit(manifest):
         "ci-extract-source",
         "ci-r-dependencies",
         "ci-verify-dependencies",
+        "ci-full-dependencies",
+        "ci-verify-full-dependencies",
+        "ci-probe-runtime",
+        "ci-verify-runtime",
+        "ci-platform-r",
+        "ci-r-binary-check",
+        "ci-special-check",
         "ci-verify-mkl",
         "ci-native-check",
         "ci-unit-result",
@@ -183,6 +190,34 @@ def test_top_level_task_interfaces_are_explicit(manifest):
         "r_executable", "environment_id", "tarball", "library", "evidence", "install_package"
     ]
     assert task_args(tasks["ci-verify-dependencies"]) == ["environment_id", "evidence"]
+    assert task_args(tasks["ci-full-dependencies"]) == [
+        "r_executable", "environment_id", "purpose", "tarball", "library",
+        "evidence", "source_sha", "event_sha", "tarball_sha256",
+    ]
+    assert task_args(tasks["ci-verify-full-dependencies"]) == [
+        "environment_id", "purpose", "evidence", "source_sha", "event_sha",
+        "tarball_sha256", "r_executable",
+    ]
+    assert task_args(tasks["ci-probe-runtime"]) == [
+        "r_executable", "environment_id", "runtime_profile", "source_sha",
+        "event_sha", "tarball_sha256", "evidence",
+    ]
+    assert task_args(tasks["ci-verify-runtime"]) == [
+        "environment_id", "evidence", "source_sha", "event_sha", "tarball_sha256",
+    ]
+    assert task_args(tasks["ci-platform-r"]) == [
+        "environment_id", "r_executable", "selected_selector", "setup_r_version",
+        "runner_label", "evidence", "github_output",
+    ]
+    assert task_args(tasks["ci-r-binary-check"]) == [
+        "environment_id", "r_executable", "tarball", "metadata", "source_sha",
+        "event_sha", "work_dir", "check_library", "evidence", "log",
+    ]
+    assert task_args(tasks["ci-special-check"]) == [
+        "environment_id", "profile", "check_root", "native_evidence",
+        "runtime_evidence", "source_sha", "event_sha", "tarball_sha256",
+        "output", "github_output",
+    ]
     assert task_args(tasks["ci-verify-mkl"]) == [
         "r_executable",
         "policy",
@@ -240,6 +275,13 @@ def test_top_level_task_interfaces_are_explicit(manifest):
     assert ".github/ci/extract_source.py" in commands["ci-extract-source"]
     assert "--helper=prepare-rhub-dependencies" in commands["ci-r-dependencies"]
     assert ".github/ci/verify_dependency_evidence.py" in commands["ci-verify-dependencies"]
+    assert "--helper=prepare-full-dependencies" in commands["ci-full-dependencies"]
+    assert ".github/ci/verify_full_dependencies.py" in commands["ci-verify-full-dependencies"]
+    assert "--helper=probe-runtime" in commands["ci-probe-runtime"]
+    assert ".github/ci/verify_runtime_evidence.py" in commands["ci-verify-runtime"]
+    assert ".github/ci/verify_platform_r.py" in commands["ci-platform-r"]
+    assert ".github/ci/run_r_binary_check.py" in commands["ci-r-binary-check"]
+    assert ".github/ci/verify_special_check.py" in commands["ci-special-check"]
     assert "--helper=verify-mkl" in commands["ci-verify-mkl"]
     assert ".github/ci/run_native_check.py" in commands["ci-native-check"]
     assert ".github/ci/adapt_unit_result.py" in commands["ci-unit-result"]
@@ -280,6 +322,34 @@ def test_typed_task_values_are_shell_quoted(manifest):
         "ci-extract-source": ("tarball", "metadata", "source_sha", "event_sha", "destination", "github_output"),
         "ci-r-dependencies": ("r_executable", "environment_id", "tarball", "library", "evidence", "install_package"),
         "ci-verify-dependencies": ("environment_id", "evidence"),
+        "ci-full-dependencies": (
+            "r_executable", "environment_id", "purpose", "tarball", "library",
+            "evidence", "source_sha", "event_sha", "tarball_sha256",
+        ),
+        "ci-verify-full-dependencies": (
+            "environment_id", "purpose", "evidence", "source_sha", "event_sha",
+            "tarball_sha256", "r_executable",
+        ),
+        "ci-probe-runtime": (
+            "r_executable", "environment_id", "runtime_profile", "source_sha",
+            "event_sha", "tarball_sha256", "evidence",
+        ),
+        "ci-verify-runtime": (
+            "environment_id", "evidence", "source_sha", "event_sha", "tarball_sha256",
+        ),
+        "ci-platform-r": (
+            "environment_id", "r_executable", "selected_selector", "setup_r_version",
+            "runner_label", "evidence", "github_output",
+        ),
+        "ci-r-binary-check": (
+            "environment_id", "r_executable", "tarball", "metadata", "source_sha",
+            "event_sha", "work_dir", "check_library", "evidence", "log",
+        ),
+        "ci-special-check": (
+            "environment_id", "profile", "check_root", "native_evidence",
+            "runtime_evidence", "source_sha", "event_sha", "tarball_sha256",
+            "output", "github_output",
+        ),
         "ci-verify-mkl": ("r_executable", "policy", "evidence"),
         "ci-native-check": ("environment_id", "wrapper", "r_executable", "tarball", "metadata", "source_sha", "event_sha", "work_dir", "check_library", "evidence", "log"),
         "ci-unit-result": ("diagnostic", "output", "environment_id", "source_sha", "event_sha", "tarball_sha256", "sidecar_1", "sidecar_2"),

@@ -1,4 +1,5 @@
 import json
+import hashlib
 import os
 import stat
 import subprocess
@@ -129,6 +130,68 @@ def test_native_wrapper_binds_verified_single_tarball_parent_and_system_r(tmp_pa
     proof = json.loads(evidence.read_text())
     assert proof["required_r_executable"]["path"] == os.fspath(system_r)
     assert proof["path_r_resolution"] == os.fspath(system_r)
+
+
+def test_native_wrapper_binds_declared_hash_and_check_args(tmp_path):
+    tarball, metadata = make_artifact(tmp_path)
+    wrapper = make_executable(tmp_path / "bin" / "r-check")
+    system_r = make_executable(tmp_path / "bin" / "R")
+    wrapper_sha256 = hashlib.sha256(wrapper.read_bytes()).hexdigest()
+    environment = os.environ.copy()
+    environment["PATH"] = os.fspath(system_r.parent)
+    environment["CHECK_ARGS"] = "--no-manual --no-build-vignettes"
+    row = {
+        "id": "r-devel-linux-x86-64-debian-clang",
+        "driver": "native-wrapper",
+        "wrapper_path": os.fspath(wrapper),
+        "wrapper_sha256": wrapper_sha256,
+        "system_r": os.fspath(system_r),
+        "wrapper_input": "tarball-parent",
+        "check_args": ["--no-manual", "--no-build-vignettes"],
+    }
+
+    assert run_driver(
+        row,
+        requested_driver="native-wrapper",
+        executable=wrapper,
+        argv=[TARBALL_PARENT_TOKEN],
+        tarball=tarball,
+        metadata=metadata,
+        expected_source_sha=SOURCE_SHA,
+        expected_event_sha=EVENT_SHA,
+        required_r_executable=system_r,
+        environment=environment,
+    ) == 0
+
+    bad_hash = dict(row, wrapper_sha256="0" * 64)
+    with pytest.raises(ValueError, match="wrapper.*sha256"):
+        run_driver(
+            bad_hash,
+            requested_driver="native-wrapper",
+            executable=wrapper,
+            argv=[TARBALL_PARENT_TOKEN],
+            tarball=tarball,
+            metadata=metadata,
+            expected_source_sha=SOURCE_SHA,
+            expected_event_sha=EVENT_SHA,
+            required_r_executable=system_r,
+            environment=environment,
+        )
+
+    wrong_args_environment = dict(environment, CHECK_ARGS="--no-manual")
+    with pytest.raises(ValueError, match="CHECK_ARGS"):
+        run_driver(
+            row,
+            requested_driver="native-wrapper",
+            executable=wrapper,
+            argv=[TARBALL_PARENT_TOKEN],
+            tarball=tarball,
+            metadata=metadata,
+            expected_source_sha=SOURCE_SHA,
+            expected_event_sha=EVENT_SHA,
+            required_r_executable=system_r,
+            environment=wrong_args_environment,
+        )
 
 
 @pytest.mark.parametrize("extra_kind", ["regular", "symlink", "fifo"])
@@ -586,7 +649,7 @@ def test_driver_cli_validates_manifest_row_and_propagates_exit(tmp_path):
             "--manifest",
             str(CI_DIR / "check-matrix.yml"),
             "--environment-id",
-            "atlas",
+            "openblas",
             "--driver",
             "native-wrapper",
             "--executable",

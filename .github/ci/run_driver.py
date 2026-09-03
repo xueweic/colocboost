@@ -195,6 +195,29 @@ def _verify_native_r_binding(
     if declared_r is not None and os.fspath(system_r) != declared_r:
         raise ValueError("required system R does not match manifest system_r")
 
+    declared_wrapper_sha256 = manifest_row.get("wrapper_sha256")
+    if declared_wrapper_sha256 is not None:
+        if (
+            not isinstance(declared_wrapper_sha256, str)
+            or len(declared_wrapper_sha256) != 64
+            or any(character not in "0123456789abcdef" for character in declared_wrapper_sha256)
+        ):
+            raise ValueError("manifest wrapper sha256 must be 64 lowercase hex characters")
+        if _sha256(executable) != declared_wrapper_sha256:
+            raise ValueError("native wrapper sha256 does not match manifest")
+
+    declared_check_args = manifest_row.get("check_args")
+    if declared_check_args is not None:
+        if (
+            not isinstance(declared_check_args, list)
+            or any(not isinstance(item, str) or not item or any(c.isspace() for c in item)
+                   for item in declared_check_args)
+        ):
+            raise ValueError("manifest check_args must be a list of single-token strings")
+        actual_check_args = environment.get("CHECK_ARGS", "")
+        if actual_check_args != " ".join(declared_check_args):
+            raise ValueError("CHECK_ARGS does not match manifest check_args")
+
     path_value = environment.get("PATH")
     if not isinstance(path_value, str) or not path_value:
         raise ValueError("PATH must resolve the required system R for native-wrapper")
@@ -338,6 +361,8 @@ def run_driver(
         )
         evidence["required_r_executable"] = r_evidence["executable"]
         evidence["path_r_resolution"] = os.fspath(path_r)
+        evidence["wrapper_sha256"] = _sha256(executable_path)
+        evidence["check_args"] = selected_environment.get("CHECK_ARGS", "")
     if evidence_path is not None:
         _atomic_write_json(Path(evidence_path), evidence)
 

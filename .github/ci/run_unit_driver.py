@@ -57,8 +57,13 @@ def main(argv: list[str] | None = None) -> int:
     ]
     if arguments.filter is not None:
         command.append(f"--filter={arguments.filter}")
+    environment = dict(os.environ)
+    environment["R_PROFILE_USER"] = os.devnull
+    environment["R_ENVIRON_USER"] = os.devnull
     try:
-        completed = subprocess.run(command, check=False, shell=False)
+        completed = subprocess.run(
+            command, check=False, shell=False, env=environment
+        )
     except OSError as error:
         print(f"unit driver execution error: {error}", file=sys.stderr)
         return 2

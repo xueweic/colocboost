@@ -482,8 +482,42 @@ Expected: local fixtures and static contracts prove both job definitions are fai
 ### Task 10: Expand to 13 primary flavors and active R-hub checks
 
 **Files:**
+- Create: .github/actionlint.yaml
+- Create: .github/ci/prepare-full-dependencies.R
+- Create: .github/ci/verify_full_dependencies.py
+- Create: .github/ci/probe-runtime.R
+- Create: .github/ci/verify_runtime_evidence.py
+- Create: .github/ci/verify_platform_r.py
+- Create: .github/ci/run_r_binary_check.py
+- Create: .github/ci/verify_special_check.py
+- Create: .github/ci/verify_file_contract.py
+- Create: .github/ci/run_vnu.py
+- Create: .github/ci/fixtures/rhub-valgrind.supp
+- Create: .github/ci/tests/test-task10-runtime-policy.R
+- Create: .github/ci/tests/test_full_dependencies.py
+- Create: .github/ci/tests/test_runtime_evidence.py
+- Create: .github/ci/tests/test_platform_r.py
+- Create: .github/ci/tests/test_r_binary_check.py
+- Create: .github/ci/tests/test_special_check.py
+- Create: .github/ci/tests/fixtures/release-full-doc-00check.log
+- Create: .github/ci/tests/test_file_contract.py
+- Create: .github/ci/tests/test_vnu.py
 - Modify: .github/workflows/cran-preflight.yml
 - Modify: .github/ci/check-matrix.yml
+- Modify: .github/ci/validate_manifest.py
+- Modify: .github/ci/run_driver.py
+- Modify: .github/ci/run_native_check.py
+- Modify: .github/ci/run_r_helper.py
+- Modify: .github/ci/run_unit_driver.py
+- Modify: .github/ci/tests/test-workflow-policy.py
+- Modify: .github/ci/tests/test_manifest.py
+- Modify: .github/ci/tests/test_driver.py
+- Modify: .github/ci/tests/test_native_check.py
+- Modify: .github/ci/tests/test_unit_driver.py
+- Modify: .github/ci/tests/test_pixi_contract.py
+- Modify: pixi.toml
+- Modify: docs/superpowers/specs/2026-09-03-cran-preflight-ci-design.md
+- Modify: docs/superpowers/plans/2026-09-03-cran-preflight-ci.md
 
 **Interfaces:**
 - Consumes: shared tarball plus r-binary/native-wrapper drivers.

@@ -8,6 +8,17 @@ coverage:
     state: proxy
     driver: native-wrapper
     image: ghcr.io/r-hub/containers/clang22@sha256:f4193769412c461365849dd664b3d42bd2a0aebe520eab3ae6cd426a19d8b71e
+    wrapper_path: /usr/local/bin/r-check
+    wrapper_sha256: a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090
+    system_r: /opt/R/devel/bin/R
+    wrapper_input: tarball-parent
+    check_args: [--no-manual, --no-build-vignettes]
+    runtime_profile: clang22
+    expected_r_kind: devel
+    expected_os: linux
+    expected_architecture: x86_64
+    expected_distribution: ubuntu
+    expected_distribution_version: "22.04"
     proof: [source-tarball-sha256, container-system-r, r-executable, r-version, r-devel-revision, operating-system, compiler, clang-22, flang-22, libcxx, architecture, locale]
     limitation: Ubuntu and libc++ proxy the CRAN Debian testing environment; no active exact Debian/Clang CRAN image exists.
 
@@ -17,6 +28,17 @@ coverage:
     state: proxy
     driver: native-wrapper
     image: ghcr.io/r-hub/containers/ubuntu-gcc16@sha256:2e9576e51ad17a706887b7e06fc4057388765226ec795f3c7af0e7348fb8fbf1
+    wrapper_path: /usr/local/bin/r-check
+    wrapper_sha256: a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090
+    system_r: /opt/R/devel/bin/R
+    wrapper_input: tarball-parent
+    check_args: [--no-manual, --no-build-vignettes]
+    runtime_profile: ubuntu-gcc16
+    expected_r_kind: devel
+    expected_os: linux
+    expected_architecture: x86_64
+    expected_distribution: ubuntu
+    expected_distribution_version: "24.04"
     proof: [source-tarball-sha256, container-system-r, r-executable, r-version, r-devel-revision, operating-system, compiler, gcc-16, architecture, locale]
     limitation: Ubuntu proxies the CRAN Debian testing environment; ubuntu-gcc16 is selected explicitly instead of deprecated ubuntu-gcc12.
 
@@ -26,6 +48,17 @@ coverage:
     state: proxy
     driver: native-wrapper
     image: ghcr.io/r-hub/containers/clang22@sha256:f4193769412c461365849dd664b3d42bd2a0aebe520eab3ae6cd426a19d8b71e
+    wrapper_path: /usr/local/bin/r-check
+    wrapper_sha256: a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090
+    system_r: /opt/R/devel/bin/R
+    wrapper_input: tarball-parent
+    check_args: [--no-manual, --no-build-vignettes]
+    runtime_profile: clang22
+    expected_r_kind: devel
+    expected_os: linux
+    expected_architecture: x86_64
+    expected_distribution: ubuntu
+    expected_distribution_version: "22.04"
     proof: [source-tarball-sha256, container-system-r, r-executable, r-version, r-devel-revision, operating-system, compiler, clang-22, flang-22, libcxx, architecture, locale]
     limitation: Ubuntu and libc++ proxy Fedora and do not reproduce the current CRAN Fedora/Clang toolchain exactly.
 
@@ -35,6 +68,17 @@ coverage:
     state: direct
     driver: native-wrapper
     image: ghcr.io/r-hub/containers/gcc16@sha256:1127418efe3938f0e72fc29c55596a8cdde03293928b60aeb0ac44b6586960d2
+    wrapper_path: /usr/local/bin/r-check
+    wrapper_sha256: a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090
+    system_r: /opt/R/devel-gcc16/bin/R
+    wrapper_input: tarball-parent
+    check_args: [--no-manual, --no-build-vignettes]
+    runtime_profile: gcc16
+    expected_r_kind: devel
+    expected_os: linux
+    expected_architecture: x86_64
+    expected_distribution: fedora
+    expected_distribution_version: "44"
     proof: [source-tarball-sha256, container-system-r, r-executable, r-version, r-devel-revision, operating-system, fedora-44, compiler, gcc-version, architecture, locale]
 
   - id: r-devel-windows-x86-64
@@ -43,6 +87,12 @@ coverage:
     state: proxy
     driver: r-binary
     runner: windows-2022
+    setup_r_selector: devel
+    system_r: C:/R/bin/R.exe
+    check_args: [--as-cran, --no-manual, --no-build-vignettes]
+    expected_r_kind: devel
+    expected_os: windows
+    expected_architecture: x86_64
     proof: [source-tarball-sha256, r-executable, r-version, r-devel-revision, operating-system, windows-server-2022, compiler, rtools-gcc, architecture, locale]
     limitation: CRAN locale, hardware, and Rtools details differ from the GitHub Windows runner.
 
@@ -52,6 +102,17 @@ coverage:
     state: proxy
     driver: native-wrapper
     image: ghcr.io/r-hub/containers/ubuntu-next@sha256:1c29eed93b0aa05fe147e476e6b3510a09fb0476460eeefbbe99a4a1eb2c3bd9
+    wrapper_path: /usr/local/bin/r-check
+    wrapper_sha256: a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090
+    system_r: /opt/R/next/bin/R
+    wrapper_input: tarball-parent
+    check_args: [--no-manual, --no-build-vignettes]
+    runtime_profile: ubuntu-next
+    expected_r_kind: patched
+    expected_os: linux
+    expected_architecture: x86_64
+    expected_distribution: ubuntu
+    expected_distribution_version: "24.04"
     proof: [source-tarball-sha256, container-system-r, r-executable, r-version, r-revision, r-patched, operating-system, compiler, architecture, locale]
     limitation: Ubuntu proxies the CRAN Debian testing environment.
 
@@ -61,6 +122,17 @@ coverage:
     state: proxy
     driver: native-wrapper
     image: ghcr.io/r-hub/containers/ubuntu-release@sha256:714722b7ecb4307fbf88a707f83fb045181482c0c8ce6086a0e26860416ca9c2
+    wrapper_path: /usr/local/bin/r-check
+    wrapper_sha256: a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090
+    system_r: /opt/R/release/bin/R
+    wrapper_input: tarball-parent
+    check_args: []
+    runtime_profile: ubuntu-release
+    expected_r_kind: release
+    expected_os: linux
+    expected_architecture: x86_64
+    expected_distribution: ubuntu
+    expected_distribution_version: "24.04"
     proof: [source-tarball-sha256, container-system-r, r-executable, r-version, r-release, operating-system, compiler, architecture, locale]
     limitation: Ubuntu proxies the CRAN Debian testing environment.
 
@@ -70,6 +142,12 @@ coverage:
     state: proxy
     driver: r-binary
     runner: macos-15
+    setup_r_selector: release
+    system_r: /Library/Frameworks/R.framework/Resources/bin/R
+    check_args: [--as-cran, --no-manual, --no-build-vignettes]
+    expected_r_kind: release
+    expected_os: macos
+    expected_architecture: aarch64
     proof: [source-tarball-sha256, r-executable, r-version, r-release, operating-system, macos-version, compiler, apple-and-gnu-compilers, architecture, arm64, locale]
     limitation: GitHub runner hardware and image differ from CRAN macOS arm64.
 
@@ -79,6 +157,12 @@ coverage:
     state: proxy
     driver: r-binary
     runner: macos-15-intel
+    setup_r_selector: release
+    system_r: /Library/Frameworks/R.framework/Resources/bin/R
+    check_args: [--as-cran, --no-manual, --no-build-vignettes]
+    expected_r_kind: release
+    expected_os: macos
+    expected_architecture: x86_64
     proof: [source-tarball-sha256, r-executable, r-version, r-release, operating-system, macos-version, compiler, apple-and-gnu-compilers, architecture, x86-64, locale]
     limitation: GitHub runner macOS version and hardware differ from CRAN macOS x86_64.
 
@@ -88,6 +172,12 @@ coverage:
     state: proxy
     driver: r-binary
     runner: windows-2022
+    setup_r_selector: release
+    system_r: C:/R/bin/R.exe
+    check_args: [--as-cran, --no-manual, --no-build-vignettes]
+    expected_r_kind: release
+    expected_os: windows
+    expected_architecture: x86_64
     proof: [source-tarball-sha256, r-executable, r-version, r-release, operating-system, windows-server-2022, compiler, rtools-gcc, architecture, locale]
     limitation: CRAN locale and hardware differ from the GitHub Windows runner.
 
@@ -97,6 +187,12 @@ coverage:
     state: proxy
     driver: r-binary
     runner: macos-15
+    setup_r_selector: oldrel-1
+    system_r: /Library/Frameworks/R.framework/Resources/bin/R
+    check_args: [--as-cran, --no-manual, --no-build-vignettes]
+    expected_r_kind: release
+    expected_os: macos
+    expected_architecture: aarch64
     proof: [source-tarball-sha256, r-executable, r-version, r-oldrel, operating-system, macos-version, compiler, apple-and-gnu-compilers, architecture, arm64, locale]
     limitation: GitHub runner hardware and image differ from CRAN macOS arm64.
 
@@ -106,6 +202,12 @@ coverage:
     state: proxy
     driver: r-binary
     runner: macos-15-intel
+    setup_r_selector: oldrel-1
+    system_r: /Library/Frameworks/R.framework/Resources/bin/R
+    check_args: [--as-cran, --no-manual, --no-build-vignettes]
+    expected_r_kind: release
+    expected_os: macos
+    expected_architecture: x86_64
     proof: [source-tarball-sha256, r-executable, r-version, r-oldrel, operating-system, macos-version, compiler, apple-and-gnu-compilers, architecture, x86-64, locale]
     limitation: GitHub runner image differs from CRAN macOS x86_64.
 
@@ -115,6 +217,12 @@ coverage:
     state: proxy
     driver: r-binary
     runner: windows-2022
+    setup_r_selector: oldrel-1
+    system_r: C:/R/bin/R.exe
+    check_args: [--as-cran, --no-manual, --no-build-vignettes]
+    expected_r_kind: release
+    expected_os: windows
+    expected_architecture: x86_64
     proof: [source-tarball-sha256, r-executable, r-version, r-oldrel, operating-system, windows-server-2022, compiler, rtools-gcc, architecture, locale]
     limitation: CRAN locale and hardware differ from the GitHub Windows runner.
 
@@ -125,6 +233,17 @@ coverage:
     state: direct
     driver: native-wrapper
     image: ghcr.io/r-hub/containers/atlas@sha256:7597f7d0b6b2f009ae7bb425391523d8f4388223238db50d7dfb1572add63a88
+    wrapper_path: /usr/local/bin/r-check
+    wrapper_sha256: a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090
+    system_r: /opt/R/devel/bin/R
+    wrapper_input: tarball-parent
+    check_args: [--no-manual, --no-build-vignettes]
+    runtime_profile: atlas
+    expected_r_kind: devel
+    expected_os: linux
+    expected_architecture: x86_64
+    expected_distribution: fedora
+    expected_distribution_version: "42"
     proof: [source-tarball-sha256, container-system-r, r-executable, extsoftversion-blas, la-library, process-mappings, loaded-atlas]
 
   - id: blis

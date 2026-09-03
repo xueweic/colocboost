@@ -15,6 +15,8 @@ from run_unit_driver import _resolve_rscript
 
 HELPERS = {
     "prepare-rhub-dependencies": "prepare-rhub-dependencies.R",
+    "prepare-full-dependencies": "prepare-full-dependencies.R",
+    "probe-runtime": "probe-runtime.R",
     "verify-mkl": "verify-mkl.R",
     "parse-check": "run-r-cmd-check.R",
 }

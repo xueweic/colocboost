@@ -69,6 +69,43 @@ cmd = '''python -B .github/ci/verify_dependency_evidence.py --environment-id='{{
 cwd = "."
 args = ["environment_id", "evidence"]
 
+[tasks.ci-full-dependencies]
+cmd = '''python -B .github/ci/run_r_helper.py --r-executable='{{ r_executable | replace("'", "'\"'\"'") }}' --helper=prepare-full-dependencies -- --environment-id='{{ environment_id | replace("'", "'\"'\"'") }}' --purpose='{{ purpose | replace("'", "'\"'\"'") }}' --tarball='{{ tarball | replace("'", "'\"'\"'") }}' --library='{{ library | replace("'", "'\"'\"'") }}' --evidence='{{ evidence | replace("'", "'\"'\"'") }}' --source-sha='{{ source_sha | replace("'", "'\"'\"'") }}' --event-sha='{{ event_sha | replace("'", "'\"'\"'") }}' --tarball-sha256='{{ tarball_sha256 | replace("'", "'\"'\"'") }}' --r-executable='{{ r_executable | replace("'", "'\"'\"'") }}' '''
+cwd = "."
+args = ["r_executable", "environment_id", "purpose", "tarball", "library", "evidence", "source_sha", "event_sha", "tarball_sha256"]
+env = { LC_ALL = "C", R_ENVIRON_USER = "{% if pixi.is_win %}NUL{% else %}/dev/null{% endif %}", R_PROFILE_USER = "{% if pixi.is_win %}NUL{% else %}/dev/null{% endif %}" }
+
+[tasks.ci-verify-full-dependencies]
+cmd = '''python -B .github/ci/verify_full_dependencies.py --manifest=.github/ci/check-matrix.yml --environment-id='{{ environment_id | replace("'", "'\"'\"'") }}' --purpose='{{ purpose | replace("'", "'\"'\"'") }}' --evidence='{{ evidence | replace("'", "'\"'\"'") }}' --source-sha='{{ source_sha | replace("'", "'\"'\"'") }}' --event-sha='{{ event_sha | replace("'", "'\"'\"'") }}' --tarball-sha256='{{ tarball_sha256 | replace("'", "'\"'\"'") }}' --r-executable='{{ r_executable | replace("'", "'\"'\"'") }}' '''
+cwd = "."
+args = ["environment_id", "purpose", "evidence", "source_sha", "event_sha", "tarball_sha256", "r_executable"]
+
+[tasks.ci-probe-runtime]
+cmd = '''python -B .github/ci/run_r_helper.py --r-executable='{{ r_executable | replace("'", "'\"'\"'") }}' --helper=probe-runtime -- --environment-id='{{ environment_id | replace("'", "'\"'\"'") }}' --runtime-profile='{{ runtime_profile | replace("'", "'\"'\"'") }}' --r-executable='{{ r_executable | replace("'", "'\"'\"'") }}' --source-sha='{{ source_sha | replace("'", "'\"'\"'") }}' --event-sha='{{ event_sha | replace("'", "'\"'\"'") }}' --tarball-sha256='{{ tarball_sha256 | replace("'", "'\"'\"'") }}' --evidence='{{ evidence | replace("'", "'\"'\"'") }}' '''
+cwd = "."
+args = ["r_executable", "environment_id", "runtime_profile", "source_sha", "event_sha", "tarball_sha256", "evidence"]
+env = { LC_ALL = "C", R_ENVIRON_USER = "{% if pixi.is_win %}NUL{% else %}/dev/null{% endif %}", R_PROFILE_USER = "{% if pixi.is_win %}NUL{% else %}/dev/null{% endif %}" }
+
+[tasks.ci-verify-runtime]
+cmd = '''python -B .github/ci/verify_runtime_evidence.py --manifest=.github/ci/check-matrix.yml --environment-id='{{ environment_id | replace("'", "'\"'\"'") }}' --evidence='{{ evidence | replace("'", "'\"'\"'") }}' --source-sha='{{ source_sha | replace("'", "'\"'\"'") }}' --event-sha='{{ event_sha | replace("'", "'\"'\"'") }}' --tarball-sha256='{{ tarball_sha256 | replace("'", "'\"'\"'") }}' '''
+cwd = "."
+args = ["environment_id", "evidence", "source_sha", "event_sha", "tarball_sha256"]
+
+[tasks.ci-platform-r]
+cmd = '''python -B .github/ci/verify_platform_r.py --manifest=.github/ci/check-matrix.yml --environment-id='{{ environment_id | replace("'", "'\"'\"'") }}' --r-executable='{{ r_executable | replace("'", "'\"'\"'") }}' --selected-selector='{{ selected_selector | replace("'", "'\"'\"'") }}' --setup-r-version='{{ setup_r_version | replace("'", "'\"'\"'") }}' --runner-label='{{ runner_label | replace("'", "'\"'\"'") }}' --evidence='{{ evidence | replace("'", "'\"'\"'") }}' --github-output='{{ github_output | replace("'", "'\"'\"'") }}' '''
+cwd = "."
+args = ["environment_id", "r_executable", "selected_selector", "setup_r_version", "runner_label", "evidence", "github_output"]
+
+[tasks.ci-r-binary-check]
+cmd = '''python -B .github/ci/run_r_binary_check.py --manifest=.github/ci/check-matrix.yml --environment-id='{{ environment_id | replace("'", "'\"'\"'") }}' --r-executable='{{ r_executable | replace("'", "'\"'\"'") }}' --tarball='{{ tarball | replace("'", "'\"'\"'") }}' --metadata='{{ metadata | replace("'", "'\"'\"'") }}' --source-sha='{{ source_sha | replace("'", "'\"'\"'") }}' --event-sha='{{ event_sha | replace("'", "'\"'\"'") }}' --work-dir='{{ work_dir | replace("'", "'\"'\"'") }}' --check-library='{{ check_library | replace("'", "'\"'\"'") }}' --evidence='{{ evidence | replace("'", "'\"'\"'") }}' --log='{{ log | replace("'", "'\"'\"'") }}' '''
+cwd = "."
+args = ["environment_id", "r_executable", "tarball", "metadata", "source_sha", "event_sha", "work_dir", "check_library", "evidence", "log"]
+
+[tasks.ci-special-check]
+cmd = '''python -B .github/ci/verify_special_check.py --manifest=.github/ci/check-matrix.yml --environment-id='{{ environment_id | replace("'", "'\"'\"'") }}' --profile='{{ profile | replace("'", "'\"'\"'") }}' --check-root='{{ check_root | replace("'", "'\"'\"'") }}' --native-evidence='{{ native_evidence | replace("'", "'\"'\"'") }}' --runtime-evidence='{{ runtime_evidence | replace("'", "'\"'\"'") }}' --source-sha='{{ source_sha | replace("'", "'\"'\"'") }}' --event-sha='{{ event_sha | replace("'", "'\"'\"'") }}' --tarball-sha256='{{ tarball_sha256 | replace("'", "'\"'\"'") }}' --output='{{ output | replace("'", "'\"'\"'") }}' --github-output='{{ github_output | replace("'", "'\"'\"'") }}' '''
+cwd = "."
+args = ["environment_id", "profile", "check_root", "native_evidence", "runtime_evidence", "source_sha", "event_sha", "tarball_sha256", "output", "github_output"]
+
 [tasks.ci-verify-mkl]
 cmd = '''python -B .github/ci/run_r_helper.py --r-executable='{{ r_executable | replace("'", "'\"'\"'") }}' --helper=verify-mkl -- --policy='{{ policy | replace("'", "'\"'\"'") }}' --evidence='{{ evidence | replace("'", "'\"'\"'") }}' '''
 cwd = "."

@@ -559,6 +559,115 @@ def test_mkl_and_nosuggests_bind_exact_native_wrapper_interfaces(manifest):
         assert {field: row[field] for field in contract} == contract
 
 
+def test_primary_linux_rows_bind_exact_native_wrapper_contracts(manifest):
+    wrapper_sha256 = (
+        "a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090"
+    )
+    no_docs = ["--no-manual", "--no-build-vignettes"]
+    expected = {
+        "r-devel-linux-x86_64-debian-clang": (
+            "/opt/R/devel/bin/R", "devel", "clang22", no_docs
+        ),
+        "r-devel-linux-x86_64-debian-gcc": (
+            "/opt/R/devel/bin/R", "devel", "ubuntu-gcc16", no_docs
+        ),
+        "r-devel-linux-x86_64-fedora-clang": (
+            "/opt/R/devel/bin/R", "devel", "clang22", no_docs
+        ),
+        "r-devel-linux-x86_64-fedora-gcc": (
+            "/opt/R/devel-gcc16/bin/R", "devel", "gcc16", no_docs
+        ),
+        "r-patched-linux-x86_64": (
+            "/opt/R/next/bin/R", "patched", "ubuntu-next", no_docs
+        ),
+        "r-release-linux-x86_64": (
+            "/opt/R/release/bin/R", "release", "ubuntu-release", []
+        ),
+    }
+    for cran_name, (system_r, r_kind, runtime_profile, check_args) in expected.items():
+        row = row_for(manifest, cran_name)
+        assert row["wrapper_path"] == "/usr/local/bin/r-check"
+        assert row["wrapper_sha256"] == wrapper_sha256
+        assert row["system_r"] == system_r
+        assert row["wrapper_input"] == "tarball-parent"
+        assert row["check_args"] == check_args
+        assert row["expected_r_kind"] == r_kind
+        assert row["runtime_profile"] == runtime_profile
+        assert row["expected_os"] == "linux"
+        assert row["expected_architecture"] == "x86_64"
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("wrapper_sha256", "0" * 64),
+        ("system_r", "/opt/R/release/bin/R"),
+        ("expected_r_kind", "release"),
+        ("check_args", []),
+    ],
+)
+def test_primary_linux_native_bindings_cannot_drift(manifest, field, value):
+    mutated = copy.deepcopy(manifest)
+    row_for(mutated, "r-devel-linux-x86_64-debian-clang")[field] = value
+
+    with pytest.raises(ValueError, match="native wrapper binding"):
+        validate_manifest(mutated)
+
+
+def test_native_runtime_distribution_bindings_are_exact(manifest):
+    expected = {
+        "r-devel-linux-x86_64-debian-clang": ("ubuntu", "22.04"),
+        "r-devel-linux-x86_64-debian-gcc": ("ubuntu", "24.04"),
+        "r-devel-linux-x86_64-fedora-clang": ("ubuntu", "22.04"),
+        "r-devel-linux-x86_64-fedora-gcc": ("fedora", "44"),
+        "r-patched-linux-x86_64": ("ubuntu", "24.04"),
+        "r-release-linux-x86_64": ("ubuntu", "24.04"),
+        "ATLAS": ("fedora", "42"),
+    }
+    for cran_name, binding in expected.items():
+        row = row_for(manifest, cran_name)
+        assert (row["expected_distribution"], row["expected_distribution_version"]) == binding
+
+
+def test_primary_platform_rows_bind_setup_r_and_check_contracts(manifest):
+    check_args = ["--as-cran", "--no-manual", "--no-build-vignettes"]
+    expected = {
+        "r-devel-windows-x86_64": ("windows-2022", "devel", "devel", "windows", "x86_64", "C:/R/bin/R.exe"),
+        "r-release-windows-x86_64": ("windows-2022", "release", "release", "windows", "x86_64", "C:/R/bin/R.exe"),
+        "r-oldrel-windows-x86_64": ("windows-2022", "oldrel-1", "release", "windows", "x86_64", "C:/R/bin/R.exe"),
+        "r-release-macos-arm64": ("macos-15", "release", "release", "macos", "aarch64", "/Library/Frameworks/R.framework/Resources/bin/R"),
+        "r-oldrel-macos-arm64": ("macos-15", "oldrel-1", "release", "macos", "aarch64", "/Library/Frameworks/R.framework/Resources/bin/R"),
+        "r-release-macos-x86_64": ("macos-15-intel", "release", "release", "macos", "x86_64", "/Library/Frameworks/R.framework/Resources/bin/R"),
+        "r-oldrel-macos-x86_64": ("macos-15-intel", "oldrel-1", "release", "macos", "x86_64", "/Library/Frameworks/R.framework/Resources/bin/R"),
+    }
+    for cran_name, (runner, selector, kind, os_name, architecture, system_r) in expected.items():
+        row = row_for(manifest, cran_name)
+        assert row["runner"] == runner
+        assert row["setup_r_selector"] == selector
+        assert row["check_args"] == check_args
+        assert row["expected_r_kind"] == kind
+        assert row["expected_os"] == os_name
+        assert row["expected_architecture"] == architecture
+        assert row.get("system_r") == system_r
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("setup_r_selector", "release"),
+        ("check_args", ["--as-cran"]),
+        ("expected_r_kind", "release"),
+        ("expected_os", "linux"),
+        ("expected_architecture", "aarch64"),
+    ],
+)
+def test_primary_platform_bindings_cannot_drift(manifest, field, value):
+    mutated = copy.deepcopy(manifest)
+    row_for(mutated, "r-devel-windows-x86_64")[field] = value
+    with pytest.raises(ValueError, match="platform R binding"):
+        validate_manifest(mutated)
+
+
 @pytest.mark.parametrize(
     ("cran_name", "field", "value"),
     [

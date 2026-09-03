@@ -22,6 +22,9 @@ def invoke(r_executable, tmp_path, filter_value=None):
     received = tmp_path / "received args.json"
     environment = os.environ.copy()
     environment["UNIT_DRIVER_RECEIVED"] = os.fspath(received)
+    environment["R_PROFILE_USER"] = "untrusted-profile"
+    environment["R_ENVIRON_USER"] = "untrusted-environ"
+    environment["R_LIBS_USER"] = "selected-unit-library"
     arguments = [
             sys.executable,
             os.fspath(SCRIPT),
@@ -57,7 +60,9 @@ def test_unit_driver_uses_only_absolute_rscript_sibling_and_preserves_arguments(
     recorder = (
         "import json, os, sys\n"
         "from pathlib import Path\n"
-        "Path(os.environ['UNIT_DRIVER_RECEIVED']).write_text(json.dumps(sys.argv[1:]))\n"
+        "payload = {'argv': sys.argv[1:], 'environment': {name: os.environ.get(name) "
+        "for name in ('R_PROFILE_USER', 'R_ENVIRON_USER', 'R_LIBS_USER')}}\n"
+        "Path(os.environ['UNIT_DRIVER_RECEIVED']).write_text(json.dumps(payload))\n"
         "raise SystemExit(23)\n"
     )
     rscript = make_executable(r_binary.with_name("Rscript"), recorder)
@@ -65,7 +70,8 @@ def test_unit_driver_uses_only_absolute_rscript_sibling_and_preserves_arguments(
     completed, received = invoke(r_binary, tmp_path)
 
     assert completed.returncode == 23, completed.stderr
-    arguments = json.loads(received.read_text(encoding="utf-8"))
+    payload = json.loads(received.read_text(encoding="utf-8"))
+    arguments = payload["argv"]
     assert arguments == [
         "--vanilla",
         os.fspath((ROOT / ".github" / "ci" / "run-unit-tests.R").resolve()),
@@ -75,6 +81,11 @@ def test_unit_driver_uses_only_absolute_rscript_sibling_and_preserves_arguments(
         "--policy=policy path's value.yml",
         "--output=output path's value.json",
     ]
+    assert payload["environment"] == {
+        "R_PROFILE_USER": os.devnull,
+        "R_ENVIRON_USER": os.devnull,
+        "R_LIBS_USER": "selected-unit-library",
+    }
     assert rscript.is_file()
 
 
