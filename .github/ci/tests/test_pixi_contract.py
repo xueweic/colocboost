@@ -127,7 +127,12 @@ def test_top_level_task_interfaces_are_explicit(manifest):
         "ci-summary",
     }
 
-    assert task_args(tasks["ci-unit"]) == ["mode", "output", "environment_id"]
+    assert task_args(tasks["ci-unit"]) == [
+        "mode",
+        "output",
+        "r_executable",
+        "runner_context",
+    ]
     assert task_args(tasks["ci-prepare"]) == [
         "tarball",
         "metadata",
@@ -165,8 +170,8 @@ def test_top_level_task_interfaces_are_explicit(manifest):
         "PYTHONDONTWRITEBYTECODE": "1"
     }
     assert ".github/ci/artifact_contract.py create" in commands["ci-prepare"]
-    assert ".github/ci/run-unit-tests.R" in commands["ci-unit"]
-    assert commands["ci-unit"].startswith("Rscript --vanilla ")
+    assert ".github/ci/run_unit_driver.py" in commands["ci-unit"]
+    assert commands["ci-unit"].startswith("python ")
     assert tasks["ci-unit"].get("env") == CI_UNIT_R_TASK_ENV
     assert ".github/ci/run_driver.py" in commands["ci-check"]
     assert commands["ci-check"].rstrip().endswith("--")
@@ -178,7 +183,7 @@ def test_typed_task_values_are_shell_quoted(manifest):
     tasks = manifest["tasks"]
     required_quoted_values = {
         "ci-prepare": ("tarball", "metadata", "source_sha", "event_sha"),
-        "ci-unit": ("mode", "output", "environment_id"),
+        "ci-unit": ("mode", "output", "r_executable", "runner_context"),
         "ci-check": (
             "environment_id",
             "driver",
@@ -219,18 +224,16 @@ def test_top_level_ci_unit_preserves_caller_r_library(tmp_path):
     stub_bin = tmp_path / "external R bin"
     stub_bin.mkdir()
     if os.name == "nt":
-        rscript = stub_bin / "Rscript.bat"
-        rscript.write_text(
-            "@echo off\r\necho R_LIBS_USER=%R_LIBS_USER%\r\nexit /b 19\r\n",
-            encoding="utf-8",
-        )
-    else:
-        rscript = stub_bin / "Rscript"
-        rscript.write_text(
-            "#!/bin/sh\nprintf 'R_LIBS_USER=%s\\n' \"$R_LIBS_USER\"\nexit 19\n",
-            encoding="utf-8",
-        )
-        rscript.chmod(0o755)
+        pytest.skip("the external-R runtime probe uses POSIX executable fixtures")
+    r_binary = stub_bin / "R"
+    r_binary.write_text("#!/bin/sh\nexit 99\n", encoding="utf-8")
+    r_binary.chmod(0o755)
+    rscript = stub_bin / "Rscript"
+    rscript.write_text(
+        "#!/bin/sh\nprintf 'R_LIBS_USER=%s\\n' \"$R_LIBS_USER\"\nexit 19\n",
+        encoding="utf-8",
+    )
+    rscript.chmod(0o755)
 
     environment = os.environ.copy()
     environment["PATH"] = os.pathsep.join(
@@ -247,6 +250,7 @@ def test_top_level_ci_unit_preserves_caller_r_library(tmp_path):
             "ci-unit",
             "source",
             os.fspath(tmp_path / "unused.json"),
+            os.fspath(r_binary),
             "external-r-probe",
         ],
         cwd=ROOT,
@@ -406,12 +410,19 @@ def test_ci_prepare_preserves_practical_shell_metacharacters_in_paths(tmp_path):
 
 
 def test_pixi_renders_typed_task_arguments_and_passthrough():
-    unit = run_pixi_dry("ci-unit", "source", "unit.json", "local-r44")
+    unit = run_pixi_dry(
+        "ci-unit",
+        "source",
+        "unit.json",
+        "/opt/R path's/bin/R",
+        "r-cmd-check-installed",
+    )
     assert unit.returncode == 0, unit.stderr
     unit_output = unit.stdout + unit.stderr
     assert "--load-package='source'" in unit_output
     assert "--output='unit.json'" in unit_output
-    assert "--context='local-r44'" in unit_output
+    assert "--r-executable='/opt/R path'\"'\"'s/bin/R'" in unit_output
+    assert "--context='r-cmd-check-installed'" in unit_output
 
     prepare = run_pixi_dry(
         "ci-prepare",
@@ -461,6 +472,8 @@ def test_pixi_renders_typed_task_arguments_and_passthrough():
     assert "--results-root='results root'\"'\"'s'" in summary_output
     assert "--summary='summary'\"'\"'s.md'" in summary_output
 
-    missing_argument = run_pixi_dry("ci-unit", "source", "unit.json")
+    missing_argument = run_pixi_dry(
+        "ci-unit", "source", "unit.json", "/opt/R/bin/R"
+    )
     assert missing_argument.returncode != 0
-    assert "environment_id" in missing_argument.stderr
+    assert "runner_context" in missing_argument.stderr

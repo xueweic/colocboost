@@ -43,9 +43,9 @@ cwd = "."
 args = ["tarball", "metadata", "source_sha", "event_sha"]
 
 [tasks.ci-unit]
-cmd = '''Rscript --vanilla .github/ci/run-unit-tests.R --package=. --load-package='{{ mode | replace("'", "'\"'\"'") }}' --context='{{ environment_id | replace("'", "'\"'\"'") }}' --policy=.github/ci/check-policy.yml --output='{{ output | replace("'", "'\"'\"'") }}' '''
+cmd = '''python .github/ci/run_unit_driver.py --r-executable='{{ r_executable | replace("'", "'\"'\"'") }}' --package=. --load-package='{{ mode | replace("'", "'\"'\"'") }}' --context='{{ runner_context | replace("'", "'\"'\"'") }}' --policy=.github/ci/check-policy.yml --output='{{ output | replace("'", "'\"'\"'") }}' '''
 cwd = "."
-args = ["mode", "output", "environment_id"]
+args = ["mode", "output", "r_executable", "runner_context"]
 env = { LC_ALL = "C", R_ENVIRON_USER = "{% if pixi.is_win %}NUL{% else %}/dev/null{% endif %}", R_PROFILE_USER = "{% if pixi.is_win %}NUL{% else %}/dev/null{% endif %}" }
 
 [tasks.ci-check]
