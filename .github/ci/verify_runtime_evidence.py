@@ -22,10 +22,18 @@ FIELDS = {
     "distribution_id", "distribution_version", "architecture", "compiler",
     "cc", "cc_path", "cc_version", "cxx", "cxx_path", "cxx_version",
     "fc", "fc_path", "fc_version", "locale", "session_info", "ext_soft_version",
-    "la_library", "la_version", "blas_libs", "matrix_dimension",
+    "la_library", "la_version", "blas_libs", "makeconf", "matrix_dimension",
     "matrix_checksum", "maps_method", "loaded_libraries", "long_double",
     "environment",
 }
+ENVIRONMENT_FIELDS = {
+    "PATH", "R_HOME", "R_LIBS", "R_LIBS_USER", "R_LIBS_SITE",
+    "LD_LIBRARY_PATH", "DYLD_LIBRARY_PATH", "CC", "CXX", "FC", "F77",
+    "LANG", "LC_ALL", "LC_CTYPE", "ASAN_OPTIONS", "UBSAN_OPTIONS",
+    "LD_PRELOAD", "VALGRIND_OPTS", "CHECK_ARGS",
+    "_R_CHECK_DONTTEST_EXAMPLES_",
+}
+MAKECONF_FIELDS = {"CFLAGS", "CXXFLAGS", "FFLAGS", "MAIN_LDFLAGS", "SAN_LIBS"}
 
 
 def _pairs(pairs):
@@ -56,6 +64,43 @@ def _classify_r(document):
     return "release"
 
 
+def _require_active_compiler(document, family, *, major=None):
+    if document["compiler"] != document["cc_version"]:
+        raise ValueError("runtime compiler summary does not match the executed C compiler")
+    cc_name = Path(document["cc_path"]).name.lower()
+    cxx_name = Path(document["cxx_path"]).name.lower()
+    configured_cc = Path(document["cc"].split()[0]).name.lower()
+    configured_cxx = Path(document["cxx"].split()[0]).name.lower()
+    cc_version = document["cc_version"].lower()
+    cxx_version = document["cxx_version"].lower()
+    if family == "clang":
+        if (
+            re.fullmatch(r"clang(?:-[0-9]+)?", configured_cc) is None
+            or re.fullmatch(r"clang\+\+(?:-[0-9]+)?", configured_cxx) is None
+            or re.fullmatch(r"clang(?:-[0-9]+)?", cc_name) is None
+            or re.fullmatch(r"clang(?:\+\+)?(?:-[0-9]+)?", cxx_name) is None
+        ):
+            raise ValueError("active Clang compiler paths are invalid")
+        if "clang" not in cc_version or "clang" not in cxx_version:
+            raise ValueError("active Clang compiler versions are invalid")
+    elif family == "gcc":
+        if re.fullmatch(r"gcc(?:-[0-9]+)?", cc_name) is None or re.fullmatch(
+            r"g\+\+(?:-[0-9]+)?", cxx_name
+        ) is None:
+            raise ValueError("active GCC compiler paths are invalid")
+        if not re.search(r"(?:gcc|gnu)", cc_version) or not re.search(
+            r"(?:g\+\+|gcc|gnu)", cxx_version
+        ):
+            raise ValueError("active GCC compiler versions are invalid")
+    else:
+        raise ValueError("unsupported active compiler family")
+    if major is not None and (
+        re.search(rf"\b{major}(?:\.|\b)", cc_version) is None
+        or re.search(rf"\b{major}(?:\.|\b)", cxx_version) is None
+    ):
+        raise ValueError("active compiler major version is invalid")
+
+
 def validate_runtime_evidence(
     document,
     *,
@@ -82,7 +127,6 @@ def validate_runtime_evidence(
         "event_sha": event_sha,
         "tarball_sha256": tarball_sha256,
         "r_executable": row.get("system_r"),
-        "r_resolved": row.get("system_r"),
         "os": row.get("expected_os"),
         "distribution_id": row.get("expected_distribution"),
         "distribution_version": row.get("expected_distribution_version"),
@@ -93,6 +137,15 @@ def validate_runtime_evidence(
     for field, value in expected.items():
         if document[field] != value:
             raise ValueError(f"runtime {field} does not match manifest/caller")
+    _single_line(document["r_resolved"], "r_resolved")
+    if not document["r_resolved"].startswith("/"):
+        raise ValueError("runtime r_resolved must be absolute")
+    if document["r_resolved"] != row.get("system_r"):
+        if re.fullmatch(
+            r"/opt/R/[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9._-]+)?/bin/R",
+            document["r_resolved"],
+        ) is None:
+            raise ValueError("runtime resolved R is not an approved manifest alias")
     for field in (
         "r_executable", "r_resolved", "r_version", "r_platform", "os",
         "os_release", "distribution_id", "distribution_version", "architecture",
@@ -124,9 +177,9 @@ def validate_runtime_evidence(
         if not re.search(r"flang(?:-new)?-?22(?:\b|$)", document["fc"], re.I):
             raise ValueError("clang22 runtime does not prove flang 22")
         for field, pattern in (
-            ("cc_path", r"clang-?22$"),
-            ("cxx_path", r"clang\+\+-?22$"),
-            ("fc_path", r"flang(?:-new)?-?22$"),
+            ("cc_path", r"clang(?:-?22)?$"),
+            ("cxx_path", r"clang(?:\+\+)?(?:-?22)?$"),
+            ("fc_path", r"flang(?:-new)?(?:-?22)?$"),
         ):
             if re.search(pattern, document[field], re.I) is None:
                 raise ValueError("clang22 runtime compiler executable/version is wrong")
@@ -171,8 +224,14 @@ def validate_runtime_evidence(
         raise ValueError("long_double must be boolean")
     if not isinstance(document["ext_soft_version"], Mapping):
         raise ValueError("ext_soft_version must be an object")
+    makeconf = document["makeconf"]
+    if not isinstance(makeconf, Mapping) or set(makeconf) != MAKECONF_FIELDS or any(
+        not isinstance(value, str) or any(character in value for character in "\r\n\x00")
+        for value in makeconf.values()
+    ):
+        raise ValueError("runtime Makeconf evidence is invalid")
     environment = document["environment"]
-    if not isinstance(environment, Mapping) or any(
+    if not isinstance(environment, Mapping) or set(environment) != ENVIRONMENT_FIELDS or any(
         not isinstance(key, str)
         or value is not None and (
             not isinstance(value, str) or any(character in value for character in "\r\n\x00")
@@ -189,6 +248,57 @@ def validate_runtime_evidence(
             raise ValueError("ATLAS runtime did not load libsatlas")
         if "atlas" not in document["la_library"].lower():
             raise ValueError("ATLAS La_library identity is missing")
+        if "atlas" not in str(document["ext_soft_version"].get("BLAS", "")).lower():
+            raise ValueError("ATLAS extSoftVersion BLAS identity is missing")
+        if "atlas" not in document["blas_libs"].lower():
+            raise ValueError("ATLAS BLAS_LIBS identity is missing")
+    elif profile in {"clang-asan", "clang-ubsan"}:
+        _require_active_compiler(document, "clang", major=22)
+        cc = document["cc"]
+        cxx = document["cxx"]
+        required = (
+            {"-fsanitize=address,undefined", "-fno-sanitize=float-divide-by-zero", "-fno-sanitize=alignment", "-fno-omit-frame-pointer", "-fsanitize=pointer-overflow", "-fsanitize=signed-integer-overflow"}
+            if profile == "clang-asan"
+            else {"-fsanitize=undefined", "-fno-sanitize=function", "-fno-omit-frame-pointer"}
+        )
+        if not required <= set(cc.split()) or not required <= set(cxx.split()):
+            raise ValueError("Clang sanitizer compiler flags do not match the active image")
+        runtime_name = "libclang_rt.asan" if profile == "clang-asan" else "libclang_rt.ubsan"
+        if runtime_name not in lowered:
+            raise ValueError("Clang sanitizer runtime is not loaded in the selected R process")
+        if profile == "clang-ubsan" and "ubsan_standalone" not in makeconf["SAN_LIBS"]:
+            raise ValueError("Clang UBSAN linker configuration is missing")
+        if environment["UBSAN_OPTIONS"] != "print_stacktrace=1":
+            raise ValueError("Clang UBSAN runtime options do not match")
+        if environment["ASAN_OPTIONS"] != "detect_leaks=0:alloc_dealloc_mismatch=0":
+            raise ValueError("Clang ASAN runtime options do not match")
+    elif profile in {"gcc-asan", "gcc-ubsan"}:
+        _require_active_compiler(document, "gcc")
+        required_flags = {"-fsanitize=address,undefined,bounds-strict", "-fno-omit-frame-pointer"}
+        if not required_flags <= set(document["cc"].split()) or not required_flags <= set(document["cxx"].split()):
+            raise ValueError("GCC sanitizer compiler flags do not match the active image")
+        if "-fsanitize=address" not in makeconf["CFLAGS"] or "-fsanitize=address,undefined" not in makeconf["MAIN_LDFLAGS"]:
+            raise ValueError("GCC sanitizer compiler/linker configuration is missing")
+        preload = (environment["LD_PRELOAD"] or "").split(":")
+        if set(preload) != {"/usr/lib64/libasan.so.8", "/usr/lib64/libubsan.so.1"}:
+            raise ValueError("GCC sanitizer preload does not match the active image")
+        if "libasan.so" not in lowered or "libubsan.so" not in lowered:
+            raise ValueError("GCC sanitizer runtimes are not loaded in the selected R process")
+        if environment["ASAN_OPTIONS"] != "detect_leaks=0" or environment["UBSAN_OPTIONS"] != "print_stacktrace=1":
+            raise ValueError("GCC sanitizer runtime options do not match")
+    elif profile == "donttest":
+        if environment["_R_CHECK_DONTTEST_EXAMPLES_"] != "true":
+            raise ValueError("donttest policy is not enabled")
+    elif profile == "nold":
+        if document["long_double"] is not False:
+            raise ValueError("noLD runtime still reports long-double capability")
+    elif profile == "valgrind":
+        if environment["VALGRIND_OPTS"] != "--track-origins=yes --leak-check=full":
+            raise ValueError("Valgrind runtime options do not match the active image")
+
+    if profile in {"atlas", "clang-asan", "clang-ubsan", "donttest", "gcc-asan", "gcc-ubsan", "nold", "valgrind", "vnu"}:
+        if environment["CHECK_ARGS"] != " ".join(row["check_args"]):
+            raise ValueError("runtime CHECK_ARGS do not match the manifest")
     return document
 
 

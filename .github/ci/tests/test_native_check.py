@@ -95,6 +95,8 @@ def test_runs_wrapper_in_fresh_tree_and_publishes_exact_log_and_evidence(tmp_pat
     document = json.loads(evidence.read_text())
     assert document["wrapper_exit_code"] == 0
     assert document["check_log"].endswith("colocboost.Rcheck/00check.log")
+    assert document["environment"]["R_PROFILE_USER"] == os.devnull
+    assert document["environment"]["R_ENVIRON_USER"] == os.devnull
 
 
 def test_preserves_nonzero_wrapper_exit_when_a_unique_log_exists(tmp_path):
@@ -179,3 +181,21 @@ def test_rejects_reused_work_or_check_library(tmp_path):
             log_output=tmp_path / "log",
             environment=environment,
         )
+
+
+def test_native_check_disables_only_user_startup_files(tmp_path):
+    body = (
+        "import json, os, pathlib, sys\n"
+        "parent = pathlib.Path(sys.argv[1])\n"
+        "check = parent / 'colocboost.Rcheck'\n"
+        "check.mkdir()\n"
+        "(check / '00check.log').write_text('* DONE\\nStatus: OK\\n')\n"
+        "(parent / 'startup.json').write_text(json.dumps({k: os.environ.get(k) for k in ('R_PROFILE_USER', 'R_ENVIRON_USER', 'R_PROFILE', 'R_ENVIRON')}))\n"
+    )
+    code, work, *_ = invoke(tmp_path, wrapper_body=body)
+    assert code == 0
+    captured = json.loads((work / "input" / "startup.json").read_text())
+    assert captured["R_PROFILE_USER"] == os.devnull
+    assert captured["R_ENVIRON_USER"] == os.devnull
+    assert captured["R_PROFILE"] is None
+    assert captured["R_ENVIRON"] is None

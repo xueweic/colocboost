@@ -85,9 +85,22 @@ status <- tryCatch({
   evidence <- absolute(cli$evidence, "evidence")
   selected_r <- absolute_lexical(cli[["r-executable"]], "r-executable")
   selected_r_resolved <- absolute(selected_r, "r-executable", must_work = TRUE)
-  actual_r <- file.path(R.home("bin"), if (.Platform$OS.type == "windows") "R.exe" else "R")
-  actual_r <- absolute(actual_r, "active R", must_work = TRUE)
-  if (!identical(selected_r_resolved, actual_r)) stop("Active R does not match selected r-executable.")
+  selected_r_home <- system2(
+    selected_r, "RHOME", stdout = TRUE, stderr = FALSE
+  )
+  rhome_status <- attr(selected_r_home, "status")
+  if (!is.null(rhome_status) && rhome_status != 0L) {
+    stop("Selected R failed its RHOME identity probe.")
+  }
+  selected_r_home <- selected_r_home[nzchar(trimws(selected_r_home))]
+  if (length(selected_r_home) != 1L) stop("Selected R returned ambiguous RHOME identity.")
+  selected_r_home <- absolute(
+    trimws(selected_r_home[[1L]]), "selected R home", must_work = TRUE
+  )
+  active_r_home <- absolute(R.home(), "active R home", must_work = TRUE)
+  if (!identical(selected_r_home, active_r_home)) {
+    stop("Active R home does not match selected r-executable.")
+  }
   if (dir.exists(library)) {
     if (length(list.files(library, all.files = TRUE, no.. = TRUE))) {
       stop("library must be initially empty.")

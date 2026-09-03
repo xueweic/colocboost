@@ -91,6 +91,27 @@ def _strict_portable_descendant(child, parent, label):
     return child_normal.startswith(parent_normal.rstrip("/") + "/")
 
 
+def _approved_native_r_resolution(declared, resolved):
+    if _same_portable_path(declared, resolved, "r_resolved"):
+        return True
+    declared_normal, declared_windows = _normal_portable_path(
+        declared, "r_executable"
+    )
+    resolved_normal, resolved_windows = _normal_portable_path(
+        resolved, "r_resolved"
+    )
+    if declared_windows or resolved_windows:
+        return False
+    return (
+        re.fullmatch(r"/opt/R/[^/]+/bin/R", declared_normal) is not None
+        and re.fullmatch(
+            r"/opt/R/[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9._-]+)?/bin/R",
+            resolved_normal,
+        )
+        is not None
+    )
+
+
 def validate_full_dependency_evidence(
     document,
     *,
@@ -148,7 +169,9 @@ def validate_full_dependency_evidence(
     if (
         coverage[0].get("system_r") is not None
         and coverage[0].get("expected_os") == "linux"
-        and not _same_portable_path(document["r_resolved"], r_executable, "r_resolved")
+        and not _approved_native_r_resolution(
+            document["r_executable"], document["r_resolved"]
+        )
     ):
         raise ValueError("resolved R does not match native manifest system_r")
     for field in ("r_version", "r_platform"):

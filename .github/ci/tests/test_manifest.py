@@ -597,6 +597,71 @@ def test_primary_linux_rows_bind_exact_native_wrapper_contracts(manifest):
         assert row["expected_architecture"] == "x86_64"
 
 
+def test_active_rhub_rows_bind_exact_native_wrapper_contracts(manifest):
+    generic = "a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090"
+    clang_scan = "9732ef12761fd6ecd4631dd6ce0861fbbbd68fb33f6e7643745ec36de456b4f9"
+    valgrind_scan = "79261a338b0a381a157cf2025ef40f389b3906fb4711d14b7a72314f5316cbc8"
+    vnu_wrapper = "0de8ba373ec3bbe81b84122857d071dda4eee72e035d3180464607837c0bb089"
+    no_docs = ["--no-manual", "--no-build-vignettes"]
+    expected = {
+        "ATLAS": ("/opt/R/devel/bin/R", generic, no_docs, "atlas", "devel", "fedora", "42"),
+        "clang-ASAN": ("/opt/R/devel-asan/bin/R", clang_scan, ["--extra-arch", "--no-stop-on-test-error", *no_docs], "clang-asan", "devel", "ubuntu", "22.04"),
+        "clang-UBSAN": ("/opt/R/devel-asan/bin/R", clang_scan, ["--extra-arch", "--no-stop-on-test-error", *no_docs], "clang-ubsan", "devel", "ubuntu", "22.04"),
+        "donttest": ("/opt/R/devel/bin/R", generic, no_docs, "donttest", "devel", "ubuntu", "22.04"),
+        "gcc-ASAN": ("/opt/R/devel/bin/R", generic, no_docs, "gcc-asan", "devel", "fedora", "42"),
+        "gcc-UBSAN": ("/opt/R/devel/bin/R", generic, no_docs, "gcc-ubsan", "devel", "fedora", "42"),
+        "noLD": ("/opt/R/devel-nold/bin/R", generic, no_docs, "nold", "devel", "ubuntu", "22.04"),
+        "valgrind": ("/opt/R/devel-valgrind/bin/R", valgrind_scan, ["--use-valgrind", "--extra-arch", "--no-stop-on-test-error", *no_docs], "valgrind", "devel", "fedora", "42"),
+        "vnu": ("/opt/R/release/bin/R", vnu_wrapper, no_docs, "vnu", "release", "ubuntu", "24.04"),
+    }
+    for cran_name, contract in expected.items():
+        row = row_for(manifest, cran_name)
+        actual = (
+            row["system_r"], row["wrapper_sha256"], row["check_args"],
+            row["runtime_profile"], row["expected_r_kind"],
+            row["expected_distribution"], row["expected_distribution_version"],
+        )
+        assert actual == contract
+        assert row["wrapper_path"] == "/usr/local/bin/r-check"
+        assert row["wrapper_input"] == "tarball-parent"
+        assert row["expected_os"] == "linux"
+        assert row["expected_architecture"] == "x86_64"
+
+    valgrind = row_for(manifest, "valgrind")
+    assert valgrind["suppression_path"] == "/usr/libexec/valgrind/default.supp"
+    assert valgrind["suppression_suffix_bytes"] == 1175
+    assert valgrind["suppression_suffix_sha256"] == (
+        "3503629391b14d2a7fbc83b5925fa3af3705dc76b3ceaaf2f944b2e589ee0a90"
+    )
+    vnu = row_for(manifest, "vnu")
+    assert vnu["vnu_path"] == "/usr/local/bin/vnu.sh"
+    assert vnu["vnu_sha256"] == (
+        "2878f66d7d96fe1f9ef65c47313904ec146c366ff5fb26288ec433b72fe9b98f"
+    )
+
+
+@pytest.mark.parametrize(
+    ("cran_name", "field", "value"),
+    [
+        ("clang-ASAN", "wrapper_sha256", "0" * 64),
+        ("clang-UBSAN", "runtime_profile", "clang-asan"),
+        ("donttest", "check_args", []),
+        ("gcc-ASAN", "system_r", "/opt/R/devel-asan/bin/R"),
+        ("gcc-UBSAN", "runtime_profile", "gcc-asan"),
+        ("noLD", "expected_distribution_version", "24.04"),
+        ("valgrind", "suppression_suffix_bytes", 1174),
+        ("valgrind", "suppression_suffix_sha256", "0" * 64),
+        ("vnu", "vnu_path", "/tmp/vnu.sh"),
+        ("vnu", "vnu_sha256", "0" * 64),
+    ],
+)
+def test_active_rhub_native_bindings_cannot_drift(manifest, cran_name, field, value):
+    mutated = copy.deepcopy(manifest)
+    row_for(mutated, cran_name)[field] = value
+    with pytest.raises(ValueError, match="native wrapper binding"):
+        validate_manifest(mutated)
+
+
 @pytest.mark.parametrize(
     ("field", "value"),
     [

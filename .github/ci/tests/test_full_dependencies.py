@@ -16,6 +16,14 @@ EVENT_SHA = "b" * 40
 TARBALL_SHA256 = "c" * 64
 
 
+def test_dependency_prep_binds_active_r_by_r_home_not_launcher_path():
+    source = (CI_DIR / "prepare-full-dependencies.R").read_text(encoding="utf-8")
+    assert "selected_r_home <- system2(" in source
+    assert 'selected_r, "RHOME"' in source
+    assert "active_r_home <- absolute(R.home()" in source
+    assert 'file.path(R.home("bin")' not in source
+
+
 def valid_document(environment_id="r-devel-linux-x86-64-debian-clang", purpose="unit"):
     selected_r = {
         "r-release-linux-x86-64": "/opt/R/release/bin/R",
@@ -203,6 +211,34 @@ def test_accepts_canonical_windows_paths_with_native_separator_evidence(tmp_path
         r_executable="C:/R/bin/R.exe",
     )
     assert completed.returncode == 0, completed.stderr
+
+
+def test_accepts_versioned_resolution_of_native_opt_r_alias(tmp_path):
+    document = valid_document("atlas", "unit")
+    assert document["r_executable"] == "/opt/R/devel/bin/R"
+    document["r_resolved"] = "/opt/R/4.6.1/bin/R"
+
+    completed = invoke(tmp_path, document)
+
+    assert completed.returncode == 0, completed.stderr
+
+
+@pytest.mark.parametrize(
+    "resolved_r",
+    [
+        "/tmp/R",
+        "/opt/R/not-a-version/bin/R",
+        "/opt/R/4.6.1/bin/Rscript",
+        "/opt/R/4.6.1/../other/bin/R",
+    ],
+)
+def test_rejects_unbound_resolution_of_native_opt_r_alias(tmp_path, resolved_r):
+    document = valid_document("atlas", "unit")
+    document["r_resolved"] = resolved_r
+
+    completed = invoke(tmp_path, document)
+
+    assert completed.returncode != 0
 
 
 @pytest.mark.parametrize(

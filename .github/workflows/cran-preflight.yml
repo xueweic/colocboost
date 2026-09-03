@@ -1553,9 +1553,509 @@ jobs:
           test "$CHECK_UPLOAD_OUTCOME" = success
           test "$DIAGNOSTIC_UPLOAD_OUTCOME" = success
 
+  active-rhub:
+    if: ${{ always() && !cancelled() && github.repository == 'xueweic/colocboost' }}
+    needs: prepare
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - environment_id: atlas
+            image: ghcr.io/r-hub/containers/atlas@sha256:7597f7d0b6b2f009ae7bb425391523d8f4388223238db50d7dfb1572add63a88
+            system_r: /opt/R/devel/bin/R
+            runtime_profile: atlas
+            check_args: --no-manual --no-build-vignettes
+            wrapper: /usr/local/bin/r-check
+            wrapper_sha256: a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090
+            unit_enabled: true
+            file_purpose: ""
+            file_path: ""
+          - environment_id: clang-asan
+            image: ghcr.io/r-hub/containers/clang-asan@sha256:dfab3d2274151577eb705d2be9acd3391798ba4b56d384ca9df84544e5b6be96
+            system_r: /opt/R/devel-asan/bin/R
+            runtime_profile: clang-asan
+            check_args: --extra-arch --no-stop-on-test-error --no-manual --no-build-vignettes
+            wrapper: /usr/local/bin/r-check
+            wrapper_sha256: 9732ef12761fd6ecd4631dd6ce0861fbbbd68fb33f6e7643745ec36de456b4f9
+            unit_enabled: false
+            file_purpose: ""
+            file_path: ""
+          - environment_id: clang-ubsan
+            image: ghcr.io/r-hub/containers/clang-ubsan@sha256:a58b00b52e9c4b210c3474eac4c28dc18bf70c912d75bb45e466410452a694e6
+            system_r: /opt/R/devel-asan/bin/R
+            runtime_profile: clang-ubsan
+            check_args: --extra-arch --no-stop-on-test-error --no-manual --no-build-vignettes
+            wrapper: /usr/local/bin/r-check
+            wrapper_sha256: 9732ef12761fd6ecd4631dd6ce0861fbbbd68fb33f6e7643745ec36de456b4f9
+            unit_enabled: false
+            file_purpose: ""
+            file_path: ""
+          - environment_id: donttest
+            image: ghcr.io/r-hub/containers/donttest@sha256:fd1942c8b8627d7e1d80582a023b2792acfa158a6edfeeeba3edd27a52c57967
+            system_r: /opt/R/devel/bin/R
+            runtime_profile: donttest
+            check_args: --no-manual --no-build-vignettes
+            wrapper: /usr/local/bin/r-check
+            wrapper_sha256: a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090
+            unit_enabled: false
+            file_purpose: ""
+            file_path: ""
+          - environment_id: gcc-asan
+            image: ghcr.io/r-hub/containers/gcc-asan@sha256:32c9ad423cbca983bae893c2f0f44021ddbd5ac236c29fba8078b97acd80d78f
+            system_r: /opt/R/devel/bin/R
+            runtime_profile: gcc-asan
+            check_args: --no-manual --no-build-vignettes
+            wrapper: /usr/local/bin/r-check
+            wrapper_sha256: a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090
+            unit_enabled: false
+            file_purpose: ""
+            file_path: ""
+          - environment_id: gcc-ubsan
+            image: ghcr.io/r-hub/containers/gcc-asan@sha256:32c9ad423cbca983bae893c2f0f44021ddbd5ac236c29fba8078b97acd80d78f
+            system_r: /opt/R/devel/bin/R
+            runtime_profile: gcc-ubsan
+            check_args: --no-manual --no-build-vignettes
+            wrapper: /usr/local/bin/r-check
+            wrapper_sha256: a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090
+            unit_enabled: false
+            file_purpose: ""
+            file_path: ""
+          - environment_id: nold
+            image: ghcr.io/r-hub/containers/nold@sha256:9dac23acd0e610b5fb5f82957c8136ffc6acf216a328a067795241542b3dc091
+            system_r: /opt/R/devel-nold/bin/R
+            runtime_profile: nold
+            check_args: --no-manual --no-build-vignettes
+            wrapper: /usr/local/bin/r-check
+            wrapper_sha256: a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090
+            unit_enabled: false
+            file_purpose: ""
+            file_path: ""
+          - environment_id: valgrind
+            image: ghcr.io/r-hub/containers/valgrind@sha256:98dfda5016513c269e33c8155ea57745d977dad4b1a703b28db82fcb1237ef9c
+            system_r: /opt/R/devel-valgrind/bin/R
+            runtime_profile: valgrind
+            check_args: --use-valgrind --extra-arch --no-stop-on-test-error --no-manual --no-build-vignettes
+            wrapper: /usr/local/bin/r-check
+            wrapper_sha256: 79261a338b0a381a157cf2025ef40f389b3906fb4711d14b7a72314f5316cbc8
+            unit_enabled: false
+            file_purpose: valgrind-suppression
+            file_path: /usr/libexec/valgrind/default.supp
+          - environment_id: vnu
+            image: ghcr.io/r-hub/containers/vnu@sha256:03f45d5944fc092627cae2e944f16f037fed9795f8768c90d9511799098a7884
+            system_r: /opt/R/release/bin/R
+            runtime_profile: vnu
+            check_args: --no-manual --no-build-vignettes
+            wrapper: /usr/local/bin/r-check
+            wrapper_sha256: 0de8ba373ec3bbe81b84122857d071dda4eee72e035d3180464607837c0bb089
+            unit_enabled: false
+            file_purpose: vnu-dispatcher
+            file_path: /usr/local/bin/vnu.sh
+    container:
+      image: ${{ matrix.image }}
+      options: --user 0
+    defaults:
+      run:
+        shell: bash
+    env:
+      ENVIRONMENT_ID: ${{ matrix.environment_id }}
+      SYSTEM_R: ${{ matrix.system_r }}
+      RUNTIME_PROFILE: ${{ matrix.runtime_profile }}
+      CHECK_ARGS: ${{ matrix.check_args }}
+      NATIVE_WRAPPER: ${{ matrix.wrapper }}
+      WRAPPER_SHA256: ${{ matrix.wrapper_sha256 }}
+      FILE_PURPOSE: ${{ matrix.file_purpose }}
+      FILE_PATH: ${{ matrix.file_path }}
+      SOURCE_SHA: ${{ needs.prepare.outputs.source_sha || github.sha }}
+      EVENT_SHA: ${{ needs.prepare.outputs.event_sha || github.sha }}
+      FALLBACK_TARBALL_SHA256: ${{ needs.prepare.outputs.tarball_sha256 || '0000000000000000000000000000000000000000000000000000000000000000' }}
+    steps:
+      - name: Checkout exact event commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up locked Pixi helper
+        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e
+        with:
+          pixi-version: v0.67.2
+          locked: true
+          cache: true
+          cache-write: ${{ github.event_name == 'push' }}
+          activate-environment: false
+
+      - name: Initialize fresh active R-hub paths
+        id: initialize
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          UNIT_LIBRARY="$RUNNER_TEMP/active-rhub-unit-library"
+          CHECK_LIBRARY="$RUNNER_TEMP/active-rhub-check-library"
+          SOURCE_DOWNLOAD_DIR="$RUNNER_TEMP/active-rhub-source"
+          SOURCE_TREE="$RUNNER_TEMP/active-rhub-source-tree"
+          DIAGNOSTIC_DIR="$RUNNER_TEMP/active-rhub-diagnostics"
+          RESULT_DIR="$RUNNER_TEMP/active-rhub-results"
+          CHECK_WORK_DIR="$RUNNER_TEMP/active-rhub-native-check"
+          VNU_WORK_DIR="$RUNNER_TEMP/active-rhub-vnu-source"
+          export UNIT_LIBRARY CHECK_LIBRARY SOURCE_DOWNLOAD_DIR SOURCE_TREE
+          export DIAGNOSTIC_DIR RESULT_DIR CHECK_WORK_DIR VNU_WORK_DIR
+          printf '%s\n' \
+            "UNIT_LIBRARY=$UNIT_LIBRARY" \
+            "CHECK_LIBRARY=$CHECK_LIBRARY" \
+            "SOURCE_DOWNLOAD_DIR=$SOURCE_DOWNLOAD_DIR" \
+            "SOURCE_TREE=$SOURCE_TREE" \
+            "DIAGNOSTIC_DIR=$DIAGNOSTIC_DIR" \
+            "RESULT_DIR=$RESULT_DIR" \
+            "CHECK_WORK_DIR=$CHECK_WORK_DIR" \
+            "VNU_WORK_DIR=$VNU_WORK_DIR" >> "$GITHUB_ENV"
+          mkdir "$SOURCE_DOWNLOAD_DIR"
+          mkdir "$DIAGNOSTIC_DIR"
+          mkdir "$RESULT_DIR"
+          test ! -e "$UNIT_LIBRARY"
+          test ! -e "$CHECK_LIBRARY"
+          test ! -e "$CHECK_WORK_DIR"
+          test ! -e "$VNU_WORK_DIR"
+
+      - name: Download the shared source contract
+        id: download-source
+        continue-on-error: true
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          name: cran-preflight-source
+          path: ${{ runner.temp }}/active-rhub-source
+
+      - name: Verify downloaded source bytes
+        id: verify-source
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-verify-source \
+            "$SOURCE_DOWNLOAD_DIR" "$SOURCE_SHA" "$EVENT_SHA" "$GITHUB_OUTPUT"
+
+      - name: Extract only the verified source package
+        id: extract-source
+        continue-on-error: true
+        env:
+          TARBALL: ${{ steps.verify-source.outputs.tarball_path }}
+          METADATA: ${{ steps.verify-source.outputs.metadata_path }}
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-extract-source \
+            "$TARBALL" "$METADATA" "$SOURCE_SHA" "$EVENT_SHA" \
+            "$SOURCE_TREE" "$GITHUB_OUTPUT"
+
+      - name: Verify checksum-bound special image file
+        id: verify-special-file
+        if: ${{ matrix.file_purpose != '' }}
+        continue-on-error: true
+        env:
+          TARBALL_SHA256: ${{ steps.verify-source.outputs.tarball_sha256 || env.FALLBACK_TARBALL_SHA256 }}
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-file-contract \
+            "$ENVIRONMENT_ID" "$FILE_PURPOSE" "$FILE_PATH" "$SOURCE_SHA" \
+            "$EVENT_SHA" "$TARBALL_SHA256" \
+            "$DIAGNOSTIC_DIR/special-file.json"
+
+      - name: Probe the selected R in its own process
+        id: probe-runtime
+        continue-on-error: true
+        env:
+          TARBALL_SHA256: ${{ steps.verify-source.outputs.tarball_sha256 || env.FALLBACK_TARBALL_SHA256 }}
+        run: |
+          set -euo pipefail
+          system_r_bin="${SYSTEM_R%/R}"
+          PATH="$system_r_bin:$PATH"
+          export PATH
+          pixi run --locked ci-probe-runtime \
+            "$SYSTEM_R" "$ENVIRONMENT_ID" "$RUNTIME_PROFILE" "$SOURCE_SHA" \
+            "$EVENT_SHA" "$TARBALL_SHA256" "$DIAGNOSTIC_DIR/runtime.json"
+
+      - name: Verify selected R runtime evidence
+        id: verify-runtime
+        continue-on-error: true
+        env:
+          TARBALL_SHA256: ${{ steps.verify-source.outputs.tarball_sha256 || env.FALLBACK_TARBALL_SHA256 }}
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-verify-runtime \
+            "$ENVIRONMENT_ID" "$DIAGNOSTIC_DIR/runtime.json" "$SOURCE_SHA" \
+            "$EVENT_SHA" "$TARBALL_SHA256"
+
+      - name: Install complete ATLAS unit dependencies
+        id: prepare-unit-dependencies
+        if: ${{ matrix.unit_enabled }}
+        continue-on-error: true
+        env:
+          TARBALL: ${{ steps.verify-source.outputs.tarball_path }}
+          TARBALL_SHA256: ${{ steps.verify-source.outputs.tarball_sha256 || env.FALLBACK_TARBALL_SHA256 }}
+        run: |
+          set -euo pipefail
+          system_r_bin="${SYSTEM_R%/R}"
+          PATH="$system_r_bin:$PATH"
+          export PATH
+          export R_LIBS_USER="$UNIT_LIBRARY"
+          pixi run --locked ci-full-dependencies \
+            "$SYSTEM_R" "$ENVIRONMENT_ID" unit "$TARBALL" "$UNIT_LIBRARY" \
+            "$DIAGNOSTIC_DIR/unit-dependencies.json" "$SOURCE_SHA" \
+            "$EVENT_SHA" "$TARBALL_SHA256"
+
+      - name: Validate ATLAS unit dependency evidence
+        id: verify-unit-dependencies
+        if: ${{ matrix.unit_enabled }}
+        continue-on-error: true
+        env:
+          TARBALL_SHA256: ${{ steps.verify-source.outputs.tarball_sha256 || env.FALLBACK_TARBALL_SHA256 }}
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-verify-full-dependencies \
+            "$ENVIRONMENT_ID" unit "$DIAGNOSTIC_DIR/unit-dependencies.json" \
+            "$SOURCE_SHA" "$EVENT_SHA" "$TARBALL_SHA256" "$SYSTEM_R"
+
+      - name: Run complete ATLAS source unit suite
+        id: unit-full
+        if: ${{ matrix.unit_enabled }}
+        continue-on-error: true
+        env:
+          PACKAGE_PATH: ${{ steps.extract-source.outputs.package_path }}
+        run: |
+          set -euo pipefail
+          export R_LIBS_USER="$UNIT_LIBRARY"
+          pixi run --locked ci-unit source "$DIAGNOSTIC_DIR/unit-full.json" \
+            "$SYSTEM_R" "$ENVIRONMENT_ID" "$PACKAGE_PATH"
+
+      - name: Adapt complete ATLAS source unit result
+        id: adapt-unit
+        if: ${{ matrix.unit_enabled }}
+        continue-on-error: true
+        env:
+          TARBALL_SHA256: ${{ steps.verify-source.outputs.tarball_sha256 || env.FALLBACK_TARBALL_SHA256 }}
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-unit-result \
+            "$DIAGNOSTIC_DIR/unit-full.json" "$RESULT_DIR/unit/result.json" \
+            "$ENVIRONMENT_ID" "$SOURCE_SHA" "$EVENT_SHA" "$TARBALL_SHA256"
+
+      - name: Gate all ATLAS unit prerequisites
+        id: unit-result-gate
+        if: ${{ matrix.unit_enabled }}
+        continue-on-error: true
+        env:
+          INITIALIZE_OUTCOME: ${{ steps.initialize.outcome }}
+          DOWNLOAD_OUTCOME: ${{ steps.download-source.outcome }}
+          VERIFY_SOURCE_OUTCOME: ${{ steps.verify-source.outcome }}
+          EXTRACT_OUTCOME: ${{ steps.extract-source.outcome }}
+          RUNTIME_PROBE_OUTCOME: ${{ steps.probe-runtime.outcome }}
+          RUNTIME_PROOF_OUTCOME: ${{ steps.verify-runtime.outcome }}
+          PREP_OUTCOME: ${{ steps.prepare-unit-dependencies.outcome }}
+          DEPENDENCY_PROOF_OUTCOME: ${{ steps.verify-unit-dependencies.outcome }}
+          UNIT_OUTCOME: ${{ steps.unit-full.outcome }}
+          ADAPTER_OUTCOME: ${{ steps.adapt-unit.outcome }}
+        run: |
+          set -eu
+          for value in "$INITIALIZE_OUTCOME" "$DOWNLOAD_OUTCOME" \
+            "$VERIFY_SOURCE_OUTCOME" "$EXTRACT_OUTCOME" \
+            "$RUNTIME_PROBE_OUTCOME" "$RUNTIME_PROOF_OUTCOME" \
+            "$PREP_OUTCOME" "$DEPENDENCY_PROOF_OUTCOME" "$UNIT_OUTCOME" \
+            "$ADAPTER_OUTCOME"; do
+            test "$value" = success
+          done
+
+      - name: Run native wrapper and preserve its raw exit
+        id: native-check
+        continue-on-error: true
+        env:
+          TARBALL: ${{ steps.verify-source.outputs.tarball_path }}
+          METADATA: ${{ steps.verify-source.outputs.metadata_path }}
+        run: |
+          set -uo pipefail
+          system_r_bin="${SYSTEM_R%/R}"
+          PATH="$system_r_bin:$PATH"
+          export PATH
+          export R_LIBS_USER="$CHECK_LIBRARY"
+          set +e
+          pixi run --locked ci-native-check \
+            "$ENVIRONMENT_ID" "$NATIVE_WRAPPER" "$SYSTEM_R" "$TARBALL" \
+            "$METADATA" "$SOURCE_SHA" "$EVENT_SHA" "$CHECK_WORK_DIR" \
+            "$CHECK_LIBRARY" "$DIAGNOSTIC_DIR/native-check.json" \
+            "$DIAGNOSTIC_DIR/00check.log"
+          raw_exit_code=$?
+          set -e
+          printf 'raw_exit_code=%s\n' "$raw_exit_code" >> "$GITHUB_OUTPUT"
+
+      - name: Verify active check semantics and reconcile only known wrapper defect
+        id: verify-check-semantics
+        continue-on-error: true
+        env:
+          TARBALL_SHA256: ${{ steps.verify-source.outputs.tarball_sha256 || env.FALLBACK_TARBALL_SHA256 }}
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-special-check \
+            "$ENVIRONMENT_ID" "$RUNTIME_PROFILE" "$CHECK_WORK_DIR/input" \
+            "$DIAGNOSTIC_DIR/native-check.json" "$DIAGNOSTIC_DIR/runtime.json" \
+            "$SOURCE_SHA" "$EVENT_SHA" "$TARBALL_SHA256" \
+            "$DIAGNOSTIC_DIR/check-semantics.json" "$GITHUB_OUTPUT"
+
+      - name: Run the checksum-bound VNU dispatcher from verified source
+        id: run-vnu
+        if: ${{ matrix.environment_id == 'vnu' }}
+        continue-on-error: true
+        env:
+          TARBALL: ${{ steps.verify-source.outputs.tarball_path }}
+          METADATA: ${{ steps.verify-source.outputs.metadata_path }}
+          TARBALL_SHA256: ${{ steps.verify-source.outputs.tarball_sha256 || env.FALLBACK_TARBALL_SHA256 }}
+        run: |
+          set -euo pipefail
+          system_r_bin="${SYSTEM_R%/R}"
+          PATH="$system_r_bin:$PATH"
+          export PATH
+          export R_LIBS_USER="$CHECK_LIBRARY"
+          pixi run --locked ci-run-vnu \
+            "$ENVIRONMENT_ID" "/usr/local/bin/vnu.sh" "$SYSTEM_R" "$TARBALL" \
+            "$METADATA" "$SOURCE_SHA" "$EVENT_SHA" "$TARBALL_SHA256" \
+            "$VNU_WORK_DIR" "$CHECK_LIBRARY" \
+            "$DIAGNOSTIC_DIR/special-file.json" "$DIAGNOSTIC_DIR/vnu.json"
+
+      - name: Parse the real check log with the effective wrapper exit
+        id: parse-check
+        continue-on-error: true
+        env:
+          TARBALL_SHA256: ${{ steps.verify-source.outputs.tarball_sha256 || env.FALLBACK_TARBALL_SHA256 }}
+          EFFECTIVE_EXIT_CODE: ${{ steps.verify-check-semantics.outputs.effective_exit_code }}
+        run: |
+          set -euo pipefail
+          export R_LIBS_USER="$CHECK_LIBRARY"
+          pixi run --locked ci-package-result \
+            "$SYSTEM_R" "$DIAGNOSTIC_DIR/00check.log" \
+            "$ENVIRONMENT_ID/colocboost.Rcheck/00check.log" \
+            "$RESULT_DIR/package-check/result.json" "$ENVIRONMENT_ID" \
+            "$SOURCE_SHA" "$EVENT_SHA" "$TARBALL_SHA256" \
+            "$EFFECTIVE_EXIT_CODE"
+
+      - name: Gate active package-check prerequisites
+        id: package-result-gate
+        continue-on-error: true
+        env:
+          INITIALIZE_OUTCOME: ${{ steps.initialize.outcome }}
+          DOWNLOAD_OUTCOME: ${{ steps.download-source.outcome }}
+          VERIFY_SOURCE_OUTCOME: ${{ steps.verify-source.outcome }}
+          FILE_PROOF_OUTCOME: ${{ steps.verify-special-file.outcome }}
+          RUNTIME_PROBE_OUTCOME: ${{ steps.probe-runtime.outcome }}
+          RUNTIME_PROOF_OUTCOME: ${{ steps.verify-runtime.outcome }}
+          SEMANTIC_PROOF_OUTCOME: ${{ steps.verify-check-semantics.outcome }}
+          VNU_OUTCOME: ${{ steps.run-vnu.outcome }}
+          PARSER_OUTCOME: ${{ steps.parse-check.outcome }}
+        run: |
+          set -eu
+          for value in "$INITIALIZE_OUTCOME" "$DOWNLOAD_OUTCOME" \
+            "$VERIFY_SOURCE_OUTCOME" "$RUNTIME_PROBE_OUTCOME" \
+            "$RUNTIME_PROOF_OUTCOME" "$SEMANTIC_PROOF_OUTCOME" \
+            "$PARSER_OUTCOME"; do
+            test "$value" = success
+          done
+          if [ -n "$FILE_PURPOSE" ]; then
+            test "$FILE_PROOF_OUTCOME" = success
+          else
+            test "$FILE_PROOF_OUTCOME" = skipped
+          fi
+          if [ "$ENVIRONMENT_ID" = vnu ]; then
+            test "$VNU_OUTCOME" = success
+          else
+            test "$VNU_OUTCOME" = skipped
+          fi
+
+      - name: Finalize ATLAS unit result
+        id: finalize-unit
+        if: ${{ always() && matrix.unit_enabled }}
+        continue-on-error: true
+        env:
+          TARBALL_SHA256: ${{ steps.verify-source.outputs.tarball_sha256 || env.FALLBACK_TARBALL_SHA256 }}
+          JOB_STATUS: ${{ job.status }}
+          PRODUCER_OUTCOME: ${{ steps.unit-result-gate.outcome }}
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-finalize-result \
+            "$RESULT_DIR/unit/result.json" unit "$ENVIRONMENT_ID" \
+            "$SOURCE_SHA" "$EVENT_SHA" "$TARBALL_SHA256" \
+            "$JOB_STATUS" "$PRODUCER_OUTCOME"
+
+      - name: Finalize active package-check result
+        id: finalize-check
+        if: ${{ always() }}
+        continue-on-error: true
+        env:
+          TARBALL_SHA256: ${{ steps.verify-source.outputs.tarball_sha256 || env.FALLBACK_TARBALL_SHA256 }}
+          JOB_STATUS: ${{ job.status }}
+          PRODUCER_OUTCOME: ${{ steps.package-result-gate.outcome }}
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-finalize-result \
+            "$RESULT_DIR/package-check/result.json" package-check \
+            "$ENVIRONMENT_ID" "$SOURCE_SHA" "$EVENT_SHA" \
+            "$TARBALL_SHA256" "$JOB_STATUS" "$PRODUCER_OUTCOME"
+
+      - name: Upload ATLAS unit result
+        id: upload-unit
+        if: ${{ always() && matrix.unit_enabled }}
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: cran-preflight-result-unit-${{ matrix.environment_id }}
+          path: ${{ runner.temp }}/active-rhub-results/unit/result.json
+          if-no-files-found: error
+
+      - name: Upload active package-check result
+        id: upload-check
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: cran-preflight-result-package-check-${{ matrix.environment_id }}
+          path: ${{ runner.temp }}/active-rhub-results/package-check/result.json
+          if-no-files-found: error
+
+      - name: Upload complete active R-hub diagnostics
+        id: upload-diagnostics
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: cran-preflight-diagnostics-${{ matrix.environment_id }}
+          path: |
+            ${{ runner.temp }}/active-rhub-diagnostics
+            ${{ runner.temp }}/active-rhub-native-check/input/*.Rcheck
+            ${{ runner.temp }}/active-rhub-vnu-source
+          if-no-files-found: error
+          include-hidden-files: true
+
+      - name: Enforce active R-hub producer outcomes
+        id: producer-gate
+        if: ${{ always() }}
+        env:
+          UNIT_ENABLED: ${{ matrix.unit_enabled }}
+          UNIT_FINALIZER_OUTCOME: ${{ steps.finalize-unit.outcome }}
+          CHECK_FINALIZER_OUTCOME: ${{ steps.finalize-check.outcome }}
+          UNIT_UPLOAD_OUTCOME: ${{ steps.upload-unit.outcome }}
+          CHECK_UPLOAD_OUTCOME: ${{ steps.upload-check.outcome }}
+          DIAGNOSTIC_UPLOAD_OUTCOME: ${{ steps.upload-diagnostics.outcome }}
+        run: |
+          set -eu
+          test "$CHECK_FINALIZER_OUTCOME" = success
+          test "$CHECK_UPLOAD_OUTCOME" = success
+          test "$DIAGNOSTIC_UPLOAD_OUTCOME" = success
+          if [ "$UNIT_ENABLED" = true ]; then
+            test "$UNIT_FINALIZER_OUTCOME" = success
+            test "$UNIT_UPLOAD_OUTCOME" = success
+          else
+            test "$UNIT_FINALIZER_OUTCOME" = skipped
+            test "$UNIT_UPLOAD_OUTCOME" = skipped
+          fi
+
   summary-gate:
     if: ${{ always() && !cancelled() && github.repository == 'xueweic/colocboost' }}
-    needs: [prepare, primary-linux, primary-platform, mkl, nosuggests]
+    needs: [prepare, primary-linux, primary-platform, mkl, nosuggests, active-rhub]
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout exact event commit
@@ -1657,6 +2157,7 @@ jobs:
           PRIMARY_PLATFORM_RESULT: ${{ needs.primary-platform.result }}
           MKL_RESULT: ${{ needs.mkl.result }}
           NOSUGGESTS_RESULT: ${{ needs.nosuggests.result }}
+          ACTIVE_RHUB_RESULT: ${{ needs.active-rhub.result }}
           SOURCE_DOWNLOAD_OUTCOME: ${{ steps.download-source.outcome }}
           RESULT_DOWNLOAD_OUTCOME: ${{ steps.download-results.outcome }}
           SOURCE_VERIFY_OUTCOME: ${{ steps.verify-source.outcome }}
@@ -1668,6 +2169,7 @@ jobs:
           test "$PRIMARY_PLATFORM_RESULT" = success
           test "$MKL_RESULT" = success
           test "$NOSUGGESTS_RESULT" = success
+          test "$ACTIVE_RHUB_RESULT" = success
           test "$SOURCE_DOWNLOAD_OUTCOME" = success
           test "$RESULT_DOWNLOAD_OUTCOME" = success
           test "$SOURCE_VERIFY_OUTCOME" = success

@@ -34,6 +34,15 @@ config_value <- function(r, name) {
   paste(output, collapse = " ")
 }
 
+optional_config_value <- function(r, name) {
+  makeconf <- file.path(R.home("etc"), "Makeconf")
+  if (!file.exists(makeconf)) return("")
+  lines <- readLines(makeconf, warn = TRUE)
+  matches <- lines[grepl(paste0("^", name, "[[:space:]]*="), lines)]
+  if (length(matches) != 1L) return("")
+  trimws(sub("^[^=]*=", "", matches[[1L]]))
+}
+
 compiler_evidence <- function(configuration, label) {
   command <- strsplit(trimws(configuration), "[[:space:]]+")[[1L]][[1L]]
   path <- unname(Sys.which(command))
@@ -63,23 +72,75 @@ os_release_evidence <- function() {
 }
 
 write_evidence <- function(path, fields) {
-  if (!requireNamespace("jsonlite", quietly = TRUE)) stop("jsonlite is required.")
+  json_string <- function(value) {
+    if (length(value) != 1L || is.na(value)) return("null")
+    encodeString(enc2utf8(value), quote = '"', na.encode = FALSE)
+  }
+  to_json <- function(value) {
+    if (is.null(value) || length(value) == 1L && is.atomic(value) && is.na(value)) {
+      return("null")
+    }
+    if (is.list(value)) {
+      if (!is.null(names(value)) && all(nzchar(names(value)))) {
+        entries <- vapply(seq_along(value), function(index) {
+          paste0(json_string(names(value)[[index]]), ":", to_json(value[[index]]))
+        }, character(1L))
+        return(paste0("{", paste(entries, collapse = ","), "}"))
+      }
+      entries <- vapply(value, to_json, character(1L))
+      return(paste0("[", paste(entries, collapse = ","), "]"))
+    }
+    if (is.character(value)) {
+      encoded <- vapply(value, json_string, character(1L))
+      if (length(encoded) == 1L) return(encoded)
+      return(paste0("[", paste(encoded, collapse = ","), "]"))
+    }
+    if (is.logical(value)) {
+      encoded <- ifelse(is.na(value), "null", ifelse(value, "true", "false"))
+      if (length(encoded) == 1L) return(encoded)
+      return(paste0("[", paste(encoded, collapse = ","), "]"))
+    }
+    if (is.numeric(value)) {
+      if (any(!is.finite(value))) stop("Cannot encode a non-finite JSON number.")
+      encoded <- format(value, scientific = FALSE, trim = TRUE, digits = 17L)
+      if (length(encoded) == 1L) return(encoded)
+      return(paste0("[", paste(encoded, collapse = ","), "]"))
+    }
+    stop("Unsupported evidence value type: ", typeof(value), ".")
+  }
   parent <- dirname(path)
   if (!dir.exists(parent) && !dir.create(parent, recursive = TRUE)) {
     stop("Cannot create evidence directory.")
   }
   temporary <- tempfile("runtime-evidence-", tmpdir = parent)
   on.exit(unlink(temporary), add = TRUE)
-  jsonlite::write_json(fields, temporary, auto_unbox = TRUE, pretty = TRUE, null = "null")
+  writeLines(to_json(fields), temporary, useBytes = TRUE)
   if (!file.rename(temporary, path)) stop("Cannot finalize runtime evidence.")
 }
 
 status <- tryCatch({
   cli <- parse_cli(args)
-  selected_r <- absolute(cli[["r-executable"]], "r-executable", must_work = TRUE)
-  actual_r <- file.path(R.home("bin"), if (.Platform$OS.type == "windows") "R.exe" else "R")
-  actual_r <- absolute(actual_r, "active R", must_work = TRUE)
-  if (!identical(selected_r, actual_r)) stop("Active R does not match selected r-executable.")
+  lexical_r <- gsub("\\\\", "/", cli[["r-executable"]])
+  if (!grepl("^(/|[A-Za-z]:/)", lexical_r) || !file.exists(lexical_r)) {
+    stop("r-executable must be an existing absolute path.")
+  }
+  selected_r <- absolute(lexical_r, "r-executable", must_work = TRUE)
+  selected_r_home <- system2(
+    selected_r, "RHOME", stdout = TRUE, stderr = FALSE
+  )
+  rhome_status <- attr(selected_r_home, "status")
+  if (!is.null(rhome_status) && rhome_status != 0L) {
+    stop("Selected R failed its RHOME identity probe.")
+  }
+  selected_r_home <- selected_r_home[nzchar(trimws(selected_r_home))]
+  if (length(selected_r_home) != 1L) stop("Selected R returned ambiguous RHOME identity.")
+  selected_r_home <- absolute(
+    trimws(selected_r_home[[1L]]), "selected R home", must_work = TRUE
+  )
+  active_r_home <- absolute(R.home(), "active R home", must_work = TRUE)
+  if (!identical(selected_r_home, active_r_home)) {
+    stop("Active R home does not match selected r-executable.")
+  }
   evidence <- absolute(cli$evidence, "evidence")
 
   matrix_dimension <- 3L
@@ -115,7 +176,8 @@ status <- tryCatch({
     "PATH", "R_HOME", "R_LIBS", "R_LIBS_USER", "R_LIBS_SITE",
     "LD_LIBRARY_PATH", "DYLD_LIBRARY_PATH", "CC", "CXX", "FC", "F77",
     "LANG", "LC_ALL", "LC_CTYPE", "ASAN_OPTIONS", "UBSAN_OPTIONS",
-    "LD_PRELOAD", "_R_CHECK_DONTTEST_EXAMPLES_"
+    "LD_PRELOAD", "VALGRIND_OPTS", "CHECK_ARGS",
+    "_R_CHECK_DONTTEST_EXAMPLES_"
   )
   environment <- as.list(Sys.getenv(environment_names, unset = NA_character_))
   names(environment) <- environment_names
@@ -129,8 +191,8 @@ status <- tryCatch({
     source_sha = cli[["source-sha"]],
     event_sha = cli[["event-sha"]],
     tarball_sha256 = cli[["tarball-sha256"]],
-    r_executable = selected_r,
-    r_resolved = actual_r,
+    r_executable = lexical_r,
+    r_resolved = selected_r,
     r_version = R.version.string,
     r_status = R.version$status,
     r_platform = R.version$platform,
@@ -155,11 +217,18 @@ status <- tryCatch({
     la_library = as.character(la_library),
     la_version = as.character(la_version),
     blas_libs = config_value(selected_r, "BLAS_LIBS"),
+    makeconf = list(
+      CFLAGS = config_value(selected_r, "CFLAGS"),
+      CXXFLAGS = config_value(selected_r, "CXXFLAGS"),
+      FFLAGS = config_value(selected_r, "FFLAGS"),
+      MAIN_LDFLAGS = optional_config_value(selected_r, "MAIN_LDFLAGS"),
+      SAN_LIBS = optional_config_value(selected_r, "SAN_LIBS")
+    ),
     matrix_dimension = matrix_dimension,
     matrix_checksum = matrix_checksum,
     maps_method = "proc-self-maps",
-    loaded_libraries = paths,
-    long_double = .Machine$sizeof.longdouble > .Machine$sizeof.double,
+    loaded_libraries = unname(as.list(paths)),
+    long_double = isTRUE(capabilities("long.double")),
     environment = environment
   )
   write_evidence(evidence, fields)

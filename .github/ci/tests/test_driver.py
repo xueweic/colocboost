@@ -579,6 +579,8 @@ def test_environment_evidence_is_whitelisted_and_records_executable_identity(
         "R_LIBS": "/approved/R/library",
         "R_LIBS_USER": "/approved/user/library",
         "R_LIBS_SITE": "/approved/site/library",
+        "R_PROFILE_USER": None,
+        "R_ENVIRON_USER": None,
         "LD_LIBRARY_PATH": "/approved/lib",
         "DYLD_LIBRARY_PATH": "/approved/dyld",
         "LIBPATH": None,

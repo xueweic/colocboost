@@ -55,17 +55,18 @@ def test_triggers_permissions_concurrency_and_job_inventory_are_exact():
     }
     assert set(workflow["jobs"]) == {
         "prepare", "primary-linux", "primary-platform", "mkl", "nosuggests",
-        "summary-gate",
+        "active-rhub", "summary-gate",
     }
     assert workflow["jobs"]["primary-linux"]["strategy"]["fail-fast"] is False
     assert workflow["jobs"]["primary-platform"]["strategy"]["fail-fast"] is False
+    assert workflow["jobs"]["active-rhub"]["strategy"]["fail-fast"] is False
 
 
 def test_every_job_is_inert_outside_the_fork_and_dependents_stop_when_cancelled():
     _, workflow = load_workflow()
 
     assert workflow["jobs"]["prepare"]["if"] == "${{ " + FORK_GUARD + " }}"
-    for name in ("primary-linux", "primary-platform", "mkl", "nosuggests"):
+    for name in ("primary-linux", "primary-platform", "mkl", "nosuggests", "active-rhub"):
         assert workflow["jobs"][name]["if"] == (
             "${{ always() && !cancelled() && " + FORK_GUARD + " }}"
         )
@@ -76,6 +77,7 @@ def test_every_job_is_inert_outside_the_fork_and_dependents_stop_when_cancelled(
     )
     assert summary["needs"] == [
         "prepare", "primary-linux", "primary-platform", "mkl", "nosuggests",
+        "active-rhub",
     ]
 
 
@@ -265,7 +267,7 @@ def test_primary_platform_children_are_cross_platform_and_fail_closed():
     assert "*.Rcheck" in diagnostics["with"]["path"]
 
 
-def test_task10_primary_foundation_produces_exactly_30_terminal_keys():
+def test_task10_active_phase_produces_exactly_40_terminal_keys():
     _, workflow = load_workflow()
     keys = set()
     for job_name in ("primary-linux", "primary-platform"):
@@ -276,9 +278,14 @@ def test_task10_primary_foundation_produces_exactly_30_terminal_keys():
     for environment_id in ("mkl", "nosuggests"):
         keys.add(("package-check", environment_id))
         keys.add(("unit", environment_id))
-    assert len(keys) == 30
-    assert sum(kind == "package-check" for kind, _ in keys) == 15
-    assert sum(kind == "unit" for kind, _ in keys) == 15
+    active_rows = workflow["jobs"]["active-rhub"]["strategy"]["matrix"]["include"]
+    for row in active_rows:
+        keys.add(("package-check", row["environment_id"]))
+        if row["unit_enabled"]:
+            keys.add(("unit", row["environment_id"]))
+    assert len(keys) == 40
+    assert sum(kind == "package-check" for kind, _ in keys) == 24
+    assert sum(kind == "unit" for kind, _ in keys) == 16
     assert all(kind != "applicability" for kind, _ in keys)
 
 
@@ -340,6 +347,121 @@ def test_special_producers_use_pinned_job_containers_and_system_r_bindings():
             "CHECK_WORK_DIR",
         ):
             assert f"{variable}=" in initialize
+
+
+def test_active_rhub_matrix_is_exact_and_immutable():
+    _, workflow = load_workflow()
+    job = workflow["jobs"]["active-rhub"]
+    rows = job["strategy"]["matrix"]["include"]
+    generic = "a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090"
+    clang = "9732ef12761fd6ecd4631dd6ce0861fbbbd68fb33f6e7643745ec36de456b4f9"
+    expected = {
+        "atlas": ("ghcr.io/r-hub/containers/atlas@sha256:7597f7d0b6b2f009ae7bb425391523d8f4388223238db50d7dfb1572add63a88", "/opt/R/devel/bin/R", generic, "atlas", "--no-manual --no-build-vignettes", True, ""),
+        "clang-asan": ("ghcr.io/r-hub/containers/clang-asan@sha256:dfab3d2274151577eb705d2be9acd3391798ba4b56d384ca9df84544e5b6be96", "/opt/R/devel-asan/bin/R", clang, "clang-asan", "--extra-arch --no-stop-on-test-error --no-manual --no-build-vignettes", False, ""),
+        "clang-ubsan": ("ghcr.io/r-hub/containers/clang-ubsan@sha256:a58b00b52e9c4b210c3474eac4c28dc18bf70c912d75bb45e466410452a694e6", "/opt/R/devel-asan/bin/R", clang, "clang-ubsan", "--extra-arch --no-stop-on-test-error --no-manual --no-build-vignettes", False, ""),
+        "donttest": ("ghcr.io/r-hub/containers/donttest@sha256:fd1942c8b8627d7e1d80582a023b2792acfa158a6edfeeeba3edd27a52c57967", "/opt/R/devel/bin/R", generic, "donttest", "--no-manual --no-build-vignettes", False, ""),
+        "gcc-asan": ("ghcr.io/r-hub/containers/gcc-asan@sha256:32c9ad423cbca983bae893c2f0f44021ddbd5ac236c29fba8078b97acd80d78f", "/opt/R/devel/bin/R", generic, "gcc-asan", "--no-manual --no-build-vignettes", False, ""),
+        "gcc-ubsan": ("ghcr.io/r-hub/containers/gcc-asan@sha256:32c9ad423cbca983bae893c2f0f44021ddbd5ac236c29fba8078b97acd80d78f", "/opt/R/devel/bin/R", generic, "gcc-ubsan", "--no-manual --no-build-vignettes", False, ""),
+        "nold": ("ghcr.io/r-hub/containers/nold@sha256:9dac23acd0e610b5fb5f82957c8136ffc6acf216a328a067795241542b3dc091", "/opt/R/devel-nold/bin/R", generic, "nold", "--no-manual --no-build-vignettes", False, ""),
+        "valgrind": ("ghcr.io/r-hub/containers/valgrind@sha256:98dfda5016513c269e33c8155ea57745d977dad4b1a703b28db82fcb1237ef9c", "/opt/R/devel-valgrind/bin/R", "79261a338b0a381a157cf2025ef40f389b3906fb4711d14b7a72314f5316cbc8", "valgrind", "--use-valgrind --extra-arch --no-stop-on-test-error --no-manual --no-build-vignettes", False, "valgrind-suppression"),
+        "vnu": ("ghcr.io/r-hub/containers/vnu@sha256:03f45d5944fc092627cae2e944f16f037fed9795f8768c90d9511799098a7884", "/opt/R/release/bin/R", "0de8ba373ec3bbe81b84122857d071dda4eee72e035d3180464607837c0bb089", "vnu", "--no-manual --no-build-vignettes", False, "vnu-dispatcher"),
+    }
+    assert len(rows) == 9
+    assert len({row["environment_id"] for row in rows}) == 9
+    assert {row["environment_id"] for row in rows} == set(expected)
+    for row in rows:
+        assert (
+            row["image"], row["system_r"], row["wrapper_sha256"],
+            row["runtime_profile"], row["check_args"], row["unit_enabled"],
+            row["file_purpose"],
+        ) == expected[row["environment_id"]]
+        assert row["wrapper"] == "/usr/local/bin/r-check"
+    assert job["runs-on"] == "ubuntu-24.04"
+    assert job["container"] == {"image": "${{ matrix.image }}", "options": "--user 0"}
+    assert job["defaults"] == {"run": {"shell": "bash"}}
+
+
+def test_active_rhub_orders_identity_raw_check_semantics_parse_and_special_dispatch():
+    _, workflow = load_workflow()
+    job = workflow["jobs"]["active-rhub"]
+    ids = [step.get("id") for step in job["steps"]]
+    for step_id in (
+        "initialize", "download-source", "verify-source", "extract-source",
+        "verify-special-file", "probe-runtime", "verify-runtime",
+        "native-check", "verify-check-semantics", "run-vnu", "parse-check",
+        "package-result-gate", "finalize-check", "upload-check",
+        "upload-diagnostics", "producer-gate",
+    ):
+        assert ids.count(step_id) == 1
+    assert ids.index("verify-special-file") < ids.index("native-check")
+    assert ids.index("native-check") < ids.index("verify-check-semantics")
+    assert ids.index("verify-check-semantics") < ids.index("run-vnu")
+    assert ids.index("verify-check-semantics") < ids.index("parse-check")
+    native = step_with_id(job, "native-check")
+    assert "ci-native-check" in native["run"]
+    assert "raw_exit_code=" in native["run"]
+    semantics = step_with_id(job, "verify-check-semantics")
+    assert "ci-special-check" in semantics["run"]
+    parser = step_with_id(job, "parse-check")
+    assert parser["env"]["EFFECTIVE_EXIT_CODE"] == (
+        "${{ steps.verify-check-semantics.outputs.effective_exit_code }}"
+    )
+    assert '"$EFFECTIVE_EXIT_CODE"' in parser["run"]
+    special_file = step_with_id(job, "verify-special-file")
+    assert "ci-file-contract" in special_file["run"]
+    assert special_file["if"] == "${{ matrix.file_purpose != '' }}"
+    vnu = step_with_id(job, "run-vnu")
+    assert vnu["if"] == "${{ matrix.environment_id == 'vnu' }}"
+    assert "ci-run-vnu" in vnu["run"]
+    assert "/usr/local/bin/vnu.sh" in vnu["run"]
+
+
+def test_active_atlas_alone_emits_independent_full_source_unit_result():
+    _, workflow = load_workflow()
+    job = workflow["jobs"]["active-rhub"]
+    for step_id in (
+        "prepare-unit-dependencies", "verify-unit-dependencies", "unit-full",
+        "adapt-unit", "unit-result-gate", "finalize-unit", "upload-unit",
+    ):
+        step = step_with_id(job, step_id)
+        assert "matrix.unit_enabled" in step["if"]
+    unit = step_with_id(job, "unit-full")
+    assert unit["env"]["PACKAGE_PATH"] == "${{ steps.extract-source.outputs.package_path }}"
+    assert "ci-unit source" in unit["run"]
+    assert "--filter" not in unit["run"]
+    package_gate = step_with_id(job, "package-result-gate")
+    assert "UNIT_OUTCOME" not in package_gate["env"]
+    assert "ADAPTER_OUTCOME" not in package_gate["env"]
+    assert "NATIVE_CHECK_OUTCOME" not in package_gate["env"]
+    assert "steps.native-check.outcome" not in package_gate["env"].values()
+    assert package_gate["env"]["SEMANTIC_PROOF_OUTCOME"] == (
+        "${{ steps.verify-check-semantics.outcome }}"
+    )
+    unit_gate = step_with_id(job, "unit-result-gate")
+    assert "NATIVE_CHECK_OUTCOME" not in unit_gate["env"]
+
+
+def test_active_results_and_complete_diagnostics_are_fail_closed():
+    _, workflow = load_workflow()
+    job = workflow["jobs"]["active-rhub"]
+    for step_id in ("finalize-check", "upload-check", "upload-diagnostics", "producer-gate"):
+        assert step_with_id(job, step_id)["if"] == "${{ always() }}"
+    assert step_with_id(job, "finalize-unit")["if"] == "${{ always() && matrix.unit_enabled }}"
+    assert step_with_id(job, "upload-unit")["if"] == "${{ always() && matrix.unit_enabled }}"
+    diagnostics = step_with_id(job, "upload-diagnostics")
+    assert diagnostics["with"]["include-hidden-files"] is True
+    assert diagnostics["with"]["if-no-files-found"] == "error"
+    assert "*.Rcheck" in diagnostics["with"]["path"]
+    assert step_with_id(job, "upload-check")["with"]["name"] == (
+        "cran-preflight-result-package-check-${{ matrix.environment_id }}"
+    )
+    assert step_with_id(job, "upload-unit")["with"]["name"] == (
+        "cran-preflight-result-unit-${{ matrix.environment_id }}"
+    )
+    ids = [step.get("id") for step in job["steps"]]
+    assert ids.index("finalize-check") < ids.index("upload-check")
+    assert ids.index("finalize-unit") < ids.index("upload-unit")
+    assert max(ids.index("upload-check"), ids.index("upload-unit"), ids.index("upload-diagnostics")) < ids.index("producer-gate")
 
 
 def test_special_producers_consume_verified_tarball_and_not_checkout_package():
@@ -569,6 +691,7 @@ def test_summary_publication_and_explicit_outcome_gate_run_after_failures():
         "PRIMARY_PLATFORM_RESULT": "${{ needs.primary-platform.result }}",
         "MKL_RESULT": "${{ needs.mkl.result }}",
         "NOSUGGESTS_RESULT": "${{ needs.nosuggests.result }}",
+        "ACTIVE_RHUB_RESULT": "${{ needs.active-rhub.result }}",
         "SOURCE_DOWNLOAD_OUTCOME": "${{ steps.download-source.outcome }}",
         "RESULT_DOWNLOAD_OUTCOME": "${{ steps.download-results.outcome }}",
         "SOURCE_VERIFY_OUTCOME": "${{ steps.verify-source.outcome }}",

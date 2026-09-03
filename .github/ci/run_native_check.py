@@ -95,6 +95,8 @@ def run_native_check(
     selected_environment = dict(os.environ if environment is None else environment)
     if selected_environment.get("R_LIBS_USER") != os.fspath(library):
         raise ValueError("R_LIBS_USER must name the fresh check library")
+    selected_environment["R_PROFILE_USER"] = os.devnull
+    selected_environment["R_ENVIRON_USER"] = os.devnull
 
     input_dir = work / "input"
     input_dir.mkdir()

@@ -343,7 +343,10 @@ not a production-code change; any broader test refactor remains out of scope.
   their native wrapper flags so manual tooling cannot mask the numerical,
   sanitizer, Valgrind, or reduced-feature signal; their omitted documentation
   stages are covered by the dedicated lane rather than falsely attributed to
-  every special row.
+  every special row. `--no-build-vignettes` can still check the installed
+  vignettes and run their R code; those incidental checks are allowed, while a
+  successful PDF-manual or vignette-rebuild stage remains exclusive to the
+  full-documentation lane.
 - ERROR and WARNING statuses fail the job.
 - A new NOTE fails the job. The currently documented installed-size NOTE may be
   accepted only by an exact, reviewable allowlist rule; a changed message or
@@ -356,6 +359,19 @@ not a production-code change; any broader test refactor remains out of scope.
   contains exactly the verified tarball; orchestration requires exactly one
   regular non-symlink `.Rcheck/00check.log`, preserves the wrapper exit, and,
   for noSuggests, requires a nonempty `testthat.Rout` before parsing results.
+- Runtime identity evidence is emitted without an unprepared R package: the
+  probe uses base R, retains the manifest's lexical `/opt/R` selector separately
+  from a versioned resolved target, and records compilers and loaded libraries
+  in the R process that performs the matrix operation. Only the pinned Clang
+  sanitizer and Valgrind wrappers may reconcile their known raw exit 1, and
+  only after an exact successful check footer, complete expected stages, no
+  `Rout.fail`, and an independent clean full-tree diagnostic scan.
+- The donttest lane records the exact literal `\\donttest{` count from the
+  retained checked source (currently zero), proves the policy variable and
+  completed examples, and never claims that nonexistent expanded blocks ran.
+- The Valgrind lane verifies the committed 1,175-byte official suppression
+  suffix before its wrapper. The VNU lane verifies and directly invokes the
+  pinned zero-argument dispatcher from a separately verified source extraction.
 
 ## MKL proof and regression gate
 
@@ -458,6 +474,17 @@ the diagnostic artifact. There is no automatic retry for test or check failures.
   explicit absolute system R and sibling Rscript.
 - `.github/ci/run_native_check.py`: fresh native-wrapper invocation, wrapper
   exit preservation, and strict check-log/test-output discovery.
+- `.github/ci/prepare-full-dependencies.R` and
+  `.github/ci/verify_full_dependencies.py`: fresh all-dependency libraries with
+  source/event/tarball, selected-R, purpose, availability, and package-origin
+  binding for primary and ATLAS unit lanes.
+- `.github/ci/probe-runtime.R` and
+  `.github/ci/verify_runtime_evidence.py`: base-R same-process runtime, compiler,
+  BLAS, sanitizer, noLD, donttest, and Valgrind identity proof.
+- `.github/ci/verify_special_check.py`: strict stage and full check-tree
+  validation, including narrowly scoped upstream exit reconciliation.
+- `.github/ci/verify_file_contract.py` and `.github/ci/run_vnu.py`: pinned
+  Valgrind suppression/VNU dispatcher validation and direct VNU execution.
 - `.github/ci/prepare-rhub-dependencies.R`: exact MKL and noSuggests dependency
   policy execution plus structured actual-state evidence.
 - `.github/ci/verify_dependency_evidence.py`: closed validation of that actual

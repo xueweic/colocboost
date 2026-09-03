@@ -239,6 +239,8 @@ coverage:
     wrapper_input: tarball-parent
     check_args: [--no-manual, --no-build-vignettes]
     runtime_profile: atlas
+    check_profile: standard
+    documentation_policy: forbidden
     expected_r_kind: devel
     expected_os: linux
     expected_architecture: x86_64
@@ -346,6 +348,19 @@ coverage:
     state: direct
     driver: native-wrapper
     image: ghcr.io/r-hub/containers/clang-asan@sha256:dfab3d2274151577eb705d2be9acd3391798ba4b56d384ca9df84544e5b6be96
+    wrapper_path: /usr/local/bin/r-check
+    wrapper_sha256: 9732ef12761fd6ecd4631dd6ce0861fbbbd68fb33f6e7643745ec36de456b4f9
+    system_r: /opt/R/devel-asan/bin/R
+    wrapper_input: tarball-parent
+    check_args: [--extra-arch, --no-stop-on-test-error, --no-manual, --no-build-vignettes]
+    runtime_profile: clang-asan
+    check_profile: sanitizer
+    documentation_policy: forbidden
+    expected_r_kind: devel
+    expected_os: linux
+    expected_architecture: x86_64
+    expected_distribution: ubuntu
+    expected_distribution_version: "22.04"
     proof: [source-tarball-sha256, container-system-r, r-executable, sanitizer-compiler-flags, sanitizer-linker-flags, asan-runtime, sanitizer-output-scan]
 
   - id: clang-ubsan
@@ -354,6 +369,19 @@ coverage:
     state: direct
     driver: native-wrapper
     image: ghcr.io/r-hub/containers/clang-ubsan@sha256:a58b00b52e9c4b210c3474eac4c28dc18bf70c912d75bb45e466410452a694e6
+    wrapper_path: /usr/local/bin/r-check
+    wrapper_sha256: 9732ef12761fd6ecd4631dd6ce0861fbbbd68fb33f6e7643745ec36de456b4f9
+    system_r: /opt/R/devel-asan/bin/R
+    wrapper_input: tarball-parent
+    check_args: [--extra-arch, --no-stop-on-test-error, --no-manual, --no-build-vignettes]
+    runtime_profile: clang-ubsan
+    check_profile: sanitizer
+    documentation_policy: forbidden
+    expected_r_kind: devel
+    expected_os: linux
+    expected_architecture: x86_64
+    expected_distribution: ubuntu
+    expected_distribution_version: "22.04"
     proof: [source-tarball-sha256, container-system-r, r-executable, sanitizer-compiler-flags, sanitizer-linker-flags, ubsan-runtime, undefined-behavior-output-scan]
 
   - id: donttest
@@ -362,6 +390,19 @@ coverage:
     state: direct
     driver: native-wrapper
     image: ghcr.io/r-hub/containers/donttest@sha256:fd1942c8b8627d7e1d80582a023b2792acfa158a6edfeeeba3edd27a52c57967
+    wrapper_path: /usr/local/bin/r-check
+    wrapper_sha256: a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090
+    system_r: /opt/R/devel/bin/R
+    wrapper_input: tarball-parent
+    check_args: [--no-manual, --no-build-vignettes]
+    runtime_profile: donttest
+    check_profile: donttest
+    documentation_policy: forbidden
+    expected_r_kind: devel
+    expected_os: linux
+    expected_architecture: x86_64
+    expected_distribution: ubuntu
+    expected_distribution_version: "22.04"
     proof: [source-tarball-sha256, container-system-r, r-executable, check-donttest-examples-true, expanded-examples-executed]
 
   - id: gcc-asan
@@ -370,6 +411,19 @@ coverage:
     state: direct
     driver: native-wrapper
     image: ghcr.io/r-hub/containers/gcc-asan@sha256:32c9ad423cbca983bae893c2f0f44021ddbd5ac236c29fba8078b97acd80d78f
+    wrapper_path: /usr/local/bin/r-check
+    wrapper_sha256: a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090
+    system_r: /opt/R/devel/bin/R
+    wrapper_input: tarball-parent
+    check_args: [--no-manual, --no-build-vignettes]
+    runtime_profile: gcc-asan
+    check_profile: sanitizer
+    documentation_policy: forbidden
+    expected_r_kind: devel
+    expected_os: linux
+    expected_architecture: x86_64
+    expected_distribution: fedora
+    expected_distribution_version: "42"
     proof: [source-tarball-sha256, container-system-r, r-executable, gcc-asan-flags, asan-preload, asan-runtime, sanitizer-output-scan]
 
   - id: gcc-ubsan
@@ -378,6 +432,19 @@ coverage:
     state: direct
     driver: native-wrapper
     image: ghcr.io/r-hub/containers/gcc-asan@sha256:32c9ad423cbca983bae893c2f0f44021ddbd5ac236c29fba8078b97acd80d78f
+    wrapper_path: /usr/local/bin/r-check
+    wrapper_sha256: a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090
+    system_r: /opt/R/devel/bin/R
+    wrapper_input: tarball-parent
+    check_args: [--no-manual, --no-build-vignettes]
+    runtime_profile: gcc-ubsan
+    check_profile: sanitizer
+    documentation_policy: forbidden
+    expected_r_kind: devel
+    expected_os: linux
+    expected_architecture: x86_64
+    expected_distribution: fedora
+    expected_distribution_version: "42"
     proof: [source-tarball-sha256, container-system-r, r-executable, gcc-ubsan-flags, ubsan-preload, ubsan-runtime, sanitizer-output-scan]
 
   - id: gcc
@@ -408,6 +475,19 @@ coverage:
     state: direct
     driver: native-wrapper
     image: ghcr.io/r-hub/containers/nold@sha256:9dac23acd0e610b5fb5f82957c8136ffc6acf216a328a067795241542b3dc091
+    wrapper_path: /usr/local/bin/r-check
+    wrapper_sha256: a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090
+    system_r: /opt/R/devel-nold/bin/R
+    wrapper_input: tarball-parent
+    check_args: [--no-manual, --no-build-vignettes]
+    runtime_profile: nold
+    check_profile: nold
+    documentation_policy: forbidden
+    expected_r_kind: devel
+    expected_os: linux
+    expected_architecture: x86_64
+    expected_distribution: ubuntu
+    expected_distribution_version: "22.04"
     proof: [source-tarball-sha256, container-system-r, r-executable, opt-r-devel-nold, long-double-disabled]
 
   - id: noomp
@@ -447,6 +527,22 @@ coverage:
     state: direct
     driver: native-wrapper
     image: ghcr.io/r-hub/containers/valgrind@sha256:98dfda5016513c269e33c8155ea57745d977dad4b1a703b28db82fcb1237ef9c
+    wrapper_path: /usr/local/bin/r-check
+    wrapper_sha256: 79261a338b0a381a157cf2025ef40f389b3906fb4711d14b7a72314f5316cbc8
+    system_r: /opt/R/devel-valgrind/bin/R
+    wrapper_input: tarball-parent
+    check_args: [--use-valgrind, --extra-arch, --no-stop-on-test-error, --no-manual, --no-build-vignettes]
+    runtime_profile: valgrind
+    check_profile: valgrind
+    documentation_policy: forbidden
+    expected_r_kind: devel
+    expected_os: linux
+    expected_architecture: x86_64
+    expected_distribution: fedora
+    expected_distribution_version: "42"
+    suppression_path: /usr/libexec/valgrind/default.supp
+    suppression_suffix_bytes: 1175
+    suppression_suffix_sha256: 3503629391b14d2a7fbc83b5925fa3af3705dc76b3ceaaf2f944b2e589ee0a90
     proof: [source-tarball-sha256, container-system-r, r-executable, opt-r-devel-valgrind, use-valgrind, valgrind-runtime, suppression-and-error-scan]
 
   - id: 0len
@@ -511,6 +607,21 @@ coverage:
     state: direct
     driver: native-wrapper
     image: ghcr.io/r-hub/containers/vnu@sha256:03f45d5944fc092627cae2e944f16f037fed9795f8768c90d9511799098a7884
+    wrapper_path: /usr/local/bin/r-check
+    wrapper_sha256: 0de8ba373ec3bbe81b84122857d071dda4eee72e035d3180464607837c0bb089
+    system_r: /opt/R/release/bin/R
+    wrapper_input: tarball-parent
+    check_args: [--no-manual, --no-build-vignettes]
+    runtime_profile: vnu
+    check_profile: vnu
+    documentation_policy: forbidden
+    expected_r_kind: release
+    expected_os: linux
+    expected_architecture: x86_64
+    expected_distribution: ubuntu
+    expected_distribution_version: "24.04"
+    vnu_path: /usr/local/bin/vnu.sh
+    vnu_sha256: 2878f66d7d96fe1f9ef65c47313904ec146c366ff5fb26288ec433b72fe9b98f
     proof: [source-tarball-sha256, container-system-r, r-executable, vnu-special-dispatch, nu-validator-executed, zero-bad-entries, validator-output]
 
 # One aggregate unit result per declared lane. Targeted MKL reports are required

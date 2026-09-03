@@ -106,6 +106,16 @@ cmd = '''python -B .github/ci/verify_special_check.py --manifest=.github/ci/chec
 cwd = "."
 args = ["environment_id", "profile", "check_root", "native_evidence", "runtime_evidence", "source_sha", "event_sha", "tarball_sha256", "output", "github_output"]
 
+[tasks.ci-file-contract]
+cmd = '''python -B .github/ci/verify_file_contract.py --manifest=.github/ci/check-matrix.yml --environment-id='{{ environment_id | replace("'", "'\"'\"'") }}' --purpose='{{ purpose | replace("'", "'\"'\"'") }}' --path='{{ path | replace("'", "'\"'\"'") }}' --source-sha='{{ source_sha | replace("'", "'\"'\"'") }}' --event-sha='{{ event_sha | replace("'", "'\"'\"'") }}' --tarball-sha256='{{ tarball_sha256 | replace("'", "'\"'\"'") }}' --output='{{ output | replace("'", "'\"'\"'") }}' '''
+cwd = "."
+args = ["environment_id", "purpose", "path", "source_sha", "event_sha", "tarball_sha256", "output"]
+
+[tasks.ci-run-vnu]
+cmd = '''python -B .github/ci/run_vnu.py --manifest=.github/ci/check-matrix.yml --environment-id='{{ environment_id | replace("'", "'\"'\"'") }}' --dispatcher='{{ dispatcher | replace("'", "'\"'\"'") }}' --r-executable='{{ r_executable | replace("'", "'\"'\"'") }}' --tarball='{{ tarball | replace("'", "'\"'\"'") }}' --metadata='{{ metadata | replace("'", "'\"'\"'") }}' --source-sha='{{ source_sha | replace("'", "'\"'\"'") }}' --event-sha='{{ event_sha | replace("'", "'\"'\"'") }}' --tarball-sha256='{{ tarball_sha256 | replace("'", "'\"'\"'") }}' --work-dir='{{ work_dir | replace("'", "'\"'\"'") }}' --library='{{ library | replace("'", "'\"'\"'") }}' --file-evidence='{{ file_evidence | replace("'", "'\"'\"'") }}' --output='{{ output | replace("'", "'\"'\"'") }}' '''
+cwd = "."
+args = ["environment_id", "dispatcher", "r_executable", "tarball", "metadata", "source_sha", "event_sha", "tarball_sha256", "work_dir", "library", "file_evidence", "output"]
+
 [tasks.ci-verify-mkl]
 cmd = '''python -B .github/ci/run_r_helper.py --r-executable='{{ r_executable | replace("'", "'\"'\"'") }}' --helper=verify-mkl -- --policy='{{ policy | replace("'", "'\"'\"'") }}' --evidence='{{ evidence | replace("'", "'\"'\"'") }}' '''
 cwd = "."

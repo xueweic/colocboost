@@ -138,6 +138,8 @@ def test_top_level_task_interfaces_are_explicit(manifest):
         "ci-platform-r",
         "ci-r-binary-check",
         "ci-special-check",
+        "ci-file-contract",
+        "ci-run-vnu",
         "ci-verify-mkl",
         "ci-native-check",
         "ci-unit-result",
@@ -218,6 +220,15 @@ def test_top_level_task_interfaces_are_explicit(manifest):
         "runtime_evidence", "source_sha", "event_sha", "tarball_sha256",
         "output", "github_output",
     ]
+    assert task_args(tasks["ci-file-contract"]) == [
+        "environment_id", "purpose", "path", "source_sha", "event_sha",
+        "tarball_sha256", "output",
+    ]
+    assert task_args(tasks["ci-run-vnu"]) == [
+        "environment_id", "dispatcher", "r_executable", "tarball", "metadata",
+        "source_sha", "event_sha", "tarball_sha256", "work_dir", "library",
+        "file_evidence", "output",
+    ]
     assert task_args(tasks["ci-verify-mkl"]) == [
         "r_executable",
         "policy",
@@ -282,6 +293,8 @@ def test_top_level_task_interfaces_are_explicit(manifest):
     assert ".github/ci/verify_platform_r.py" in commands["ci-platform-r"]
     assert ".github/ci/run_r_binary_check.py" in commands["ci-r-binary-check"]
     assert ".github/ci/verify_special_check.py" in commands["ci-special-check"]
+    assert ".github/ci/verify_file_contract.py" in commands["ci-file-contract"]
+    assert ".github/ci/run_vnu.py" in commands["ci-run-vnu"]
     assert "--helper=verify-mkl" in commands["ci-verify-mkl"]
     assert ".github/ci/run_native_check.py" in commands["ci-native-check"]
     assert ".github/ci/adapt_unit_result.py" in commands["ci-unit-result"]
@@ -349,6 +362,15 @@ def test_typed_task_values_are_shell_quoted(manifest):
             "environment_id", "profile", "check_root", "native_evidence",
             "runtime_evidence", "source_sha", "event_sha", "tarball_sha256",
             "output", "github_output",
+        ),
+        "ci-file-contract": (
+            "environment_id", "purpose", "path", "source_sha", "event_sha",
+            "tarball_sha256", "output",
+        ),
+        "ci-run-vnu": (
+            "environment_id", "dispatcher", "r_executable", "tarball", "metadata",
+            "source_sha", "event_sha", "tarball_sha256", "work_dir", "library",
+            "file_evidence", "output",
         ),
         "ci-verify-mkl": ("r_executable", "policy", "evidence"),
         "ci-native-check": ("environment_id", "wrapper", "r_executable", "tarball", "metadata", "source_sha", "event_sha", "work_dir", "check_library", "evidence", "log"),
