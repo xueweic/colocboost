@@ -46,7 +46,7 @@ args = ["tarball", "metadata", "source_sha", "event_sha"]
 cmd = '''Rscript --vanilla .github/ci/run-unit-tests.R --package=. --load-package='{{ mode | replace("'", "'\"'\"'") }}' --context='{{ environment_id | replace("'", "'\"'\"'") }}' --policy=.github/ci/check-policy.yml --output='{{ output | replace("'", "'\"'\"'") }}' '''
 cwd = "."
 args = ["mode", "output", "environment_id"]
-env = { LC_ALL = "C", R_ENVIRON_USER = "{% if pixi.is_win %}NUL{% else %}/dev/null{% endif %}", R_PROFILE_USER = "{% if pixi.is_win %}NUL{% else %}/dev/null{% endif %}", R_LIBS_USER = "$CONDA_PREFIX/lib/R/library" }
+env = { LC_ALL = "C", R_ENVIRON_USER = "{% if pixi.is_win %}NUL{% else %}/dev/null{% endif %}", R_PROFILE_USER = "{% if pixi.is_win %}NUL{% else %}/dev/null{% endif %}" }
 
 [tasks.ci-check]
 cmd = '''python .github/ci/run_driver.py --manifest=.github/ci/check-matrix.yml --environment-id='{{ environment_id | replace("'", "'\"'\"'") }}' --driver='{{ driver | replace("'", "'\"'\"'") }}' --executable='{{ executable | replace("'", "'\"'\"'") }}' --tarball='{{ tarball | replace("'", "'\"'\"'") }}' --metadata='{{ metadata | replace("'", "'\"'\"'") }}' --source-sha='{{ source_sha | replace("'", "'\"'\"'") }}' --event-sha='{{ event_sha | replace("'", "'\"'\"'") }}' --evidence='{{ evidence | replace("'", "'\"'\"'") }}' {% if r_entrypoint %}--r-entrypoint='{{ r_entrypoint | replace("'", "'\"'\"'") }}' {% endif %}--'''

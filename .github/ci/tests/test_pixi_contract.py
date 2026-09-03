@@ -55,7 +55,7 @@ R_TASK_ENV = {
     "R_LIBS_USER": "$CONDA_PREFIX/lib/R/library",
 }
 CI_UNIT_R_TASK_ENV = {
-    **R_TASK_ENV,
+    "LC_ALL": "C",
     "R_ENVIRON_USER": "{% if pixi.is_win %}NUL{% else %}/dev/null{% endif %}",
     "R_PROFILE_USER": "{% if pixi.is_win %}NUL{% else %}/dev/null{% endif %}",
 }
@@ -191,6 +191,58 @@ def test_typed_task_values_are_shell_quoted(manifest):
                 task_name,
                 value,
             )
+
+
+def test_top_level_ci_unit_preserves_caller_r_library(tmp_path):
+    pixi = shutil.which("pixi") or "/Users/xueweic/.pixi/bin/pixi"
+    if not Path(pixi).is_file():
+        pytest.skip("Pixi is not installed")
+
+    caller_library = tmp_path / "caller R library"
+    caller_library.mkdir()
+    stub_bin = tmp_path / "external R bin"
+    stub_bin.mkdir()
+    if os.name == "nt":
+        rscript = stub_bin / "Rscript.bat"
+        rscript.write_text(
+            "@echo off\r\necho R_LIBS_USER=%R_LIBS_USER%\r\nexit /b 19\r\n",
+            encoding="utf-8",
+        )
+    else:
+        rscript = stub_bin / "Rscript"
+        rscript.write_text(
+            "#!/bin/sh\nprintf 'R_LIBS_USER=%s\\n' \"$R_LIBS_USER\"\nexit 19\n",
+            encoding="utf-8",
+        )
+        rscript.chmod(0o755)
+
+    environment = os.environ.copy()
+    environment["PATH"] = os.pathsep.join(
+        [os.fspath(stub_bin), environment.get("PATH", "")]
+    )
+    environment["R_LIBS_USER"] = os.fspath(caller_library)
+    completed = subprocess.run(
+        [
+            pixi,
+            "run",
+            "--locked",
+            "--manifest-path",
+            os.fspath(PIXI_MANIFEST),
+            "ci-unit",
+            "source",
+            os.fspath(tmp_path / "unused.json"),
+            "external-r-probe",
+        ],
+        cwd=ROOT,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    output = completed.stdout + completed.stderr
+    assert completed.returncode != 0, output
+    assert f"R_LIBS_USER={caller_library}" in output
 
 
 @pytest.mark.parametrize("feature", ["local-r44", "local-r45"])
