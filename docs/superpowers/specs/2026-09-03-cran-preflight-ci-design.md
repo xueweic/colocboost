@@ -294,9 +294,14 @@ not a production-code change; any broader test refactor remains out of scope.
 - `prepare` builds one source tarball from the checked-out commit.
 - Every package-check environment downloads that artifact and verifies the
   expected SHA256 before installation.
-- Checks include examples, installed tests, vignettes, PDF manual generation,
-  and all other applicable `R CMD check --as-cran` stages.
-- `--no-manual` is not used for the full preflight.
+- The overall preflight includes examples, installed tests, vignettes, PDF
+  manual generation, and all other applicable `R CMD check --as-cran` stages.
+- A dedicated documentation lane runs the complete check without `--no-manual`
+  or `--no-build-vignettes`. Purpose-built R-hub special containers retain
+  their native wrapper flags so manual tooling cannot mask the numerical,
+  sanitizer, Valgrind, or reduced-feature signal; their omitted documentation
+  stages are covered by the dedicated lane rather than falsely attributed to
+  every special row.
 - ERROR and WARNING statuses fail the job.
 - A new NOTE fails the job. The currently documented installed-size NOTE may be
   accepted only by an exact, reviewable allowlist rule; a changed message or
@@ -327,10 +332,10 @@ back to OpenBLAS or reference BLAS must fail before running the tests.
 ## Trigger policy
 
 - `push`: every branch in `xueweic/colocboost`.
-- `pull_request`: external forks. A repository-identity condition on the head
-  repository prevents a duplicate full run for same-repository pull requests,
-  which are already covered by `push`; that intentional event-level filter is
-  outside the matrix completeness calculation.
+- `pull_request`: internal and external pull requests targeting the fork. An
+  internal PR intentionally runs in addition to `push` because its merge ref can
+  differ from the branch-head commit. The duplicate compute cost is accepted in
+  exchange for maximum merge-sensitive coverage.
 - `workflow_dispatch`: manual new runs and diagnostics after the workflow file
   exists on the fork's default branch. On the feature branch, an existing push
   run can still be re-run from the Actions UI, but a new dispatch event is not
@@ -374,15 +379,21 @@ the diagnostic artifact. There is no automatic retry for test or check failures.
 
 - `pixi.toml`: canonical user-facing task and environment definition.
 - `pixi.lock`: reproducible Pixi resolution.
-- `.github/workflows/ci.yml`: full orchestration and aggregate gate.
+- `.github/workflows/cran-preflight.yml`: new fork-scoped orchestration and
+  aggregate gate; the existing CI/codecov workflow remains unchanged.
 - `.github/ci/check-matrix.yml`: coverage inventory and mappings.
-- `.github/ci/expected-skips.yml`: exact, expiring installed-check skip waivers.
-- `.github/ci/result-schema.json`: per-environment artifact contract.
+- `.github/ci/check-policy.yml`: exact, expiring unit-skip and R CMD check NOTE
+  waivers plus numerical-backend identity rules.
+- `.github/ci/result.schema.json`: per-environment artifact contract.
 - `.github/ci/run-unit-tests.R`: structured, strict unit-test runner.
-- `.github/ci/check-test-policy.R`: exact skip-policy and semantic-skip audit.
+- `.github/ci/check-policy.yml`: exact skip-policy, semantic-skip, NOTE, and
+  numerical-backend rules consumed by the unit and package-check runners.
 - `.github/ci/run-r-cmd-check.R`: tarball check runner and status policy.
 - `.github/ci/verify-mkl.R`: MKL identity and execution proof.
-- `.github/ci/verify-coverage.R`: manifest completeness and drift checks.
+- `.github/ci/validate_manifest.py`: committed manifest completeness and
+  repository-scope validation.
+- `.github/ci/audit_inventory.py`: scheduled live CRAN/R-hub inventory drift
+  audit, kept separate from the reproducible pinned gate.
 - `.github/ci/images/blis/Dockerfile`: purpose-built serial-BLIS proxy.
 - `.github/ci/images/noomp/Dockerfile`: purpose-built no-OpenMP proxy.
 - `.Rbuildignore`: exclusions for Pixi and design-only files.
@@ -425,8 +436,8 @@ After push:
 No pull request to, branch in, or push to `StatFunGen/colocboost` is authorized.
 The feature branch will not be merged into the fork's `main` without a separate
 user decision. Consequently, the weekly schedule remains dormant until such a
-merge, and so does `workflow_dispatch`. Push and external-PR results, including
-UI re-runs of an existing push run, can be validated on the feature branch.
+merge, and so does `workflow_dispatch`. Push and pull-request results, including
+UI re-runs of an existing run, can be validated on the feature branch.
 
 ## Success criteria
 
