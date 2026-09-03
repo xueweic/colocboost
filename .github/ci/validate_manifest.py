@@ -258,6 +258,45 @@ APPROVED_RHUB_IMAGE = {
     "vnu": "vnu",
 }
 DRIVER_ENDPOINT = {"native-wrapper": "image", "r-binary": "runner"}
+UNIT_LANE_FIELDS = {
+    "environment_id",
+    "coverage_id",
+    "mode",
+    "suite",
+    "runner_context",
+    "required_sidecar_tests",
+}
+UNIT_COVERAGE_IDS = [
+    "r-devel-linux-x86-64-debian-clang",
+    "r-devel-linux-x86-64-debian-gcc",
+    "r-devel-linux-x86-64-fedora-clang",
+    "r-devel-linux-x86-64-fedora-gcc",
+    "r-devel-windows-x86-64",
+    "r-patched-linux-x86-64",
+    "r-release-linux-x86-64",
+    "r-release-macos-arm64",
+    "r-release-macos-x86-64",
+    "r-release-windows-x86-64",
+    "r-oldrel-macos-arm64",
+    "r-oldrel-macos-x86-64",
+    "r-oldrel-windows-x86-64",
+    "atlas",
+    "blis",
+    "mkl",
+    "openblas",
+    "nosuggests",
+]
+EXPECTED_UNIT_LANES = [
+    (
+        coverage_id,
+        coverage_id,
+        "installed" if coverage_id == "nosuggests" else "source",
+        "full",
+        "r-cmd-check-installed" if coverage_id == "nosuggests" else coverage_id,
+        ("test_utils.R", "test_Xref.R") if coverage_id == "mkl" else (),
+    )
+    for coverage_id in UNIT_COVERAGE_IDS
+]
 WAIVER_FIELDS = {
     "id",
     "context",
@@ -457,6 +496,95 @@ def _validate_row(row: Any, index: int) -> None:
         )
 
 
+def _validate_unit_lanes(lanes: Any, rows: Sequence[Mapping[str, Any]]) -> None:
+    if not isinstance(lanes, list):
+        raise ValueError("unit_lanes must be a list")
+
+    environment_ids = [
+        lane.get("environment_id")
+        for lane in lanes
+        if isinstance(lane, Mapping)
+        and isinstance(lane.get("environment_id"), str)
+    ]
+    duplicates = sorted(
+        environment_id
+        for environment_id, count in Counter(environment_ids).items()
+        if isinstance(environment_id, str) and count > 1
+    )
+    if duplicates:
+        raise ValueError(f"duplicate unit environment_id {duplicates[0]}")
+
+    coverage_by_id = {row["id"]: row for row in rows}
+    actual = []
+    for index, lane in enumerate(lanes):
+        if not isinstance(lane, Mapping) or set(lane) != UNIT_LANE_FIELDS:
+            raise ValueError(
+                f"unit lane {index} fields must be exactly {sorted(UNIT_LANE_FIELDS)}"
+            )
+
+        for field in (
+            "environment_id",
+            "coverage_id",
+            "mode",
+            "suite",
+            "runner_context",
+        ):
+            _require_nonempty_string(lane[field], f"unit lane {index}.{field}")
+
+        environment_id = lane["environment_id"]
+        if ARTIFACT_ID.fullmatch(environment_id) is None:
+            raise ValueError(
+                f"unit environment_id {environment_id!r} is not artifact-safe"
+            )
+
+        coverage = coverage_by_id.get(lane["coverage_id"])
+        if coverage is None or coverage["state"] not in {"direct", "proxy"}:
+            raise ValueError(
+                f"unit lane {environment_id} must reference direct or proxy coverage"
+            )
+
+        sidecars = lane["required_sidecar_tests"]
+        if (
+            not isinstance(sidecars, list)
+            or any(not isinstance(item, str) or not item for item in sidecars)
+            or len(sidecars) != len(set(sidecars))
+        ):
+            raise ValueError(
+                f"unit lane {environment_id}.required_sidecar_tests must be a list "
+                "of unique strings"
+            )
+
+        actual.append(
+            (
+                environment_id,
+                lane["coverage_id"],
+                lane["mode"],
+                lane["suite"],
+                lane["runner_context"],
+                tuple(sidecars),
+            )
+        )
+
+    if actual != EXPECTED_UNIT_LANES:
+        raise ValueError("unit lanes do not match approved contract")
+
+
+def _coverage_result_keys(
+    rows: Sequence[Mapping[str, Any]],
+) -> list[tuple[str, str]]:
+    return [
+        (
+            "applicability" if row["state"] == "not-applicable" else "package-check",
+            row["id"],
+        )
+        for row in rows
+    ]
+
+
+def _unit_result_keys(lanes: Sequence[Mapping[str, Any]]) -> list[tuple[str, str]]:
+    return [("unit", lane["environment_id"]) for lane in lanes]
+
+
 def load_manifest(path: str | Path) -> Mapping[str, Any]:
     """Load a YAML manifest without accepting an empty document."""
 
@@ -475,8 +603,10 @@ def validate_manifest(data: Mapping[str, Any]) -> Mapping[str, Any]:
 
     if not isinstance(data, Mapping):
         raise ValueError("manifest must be an object")
-    if set(data) != {"version", "coverage"}:
-        raise ValueError("manifest must contain only version and coverage")
+    if set(data) != {"version", "coverage", "unit_lanes"}:
+        raise ValueError(
+            "manifest top-level fields must be only version, coverage, and unit_lanes"
+        )
     if isinstance(data["version"], bool) or data["version"] != 1:
         raise ValueError("manifest version must be 1")
     rows = data["coverage"]
@@ -519,6 +649,16 @@ def validate_manifest(data: Mapping[str, Any]) -> Mapping[str, Any]:
             )
             raise ValueError(f"{group} inventory does not match approved mapping: {detail}")
 
+    expected_order = list(EXPECTED_ROW_CORE)
+    actual_order = [row["cran_name"] for row in rows]
+    if actual_order != expected_order:
+        raise ValueError("coverage order does not match approved aggregate contract")
+
+    _validate_unit_lanes(data["unit_lanes"], rows)
+    result_keys = _coverage_result_keys(rows) + _unit_result_keys(data["unit_lanes"])
+    if len(result_keys) != len(set(result_keys)):
+        raise ValueError("duplicate composite result key")
+
     return data
 
 
@@ -527,6 +667,31 @@ def expected_result_ids(data: Mapping[str, Any]) -> list[str]:
 
     validate_manifest(data)
     return [row["id"] for row in data["coverage"]]
+
+
+def expected_coverage_result_keys(
+    data: Mapping[str, Any],
+) -> list[tuple[str, str]]:
+    """Return ordered package-check and applicability aggregate keys."""
+
+    validate_manifest(data)
+    return _coverage_result_keys(data["coverage"])
+
+
+def expected_unit_result_keys(data: Mapping[str, Any]) -> list[tuple[str, str]]:
+    """Return ordered unit aggregate keys without sidecar-only targeted runs."""
+
+    validate_manifest(data)
+    return _unit_result_keys(data["unit_lanes"])
+
+
+def expected_result_keys(data: Mapping[str, Any]) -> list[tuple[str, str]]:
+    """Return the complete ordered composite aggregate-result inventory."""
+
+    validate_manifest(data)
+    return _coverage_result_keys(data["coverage"]) + _unit_result_keys(
+        data["unit_lanes"]
+    )
 
 
 def validate_policy(
@@ -616,7 +781,12 @@ def main(argv: list[str]) -> int:
     primary = sum(row["group"] == "primary" for row in rows)
     additional = sum(row["group"] == "additional" for row in rows)
     uncovered = sum(row["state"] == "uncovered" for row in rows)
-    print(f"manifest valid: primary={primary}, additional={additional}, uncovered={uncovered}")
+    unit = len(data["unit_lanes"])
+    results = len(_coverage_result_keys(rows) + _unit_result_keys(data["unit_lanes"]))
+    print(
+        f"manifest valid: primary={primary}, additional={additional}, "
+        f"uncovered={uncovered}, unit={unit}, results={results}"
+    )
     return 0
 
 

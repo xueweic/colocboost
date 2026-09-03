@@ -4,7 +4,7 @@
 
 **Goal:** Build a fork-scoped, Pixi-controlled GitHub Actions preflight that explicitly runs unit tests and accounts for all 13 current primary CRAN flavors and all 29 current additional issue kinds, including a proven serial-MKL run.
 
-**Architecture:** Pixi owns the user-facing tasks and helper runtime. CRAN-like jobs use either a verified absolute R binary or the special container's native r-check wrapper; Pixi never replaces the R, compiler, BLAS, or check variables that define those environments. One source tarball and SHA256 flow through every package-check row, and a fail-closed artifact aggregator independently verifies every expected row.
+**Architecture:** Pixi owns the user-facing tasks and helper runtime. CRAN-like jobs use either a verified absolute R binary or the special container's native r-check wrapper; Pixi never replaces the R, compiler, BLAS, or check variables that define those environments. One source tarball and SHA256 flow through every package-check row, and a fail-closed artifact aggregator independently verifies all 60 manifest-declared composite results.
 
 **Tech Stack:** Pixi 0.67+, Python 3.12, PyYAML, jsonschema, pytest, R 4.4/4.5/devel, testthat, R-hub containers, GitHub Actions, Docker/OCI.
 
@@ -17,10 +17,11 @@
 - Every workflow job must require github.repository == 'xueweic/colocboost'.
 - Workflow permissions are contents: read, checkout uses persist-credentials: false, and pull_request_target is forbidden.
 - Actions and OCI base images are pinned to immutable revisions or digests.
-- A dedicated documentation row runs the full manual/vignette check; special R-hub rows retain their native wrapper flags.
+- The existing r-release-linux-x86-64 row runs the full manual/vignette check; no undeclared documentation result is added, and special R-hub rows retain their native wrapper flags.
 - All package-check rows consume the same source tarball and verify its file SHA256; no row may rebuild it.
 - Primary/proxy results are labelled CRAN-like, never exact CRAN guarantees.
 - ERROR, WARNING, new NOTE, failed expectation, unhandled warning, unexpected skip, missing result, cancellation, and uncovered inventory all fail the aggregate gate.
+- The aggregate inventory is exactly 32 package-check plus 10 applicability plus 18 unit results, keyed by (result_kind, environment_id); no smoke or subset mode may bypass it.
 - The known installed-package skips are allowed only by exact context/file/test/reason entries with expiry; source-mode unit tests expect zero skips.
 - Special containers use driver native-wrapper; ordinary platform jobs use driver r-binary. There is no fallback between drivers.
 - The baseline for scope checks is c3746e9125c962a45351717757ecf288cd099878.
@@ -29,7 +30,7 @@
 
 - pixi.toml: canonical preflight tasks and helper dependencies.
 - pixi.lock: multi-platform locked helper and local-R environments.
-- .github/ci/check-matrix.yml: 13 primary and 29 additional coverage records.
+- .github/ci/check-matrix.yml: 13 primary and 29 additional coverage records plus 18 explicit unit lanes.
 - .github/ci/check-policy.yml: exact unit-skip and R CMD check NOTE waivers plus MKL identity rules.
 - .github/ci/result.schema.json: discriminated result artifact schema.
 - .github/ci/result_contract.py: provisional/final result writer and schema validation.
@@ -148,12 +149,12 @@ Expected: all result-contract tests pass.
 - Create: .github/ci/tests/test_manifest.py
 
 **Interfaces:**
-- Consumes: YAML records with id, group, cran_name, state, driver, runner/image, proof, and limitation/predicate.
-- Produces: load_manifest(path), validate_manifest(data), and expected_result_ids(data).
+- Consumes: YAML coverage records with id, group, cran_name, state, driver, runner/image, proof, and limitation/predicate, plus closed unit-lane records.
+- Produces: load_manifest(path), validate_manifest(data), the preserved 42-ID expected_result_ids(data), and ordered expected_coverage_result_keys(data), expected_unit_result_keys(data), and expected_result_keys(data) APIs.
 
 - [ ] **Step 1: Write failing mutation tests**
 
-Assert failure when any of the 13 exact primary names or 29 exact additional names is removed, an ID is duplicated or unsafe for an artifact name, a proxy has no limitation/proof, a not-applicable row has no executable predicate, a direct row lacks identity assertions, or any row is uncovered.
+Assert failure when any of the 13 exact primary names, 29 exact additional names, or 18 exact unit lanes is removed; an ID is duplicated or unsafe for an artifact name; a unit lane references non-executed coverage or changes mode/context/sidecar requirements; a proxy has no limitation/proof; a not-applicable row has no executable predicate; a direct row lacks identity assertions; or any row is uncovered.
 
 Run:
 
@@ -165,7 +166,7 @@ Expected: FAIL because the manifest and validator do not exist.
 
 - [ ] **Step 2: Encode the approved mapping**
 
-Copy the exact 13-primary and 29-additional mapping from the design. Give every row a stable lowercase-hyphen ID. Represent compiler-only not-applicable rows as executed predicates over the built tarball. Mark BLIS and noOMP as proxy acceptance spikes with hard runtime proofs.
+Copy the exact 13-primary and 29-additional mapping from the design. Give every row a stable lowercase-hyphen ID. Represent compiler-only not-applicable rows as executed predicates over the built tarball. Mark BLIS and noOMP as proxy acceptance spikes with hard runtime proofs. Add 18 unit lanes for all 13 primary IDs plus atlas, blis, mkl, openblas, and nosuggests. The first 17 require source/full-suite mode with no installed-waiver context; nosuggests uses installed/full-suite mode and context r-cmd-check-installed. MKL additionally requires test_utils.R and test_Xref.R diagnostic sidecars without adding aggregate keys.
 
 - [ ] **Step 3: Encode the strict check policy**
 
@@ -178,7 +179,7 @@ pytest -q .github/ci/tests/test_manifest.py
 python .github/ci/validate_manifest.py .github/ci/check-matrix.yml
 ~~~
 
-Expected: tests pass and validator reports primary=13, additional=29, uncovered=0.
+Expected: tests pass and validator reports primary=13, additional=29, uncovered=0, unit=18, results=60.
 
 - [ ] **Step 5: Commit**
 
@@ -195,8 +196,8 @@ git commit -m "ci: add validated CRAN coverage manifest"
 - Create: .github/ci/tests/fixtures/unit/
 
 **Interfaces:**
-- Consumes: mode source/installed, output JSON path, environment ID, skip-policy path, and optional test-file list.
-- Produces: structured test counts and an exit status that is nonzero on failures, errors, warnings, unexpected/expired skips, stale waivers, empty tests, or executed skip-like success.
+- Consumes: mode source/installed, output JSON path, environment ID, skip-policy path, and optional test filter.
+- Produces: a detailed diagnostic sidecar and an exit status that is nonzero on failures, errors, warnings, unexpected/expired skips, stale waivers, empty tests, or executed skip-like success. This detailed JSON is not itself the minimal aggregate artifact.
 
 - [ ] **Step 1: Write failing synthetic reporter tests**
 
@@ -325,8 +326,8 @@ git commit -m "ci: add Pixi preflight control plane"
 - Create: .github/ci/tests/test_aggregate.py
 
 **Interfaces:**
-- Consumes: 00check.log, exact NOTE allowlist, manifest, result artifacts, expected source SHA and tarball SHA.
-- Produces: strict package-check result JSON and one summary Markdown table with overall exit status.
+- Consumes: 00check.log, exact NOTE allowlist, detailed Task 4 unit diagnostics, manifest, result artifacts, expected source SHA and tarball SHA.
+- Produces: strict package-check result JSON, a strict adapter from each detailed unit diagnostic to the minimal result.schema.json unit artifact, and one summary Markdown table with overall exit status.
 
 - [ ] **Step 1: Write failing check-log fixtures**
 
@@ -347,7 +348,7 @@ Expected: FAIL before implementations exist.
 
 - [ ] **Step 3: Implement strict parsing and aggregation**
 
-Parse the terminal Status line and detailed heading blocks rather than grepping arbitrary prose. The aggregator loads expected IDs directly from the committed manifest even if prepare failed, validates each artifact, and writes GitHub-flavored Markdown.
+Parse the terminal Status line and detailed heading blocks rather than grepping arbitrary prose. Adapt a unit diagnostic only after validating its context, mode, counts, violations, and status, then bind the externally verified source and tarball identity when writing the minimal result; any malformed or non-green diagnostic produces a non-green minimal result. The aggregator loads the exact ordered 60 composite keys directly from the committed manifest even if prepare failed, validates each artifact, rejects duplicates by (result_kind, environment_id), and writes GitHub-flavored Markdown. It has no subset or smoke bypass.
 
 - [ ] **Step 4: Run tests and commit**
 
@@ -366,15 +367,15 @@ git commit -m "ci: add strict package and matrix result gates"
 
 **Interfaces:**
 - Consumes: Pixi tasks, manifest, source tarball contract, result artifacts.
-- Produces: prepare, smoke, and summary jobs on every push in xueweic/colocboost.
+- Produces: a locally validated prepare/orchestration/summary skeleton. The first push is deferred until Tasks 8-11 provide every expected result producer.
 
 - [ ] **Step 1: Write failing static workflow tests**
 
 Assert repository guards on every job, contents: read, no pull_request_target, checkout persist-credentials false, immutable action SHAs, fail-fast false, summary condition always plus repository guard, and no secrets.
 
-- [ ] **Step 2: Implement prepare/smoke/summary**
+- [ ] **Step 2: Implement prepare and the fail-closed summary skeleton**
 
-Use checkout@3d3c42e5aac5ba805825da76410c181273ba90b1, setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e, upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a, and download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131. Prepare builds and uploads the tarball plus metadata. Smoke verifies it and writes a result. Summary independently checks out the manifest and aggregates with always(). Configure push for every branch and pull_request for both internal and external PR merge refs; maximum coverage takes priority over duplicate-run savings, and this trigger never creates a PR by itself.
+Use checkout@3d3c42e5aac5ba805825da76410c181273ba90b1, setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e, upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a, and download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131. Prepare builds and uploads the tarball plus metadata. Summary independently checks out the manifest and aggregates all 60 composite keys with always(); it must remain non-green while any producer is absent. Configure push for every branch and pull_request for both internal and external PR merge refs; maximum coverage takes priority over duplicate-run savings, and this trigger never creates a PR by itself.
 
 - [ ] **Step 3: Validate locally**
 
@@ -386,19 +387,18 @@ git diff --check
 
 Expected: all static checks pass.
 
-- [ ] **Step 4: Commit and explicitly push only to origin**
+- [ ] **Step 4: Commit locally; do not push the incomplete producer set**
 
 ~~~bash
 git add .github/workflows/cran-preflight.yml .github/ci/tests/test-workflow-policy.py
 git commit -m "ci: add fork-scoped preflight skeleton"
-git push origin HEAD:refs/heads/codex/cran-preflight-ci
 ~~~
 
-- [ ] **Step 5: Observe the fork run**
+- [ ] **Step 5: Verify first-push deferral**
 
-Use gh run list --repo xueweic/colocboost and gh run watch. Require prepare, smoke, and summary to pass before adding special environments.
+Confirm no push occurs in Task 8. The first fork run is deferred until Tasks 9-11 add producers for every one of the 60 expected keys; the aggregator is never weakened to make an incomplete skeleton green.
 
-### Task 9: Prove MKL and noSuggests on the real fork
+### Task 9: Implement MKL and noSuggests producers for the deferred fork run
 
 **Files:**
 - Create: .github/ci/verify-mkl.R
@@ -408,7 +408,7 @@ Use gh run list --repo xueweic/colocboost and gh run watch. Require prepare, smo
 
 **Interfaces:**
 - Consumes: R-hub mkl and nosuggests native wrappers plus the shared tarball.
-- Produces: direct MKL and noSuggests result artifacts with runtime proof.
+- Produces: direct MKL and noSuggests package-check results plus their declared unit results and diagnostic runtime proof.
 
 - [ ] **Step 1: Test MKL proof rejection locally with non-MKL R**
 
@@ -426,15 +426,14 @@ After a matrix multiply, require /proc/self/maps to contain libmkl_core, an LP64
 
 Run ghcr.io/r-hub/containers/mkl and ghcr.io/r-hub/containers/nosuggests by immutable digest. The MKL row runs targeted test_utils.R/test_Xref.R, full source tests, then package check. The noSuggests row calls the container r-check policy, proves ashr and susieR absent, confirms testthat is the allowed framework exception, and requires nonzero installed-test counts.
 
-- [ ] **Step 4: Commit, push to origin, and enforce stop/go**
+- [ ] **Step 4: Commit locally and enforce stop/go without pushing**
 
 ~~~bash
 git add .github/ci/verify-mkl.R .github/ci/tests/test-mkl-policy.R .github/workflows/cran-preflight.yml .github/ci/check-matrix.yml
 git commit -m "ci: prove MKL and noSuggests environments"
-git push origin HEAD:refs/heads/codex/cran-preflight-ci
 ~~~
 
-Expected: both jobs prove environment identity and pass. If either cannot prove identity, keep it failed and diagnose before expanding.
+Expected: local fixtures and static contracts prove both job definitions are fail-closed. If either identity cannot be proven, keep it failed and diagnose before expanding; the real fork run waits until Task 11.
 
 ### Task 10: Expand to 13 primary flavors and active R-hub checks
 
@@ -444,7 +443,7 @@ Expected: both jobs prove environment identity and pass. If either cannot prove 
 
 **Interfaces:**
 - Consumes: shared tarball plus r-binary/native-wrapper drivers.
-- Produces: all primary rows and active ATLAS, sanitizer, donttest, LTO, noLD, rchk, Valgrind, and vnu rows.
+- Produces: all primary rows and active ATLAS, sanitizer, donttest, noLD, Valgrind, and vnu rows, including unit results for every primary row and ATLAS.
 
 - [ ] **Step 1: Add Linux primary rows and run them**
 
@@ -466,20 +465,16 @@ git commit -m "ci: add Windows and macOS CRAN primary proxies"
 
 - [ ] **Step 3: Add active R-hub special rows**
 
-Add atlas, clang-asan, clang-ubsan, donttest, gcc-asan with separate ASAN/UBSAN IDs, lto, nold, rchk, valgrind, and vnu using their native mechanisms and identity proofs. Valgrind must run the official suppression pre-check before its wrapper. The vnu row must invoke the image's vnu.sh validation path because its generic r-check alone does not run Nu validation. Add one documentation row that runs the complete manual/vignette check without the special-container exclusions.
+Add atlas, clang-asan, clang-ubsan, donttest, gcc-asan with separate ASAN/UBSAN IDs, nold, valgrind, and vnu using their native mechanisms and identity proofs. Valgrind must run the official suppression pre-check before its wrapper. The vnu row must invoke the image's vnu.sh validation path because its generic r-check alone does not run Nu validation. Bind the complete manual/vignette check to the already declared r-release-linux-x86-64 row without adding another aggregate result. LTO and rchk remain executable applicability records implemented in Task 11, not native-container rows.
 
 ~~~bash
 git add .github/workflows/cran-preflight.yml .github/ci/check-matrix.yml
 git commit -m "ci: add active R-hub special checks"
 ~~~
 
-- [ ] **Step 4: Commit in platform-sized units and push each only to origin**
+- [ ] **Step 4: Commit in platform-sized units; continue deferring the first push**
 
-~~~bash
-git push origin HEAD:refs/heads/codex/cran-preflight-ci
-~~~
-
-Expected: summary sees every introduced stable ID and the shared digest.
+Expected: static producer coverage grows without changing the exact 60-key inventory; no partial workflow is pushed.
 
 ### Task 11: Add executable applicability checks and remaining proxies
 
@@ -492,7 +487,7 @@ Expected: summary sees every introduced stable ID and the shared digest.
 
 **Interfaces:**
 - Consumes: source tarball and remaining manifest rows.
-- Produces: ten executed not-applicable records and six purpose-specific proxy results.
+- Produces: ten executed not-applicable records, six purpose-specific proxy results, and the declared BLIS and OpenBLAS unit results that complete the 60-key producer set.
 
 - [ ] **Step 1: Test tarball-based native applicability**
 
@@ -510,16 +505,17 @@ Pin Fedora base digests. BLIS must load serial BLIS after a real matrix operatio
 
 OpenBLAS runs one thread and proves its mapped library. rcnst sets the three official variables. rlibro uses a non-root process and read-only bind mount. musl proves musl/Alpine. linux-arm64 compares amd64 and arm64 under the same image/setup.
 
-- [ ] **Step 5: Test, commit, push, and watch**
+- [ ] **Step 5: Test, commit, then perform the first explicit fork-only push**
 
 ~~~bash
 pytest -q .github/ci/tests/test_applicability.py
 git add .github/ci .github/workflows/cran-preflight.yml
 git commit -m "ci: complete additional CRAN-like coverage"
 git push origin HEAD:refs/heads/codex/cran-preflight-ci
+gh run list --repo xueweic/colocboost --branch codex/cran-preflight-ci
 ~~~
 
-Expected: manifest remains 13 primary plus 29 additional, uncovered=0, and every expected result is present.
+Expected: before this first push, static tests prove producers cover every one of the 60 composite keys. On the fork run, the manifest remains 13 primary plus 29 additional and 18 unit lanes, uncovered=0, and every expected result is present.
 
 ### Task 12: Add drift audit, run final verification, and report
 

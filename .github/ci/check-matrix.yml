@@ -387,3 +387,132 @@ coverage:
     driver: native-wrapper
     image: ghcr.io/r-hub/containers/vnu@sha256:03f45d5944fc092627cae2e944f16f037fed9795f8768c90d9511799098a7884
     proof: [source-tarball-sha256, container-system-r, r-executable, vnu-special-dispatch, nu-validator-executed, zero-bad-entries, validator-output]
+
+# One aggregate unit result per declared lane. Targeted MKL reports are required
+# diagnostic sidecars and do not create additional aggregate result keys.
+unit_lanes:
+  - environment_id: r-devel-linux-x86-64-debian-clang
+    coverage_id: r-devel-linux-x86-64-debian-clang
+    mode: source
+    suite: full
+    runner_context: r-devel-linux-x86-64-debian-clang
+    required_sidecar_tests: []
+
+  - environment_id: r-devel-linux-x86-64-debian-gcc
+    coverage_id: r-devel-linux-x86-64-debian-gcc
+    mode: source
+    suite: full
+    runner_context: r-devel-linux-x86-64-debian-gcc
+    required_sidecar_tests: []
+
+  - environment_id: r-devel-linux-x86-64-fedora-clang
+    coverage_id: r-devel-linux-x86-64-fedora-clang
+    mode: source
+    suite: full
+    runner_context: r-devel-linux-x86-64-fedora-clang
+    required_sidecar_tests: []
+
+  - environment_id: r-devel-linux-x86-64-fedora-gcc
+    coverage_id: r-devel-linux-x86-64-fedora-gcc
+    mode: source
+    suite: full
+    runner_context: r-devel-linux-x86-64-fedora-gcc
+    required_sidecar_tests: []
+
+  - environment_id: r-devel-windows-x86-64
+    coverage_id: r-devel-windows-x86-64
+    mode: source
+    suite: full
+    runner_context: r-devel-windows-x86-64
+    required_sidecar_tests: []
+
+  - environment_id: r-patched-linux-x86-64
+    coverage_id: r-patched-linux-x86-64
+    mode: source
+    suite: full
+    runner_context: r-patched-linux-x86-64
+    required_sidecar_tests: []
+
+  - environment_id: r-release-linux-x86-64
+    coverage_id: r-release-linux-x86-64
+    mode: source
+    suite: full
+    runner_context: r-release-linux-x86-64
+    required_sidecar_tests: []
+
+  - environment_id: r-release-macos-arm64
+    coverage_id: r-release-macos-arm64
+    mode: source
+    suite: full
+    runner_context: r-release-macos-arm64
+    required_sidecar_tests: []
+
+  - environment_id: r-release-macos-x86-64
+    coverage_id: r-release-macos-x86-64
+    mode: source
+    suite: full
+    runner_context: r-release-macos-x86-64
+    required_sidecar_tests: []
+
+  - environment_id: r-release-windows-x86-64
+    coverage_id: r-release-windows-x86-64
+    mode: source
+    suite: full
+    runner_context: r-release-windows-x86-64
+    required_sidecar_tests: []
+
+  - environment_id: r-oldrel-macos-arm64
+    coverage_id: r-oldrel-macos-arm64
+    mode: source
+    suite: full
+    runner_context: r-oldrel-macos-arm64
+    required_sidecar_tests: []
+
+  - environment_id: r-oldrel-macos-x86-64
+    coverage_id: r-oldrel-macos-x86-64
+    mode: source
+    suite: full
+    runner_context: r-oldrel-macos-x86-64
+    required_sidecar_tests: []
+
+  - environment_id: r-oldrel-windows-x86-64
+    coverage_id: r-oldrel-windows-x86-64
+    mode: source
+    suite: full
+    runner_context: r-oldrel-windows-x86-64
+    required_sidecar_tests: []
+
+  - environment_id: atlas
+    coverage_id: atlas
+    mode: source
+    suite: full
+    runner_context: atlas
+    required_sidecar_tests: []
+
+  - environment_id: blis
+    coverage_id: blis
+    mode: source
+    suite: full
+    runner_context: blis
+    required_sidecar_tests: []
+
+  - environment_id: mkl
+    coverage_id: mkl
+    mode: source
+    suite: full
+    runner_context: mkl
+    required_sidecar_tests: [test_utils.R, test_Xref.R]
+
+  - environment_id: openblas
+    coverage_id: openblas
+    mode: source
+    suite: full
+    runner_context: openblas
+    required_sidecar_tests: []
+
+  - environment_id: nosuggests
+    coverage_id: nosuggests
+    mode: installed
+    suite: full
+    runner_context: r-cmd-check-installed
+    required_sidecar_tests: []

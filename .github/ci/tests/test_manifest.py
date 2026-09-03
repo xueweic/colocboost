@@ -68,6 +68,46 @@ ADDITIONAL_NAMES = {
     "vnu",
 }
 
+UNIT_COVERAGE_IDS = [
+    "r-devel-linux-x86-64-debian-clang",
+    "r-devel-linux-x86-64-debian-gcc",
+    "r-devel-linux-x86-64-fedora-clang",
+    "r-devel-linux-x86-64-fedora-gcc",
+    "r-devel-windows-x86-64",
+    "r-patched-linux-x86-64",
+    "r-release-linux-x86-64",
+    "r-release-macos-arm64",
+    "r-release-macos-x86-64",
+    "r-release-windows-x86-64",
+    "r-oldrel-macos-arm64",
+    "r-oldrel-macos-x86-64",
+    "r-oldrel-windows-x86-64",
+    "atlas",
+    "blis",
+    "mkl",
+    "openblas",
+    "nosuggests",
+]
+
+# Independent golden contract: source contexts are deliberately distinct from
+# the sole installed-waiver context. Targeted MKL runs are diagnostic sidecars,
+# not additional aggregate results.
+GOLDEN_UNIT_LANES = [
+    {
+        "environment_id": coverage_id,
+        "coverage_id": coverage_id,
+        "mode": "installed" if coverage_id == "nosuggests" else "source",
+        "suite": "full",
+        "runner_context": (
+            "r-cmd-check-installed" if coverage_id == "nosuggests" else coverage_id
+        ),
+        "required_sidecar_tests": (
+            ["test_utils.R", "test_Xref.R"] if coverage_id == "mkl" else []
+        ),
+    }
+    for coverage_id in UNIT_COVERAGE_IDS
+]
+
 # Independent golden contract: no value here is derived from the YAML under test.
 GOLDEN_ROWS = {
     "r-devel-linux-x86_64-debian-clang": ("primary", "r-devel-linux-x86-64-debian-clang", "proxy", "native-wrapper", "image", "ghcr.io/r-hub/containers/clang22@sha256:f4193769412c461365849dd664b3d42bd2a0aebe520eab3ae6cd426a19d8b71e"),
@@ -113,6 +153,16 @@ GOLDEN_ROWS = {
     "linux-arm64": ("additional", "linux-arm64", "direct", "r-binary", "runner", ("ubuntu-24.04", "ubuntu-24.04-arm")),
     "vnu": ("additional", "vnu", "direct", "native-wrapper", "image", "ghcr.io/r-hub/containers/vnu@sha256:03f45d5944fc092627cae2e944f16f037fed9795f8768c90d9511799098a7884"),
 }
+
+GOLDEN_COVERAGE_RESULT_KEYS = [
+    (
+        "applicability" if row[2] == "not-applicable" else "package-check",
+        row[1],
+    )
+    for row in GOLDEN_ROWS.values()
+]
+GOLDEN_UNIT_RESULT_KEYS = [("unit", environment_id) for environment_id in UNIT_COVERAGE_IDS]
+GOLDEN_RESULT_KEYS = GOLDEN_COVERAGE_RESULT_KEYS + GOLDEN_UNIT_RESULT_KEYS
 
 
 def proof_set(tokens):
@@ -224,6 +274,14 @@ def row_for(data, cran_name):
     return next(row for row in data["coverage"] if row["cran_name"] == cran_name)
 
 
+def unit_lane_for(data, environment_id):
+    return next(
+        lane
+        for lane in data["unit_lanes"]
+        if lane["environment_id"] == environment_id
+    )
+
+
 def test_committed_manifest_has_exact_inventory_and_totals(manifest):
     assert validate_manifest(manifest) == manifest
     primary = [row for row in manifest["coverage"] if row["group"] == "primary"]
@@ -260,6 +318,175 @@ def test_result_ids_are_complete_unique_and_artifact_safe(manifest):
     assert result_ids == [row["id"] for row in manifest["coverage"]]
     assert len(result_ids) == len(set(result_ids)) == 42
     assert all(re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", value) for value in result_ids)
+
+
+def test_manifest_top_level_is_closed_over_unit_inventory(manifest):
+    assert set(manifest) == {"version", "coverage", "unit_lanes"}
+
+    missing = copy.deepcopy(manifest)
+    missing.pop("unit_lanes")
+    with pytest.raises(ValueError, match="top-level|only version"):
+        validate_manifest(missing)
+
+    extra = copy.deepcopy(manifest)
+    extra["undeclared"] = []
+    with pytest.raises(ValueError, match="top-level|only version"):
+        validate_manifest(extra)
+
+
+def test_committed_unit_lanes_match_independent_golden_contract(manifest):
+    assert manifest["unit_lanes"] == GOLDEN_UNIT_LANES
+    assert len(manifest["unit_lanes"]) == 18
+    assert all(
+        set(lane)
+        == {
+            "environment_id",
+            "coverage_id",
+            "mode",
+            "suite",
+            "runner_context",
+            "required_sidecar_tests",
+        }
+        for lane in manifest["unit_lanes"]
+    )
+    assert {
+        lane["runner_context"] for lane in manifest["unit_lanes"][:-1]
+    }.isdisjoint({"r-cmd-check-installed"})
+
+
+def test_result_inventory_apis_preserve_42_ids_and_declare_60_composite_keys(
+    manifest,
+):
+    assert expected_result_ids(manifest) == [
+        row["id"] for row in manifest["coverage"]
+    ]
+    assert len(expected_result_ids(manifest)) == 42
+
+    coverage_keys = validator_module.expected_coverage_result_keys(manifest)
+    unit_keys = validator_module.expected_unit_result_keys(manifest)
+    result_keys = validator_module.expected_result_keys(manifest)
+
+    assert coverage_keys == GOLDEN_COVERAGE_RESULT_KEYS
+    assert unit_keys == GOLDEN_UNIT_RESULT_KEYS
+    assert result_keys == GOLDEN_RESULT_KEYS
+    assert len(coverage_keys) == 42
+    assert sum(kind == "package-check" for kind, _ in coverage_keys) == 32
+    assert sum(kind == "applicability" for kind, _ in coverage_keys) == 10
+    assert len(unit_keys) == 18
+    assert len(result_keys) == len(set(result_keys)) == 60
+
+
+def test_coverage_order_is_part_of_the_aggregate_contract(manifest):
+    mutated = copy.deepcopy(manifest)
+    mutated["coverage"][0], mutated["coverage"][1] = (
+        mutated["coverage"][1],
+        mutated["coverage"][0],
+    )
+
+    with pytest.raises(ValueError, match="coverage order"):
+        validate_manifest(mutated)
+
+
+def test_manifest_cli_reports_coverage_unit_and_composite_totals(capsys):
+    assert validator_module.main(["validate_manifest.py", str(MANIFEST_PATH)]) == 0
+
+    captured = capsys.readouterr()
+    assert captured.err == ""
+    assert captured.out == (
+        "manifest valid: primary=13, additional=29, uncovered=0, "
+        "unit=18, results=60\n"
+    )
+
+
+@pytest.mark.parametrize("mutation", ["remove", "extra"])
+def test_unit_lane_inventory_rejects_removals_and_extras(manifest, mutation):
+    mutated = copy.deepcopy(manifest)
+    if mutation == "remove":
+        mutated["unit_lanes"].pop()
+    else:
+        lane = copy.deepcopy(mutated["unit_lanes"][0])
+        lane["environment_id"] = "extra-unit-lane"
+        mutated["unit_lanes"].append(lane)
+
+    with pytest.raises(ValueError, match="unit lane|unit_lanes"):
+        validate_manifest(mutated)
+
+
+def test_duplicate_unit_environment_ids_are_rejected(manifest):
+    mutated = copy.deepcopy(manifest)
+    mutated["unit_lanes"][1]["environment_id"] = mutated["unit_lanes"][0][
+        "environment_id"
+    ]
+
+    with pytest.raises(ValueError, match="duplicate unit environment_id"):
+        validate_manifest(mutated)
+
+
+@pytest.mark.parametrize("field", ["runner_context", "required_sidecar_tests"])
+def test_unit_lane_objects_are_closed_and_exact(manifest, field):
+    mutated = copy.deepcopy(manifest)
+    unit_lane_for(mutated, "mkl").pop(field)
+
+    with pytest.raises(ValueError, match="unit lane.*fields"):
+        validate_manifest(mutated)
+
+    mutated = copy.deepcopy(manifest)
+    unit_lane_for(mutated, "mkl")["undeclared"] = True
+    with pytest.raises(ValueError, match="unit lane.*fields"):
+        validate_manifest(mutated)
+
+
+@pytest.mark.parametrize("bad_id", ["MKL", "mkl_unit", "mkl unit", "-mkl", "mkl-"])
+def test_unsafe_unit_environment_ids_are_rejected(manifest, bad_id):
+    mutated = copy.deepcopy(manifest)
+    unit_lane_for(mutated, "mkl")["environment_id"] = bad_id
+
+    with pytest.raises(ValueError, match="unit environment_id.*artifact-safe"):
+        validate_manifest(mutated)
+
+
+def test_non_string_unit_environment_id_fails_closed(manifest):
+    mutated = copy.deepcopy(manifest)
+    unit_lane_for(mutated, "mkl")["environment_id"] = ["mkl"]
+
+    with pytest.raises(ValueError, match="unit lane.*environment_id"):
+        validate_manifest(mutated)
+
+
+@pytest.mark.parametrize("coverage_id", ["missing-coverage", "blas"])
+def test_unit_lanes_reference_only_direct_or_proxy_coverage(
+    manifest, coverage_id
+):
+    mutated = copy.deepcopy(manifest)
+    unit_lane_for(mutated, "mkl")["coverage_id"] = coverage_id
+
+    with pytest.raises(ValueError, match="direct or proxy coverage"):
+        validate_manifest(mutated)
+
+
+@pytest.mark.parametrize(
+    ("environment_id", "field", "value"),
+    [
+        ("mkl", "mode", "installed"),
+        ("mkl", "mode", "not-applicable"),
+        ("mkl", "suite", "targeted"),
+        ("mkl", "runner_context", "r-cmd-check-installed"),
+        ("mkl", "required_sidecar_tests", []),
+        ("mkl", "required_sidecar_tests", ["test_utils.R"]),
+        ("mkl", "required_sidecar_tests", ["test_Xref.R", "test_utils.R"]),
+        ("atlas", "required_sidecar_tests", ["test_utils.R"]),
+        ("nosuggests", "mode", "source"),
+        ("nosuggests", "runner_context", "nosuggests"),
+    ],
+)
+def test_unit_lane_mode_context_suite_and_sidecars_cannot_drift(
+    manifest, environment_id, field, value
+):
+    mutated = copy.deepcopy(manifest)
+    unit_lane_for(mutated, environment_id)[field] = value
+
+    with pytest.raises(ValueError, match="unit lane.*approved contract"):
+        validate_manifest(mutated)
 
 
 @pytest.mark.parametrize("bad_id", ["MKL", "mkl_result", "mkl result", "-mkl", "mkl-"])

@@ -218,15 +218,22 @@ The workflow has these job groups:
      against the same tarball.
 5. `summary-gate`
    - Run even when upstream jobs fail.
-   - Verify that every expected matrix entry produced a result.
+   - Verify all 60 manifest-declared composite results: 32 package checks, 10
+     applicability decisions, and 18 unit-test results.
    - Fail on missing, cancelled, skipped, unsuccessful, or uncovered entries.
+   - Never accept a smoke or other subset inventory in place of the complete
+     manifest.
    - Publish a concise coverage table in the GitHub Actions summary.
 
-Every matrix row has a stable environment ID and uploads a result document from
-an `if: always()` finalization step. The schema includes the commit SHA, source
-tarball SHA256, environment ID, declared coverage state, observed environment
-identity, unit-test counts, R CMD check status, and failure classification. The
-summary gate validates these documents rather than relying only on the
+Every matrix row has a stable environment ID and uploads a minimal result
+document from an `if: always()` finalization step. Results are identified by the
+composite `(result_kind, environment_id)` key because a package-check and unit
+result may intentionally share an environment ID. The manifest keeps the
+original ordered 42 coverage IDs while declaring the complete ordered 60-key
+aggregate contract. Detailed unit-runner JSON and environment evidence remain
+diagnostic sidecars; a strict adapter must translate the unit report to the
+minimal `result.schema.json` contract without discarding a non-green condition.
+The summary gate validates these documents rather than relying only on the
 aggregate `needs.<job>.result`, which cannot prove that every matrix row
 reported.
 
@@ -239,12 +246,19 @@ cancels only the stale run for that same scope.
 Unit tests are an explicit gate and are not treated as satisfied merely because
 `R CMD check` normally invokes them.
 
+The manifest declares exactly 18 unit lanes: all 13 primary coverage IDs plus
+ATLAS, BLIS, MKL, OpenBLAS, and noSuggests. Unit lanes may reference only direct
+or proxy coverage, never a not-applicable row. The first 17 use source mode and
+environment-specific contexts that cannot match installed skip waivers;
+noSuggests alone uses installed mode with `r-cmd-check-installed`.
+
 For every environment in which Suggests are intentionally installed, the
 runner will:
 
 1. Start a clean R process.
 2. Run the complete `devtools::test()` suite.
-3. Save a structured result artifact.
+3. Save a structured diagnostic sidecar; a strict adapter emits the corresponding
+   minimal unit result for aggregation.
 4. Fail on any test failure, unhandled warning, or unexpected skip.
 
 The MKL environment additionally runs `test_utils.R` and `test_Xref.R` before
@@ -296,8 +310,9 @@ not a production-code change; any broader test refactor remains out of scope.
   expected SHA256 before installation.
 - The overall preflight includes examples, installed tests, vignettes, PDF
   manual generation, and all other applicable `R CMD check --as-cran` stages.
-- A dedicated documentation lane runs the complete check without `--no-manual`
-  or `--no-build-vignettes`. Purpose-built R-hub special containers retain
+- The existing `r-release-linux-x86-64` row is the documentation lane and runs
+  the complete check without `--no-manual` or `--no-build-vignettes`; no extra
+  aggregate result is declared for documentation. Purpose-built R-hub special containers retain
   their native wrapper flags so manual tooling cannot mask the numerical,
   sanitizer, Valgrind, or reduced-feature signal; their omitted documentation
   stages are covered by the dedicated lane rather than falsely attributed to
@@ -381,7 +396,8 @@ the diagnostic artifact. There is no automatic retry for test or check failures.
 - `pixi.lock`: reproducible Pixi resolution.
 - `.github/workflows/cran-preflight.yml`: new fork-scoped orchestration and
   aggregate gate; the existing CI/codecov workflow remains unchanged.
-- `.github/ci/check-matrix.yml`: coverage inventory and mappings.
+- `.github/ci/check-matrix.yml`: coverage inventory, mappings, and the exact 18
+  unit lanes that complete the 60-key aggregate contract.
 - `.github/ci/check-policy.yml`: exact, expiring unit-skip and R CMD check NOTE
   waivers plus numerical-backend identity rules.
 - `.github/ci/result.schema.json`: per-environment artifact contract.
@@ -425,6 +441,11 @@ Before push:
 - assert that `origin` resolves to `xueweic/colocboost`, the checkout is on
   `codex/cran-preflight-ci`, and no operation targets the `upstream` remote.
 
+The workflow skeleton is developed and validated locally in Task 8. Its first
+push is deferred until Tasks 8 through 11 implement producers for every one of
+the 60 expected composite keys; an incomplete smoke inventory is never used to
+bypass the fail-closed aggregate contract.
+
 After push:
 
 - confirm the workflow appears in the fork's GitHub Actions page;
@@ -452,8 +473,8 @@ Feature-branch implementation is complete only when:
    policy.
 5. The MKL job proves that MKL executed and passes the targeted and complete
    test suites.
-6. The aggregate gate confirms every expected result belongs to the same commit
-   and source-tarball digest.
+6. The aggregate gate confirms all 60 expected composite results belong to the
+   same commit and source-tarball digest.
 7. The repository diff contains no package implementation or dependency change.
 
 Default-branch rollout is a separate user decision. Only after merge to the
