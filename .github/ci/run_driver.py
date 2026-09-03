@@ -19,6 +19,7 @@ from validate_manifest import load_manifest, validate_manifest
 
 
 _DRIVERS = frozenset({"r-binary", "native-wrapper"})
+_TARBALL_TOKEN = "{tarball}"
 _EVIDENCE_ENVIRONMENT_FIELDS = (
     "PATH",
     "R_HOME",
@@ -190,14 +191,24 @@ def run_driver(
         )
 
     executable_path = _require_executable(executable)
-    command, invoked_executable = _build_command(
-        manifest_driver, executable_path, argv, r_entrypoint
-    )
+    unbound_arguments = _normalize_argv(argv)
+    if unbound_arguments.count(_TARBALL_TOKEN) != 1:
+        raise ValueError(
+            "argv must contain exactly one literal {tarball} placeholder"
+        )
+    verified_tarball = Path(os.path.abspath(os.fspath(tarball)))
     verify_tarball(
-        tarball,
+        verified_tarball,
         metadata,
         expected_source_sha=expected_source_sha,
         expected_event_sha=expected_event_sha,
+    )
+    bound_arguments = [
+        str(verified_tarball) if argument == _TARBALL_TOKEN else argument
+        for argument in unbound_arguments
+    ]
+    command, invoked_executable = _build_command(
+        manifest_driver, executable_path, bound_arguments, r_entrypoint
     )
 
     process_environment = None if environment is None else dict(environment)

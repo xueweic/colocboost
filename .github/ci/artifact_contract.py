@@ -73,6 +73,20 @@ def _require_regular_tarball(path: Path) -> os.stat_result:
     return status
 
 
+def _require_regular_metadata(path: Path) -> os.stat_result:
+    try:
+        status = path.lstat()
+    except OSError as error:
+        raise ValueError(
+            f"metadata must be an existing regular non-symlink file: {path}"
+        ) from error
+    if stat.S_ISLNK(status.st_mode) or not stat.S_ISREG(status.st_mode):
+        raise ValueError(
+            f"metadata must be a regular non-symlink file: {path}"
+        )
+    return status
+
+
 def _hash_file(path: Path) -> tuple[int, str]:
     _require_regular_tarball(path)
     digest = hashlib.sha256()
@@ -146,8 +160,10 @@ def verify_tarball(
     _validate_git_sha(expected_event_sha, "expected_event_sha")
     tarball_path = Path(tarball)
     _require_regular_tarball(tarball_path)
+    metadata_file = Path(metadata_path)
+    _require_regular_metadata(metadata_file)
     try:
-        document = json.loads(Path(metadata_path).read_text(encoding="utf-8"))
+        document = json.loads(metadata_file.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
         raise ValueError(f"metadata is not readable valid JSON: {metadata_path}") from error
     validate_metadata(document)

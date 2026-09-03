@@ -17,6 +17,7 @@ from run_driver import capture_environment_evidence, run_driver  # noqa: E402
 
 SOURCE_SHA = "a" * 40
 EVENT_SHA = "b" * 40
+TARBALL_TOKEN = "{tarball}"
 
 
 def make_executable(path, body):
@@ -64,7 +65,7 @@ def test_native_wrapper_preserves_absolute_path_and_argv_with_spaces(tmp_path):
         "import json, pathlib, sys\n"
         "pathlib.Path(sys.argv[1]).write_text(json.dumps(sys.argv[2:]))\n",
     )
-    argv = [str(output), "argument with spaces", str(tarball), "literal;not-shell"]
+    argv = [str(output), "argument with spaces", TARBALL_TOKEN, "literal;not-shell"]
 
     exit_code = invoke(
         {"id": "mkl", "driver": "native-wrapper"},
@@ -76,7 +77,11 @@ def test_native_wrapper_preserves_absolute_path_and_argv_with_spaces(tmp_path):
     )
 
     assert exit_code == 0
-    assert json.loads(output.read_text()) == argv[1:]
+    assert json.loads(output.read_text()) == [
+        "argument with spaces",
+        str(tarball.absolute()),
+        "literal;not-shell",
+    ]
 
 
 @pytest.mark.parametrize("kind", ["missing", "relative", "non-executable", "directory"])
@@ -99,7 +104,7 @@ def test_driver_rejects_invalid_executable_paths_before_invocation(tmp_path, kin
             {"id": "mkl", "driver": "native-wrapper"},
             "native-wrapper",
             executable,
-            [str(marker), str(tarball)],
+            [str(marker), TARBALL_TOKEN],
             tarball,
             metadata,
         )
@@ -117,7 +122,7 @@ def test_driver_rejects_symlink_executable(tmp_path):
             {"id": "mkl", "driver": "native-wrapper"},
             "native-wrapper",
             symlink,
-            [str(tarball)],
+            [TARBALL_TOKEN],
             tarball,
             metadata,
         )
@@ -132,7 +137,7 @@ def test_driver_rejects_manifest_and_requested_driver_mismatch(tmp_path):
             {"id": "mkl", "driver": "native-wrapper"},
             "r-binary",
             wrapper,
-            [str(tarball)],
+            [TARBALL_TOKEN],
             tarball,
             metadata,
             r_entrypoint="r-cmd",
@@ -148,7 +153,7 @@ def test_driver_rejects_unknown_manifest_driver(tmp_path):
             {"id": "bad", "driver": "shell-command"},
             "shell-command",
             wrapper,
-            [str(tarball)],
+            [TARBALL_TOKEN],
             tarball,
             metadata,
         )
@@ -163,7 +168,7 @@ def test_native_wrapper_exit_status_is_propagated(tmp_path):
             {"id": "valgrind", "driver": "native-wrapper"},
             "native-wrapper",
             wrapper,
-            [str(tarball)],
+            [TARBALL_TOKEN],
             tarball,
             metadata,
         )
@@ -186,7 +191,7 @@ def test_invalid_r_binary_never_falls_back_to_path_r(tmp_path, monkeypatch):
             {"id": "r-release", "driver": "r-binary"},
             "r-binary",
             tmp_path / "missing" / "R",
-            ["script.R", str(tarball)],
+            ["script.R", TARBALL_TOKEN],
             tarball,
             metadata,
             r_entrypoint="rscript",
@@ -206,7 +211,7 @@ def test_rscript_uses_verified_sibling_and_preserves_argv(tmp_path):
         "import json, pathlib, sys\n"
         "pathlib.Path(sys.argv[1]).write_text(json.dumps(sys.argv[2:]))\n",
     )
-    argv = [str(output), "script with spaces.R", str(tarball), "arg with spaces"]
+    argv = [str(output), "script with spaces.R", TARBALL_TOKEN, "arg with spaces"]
 
     assert (
         invoke(
@@ -220,7 +225,11 @@ def test_rscript_uses_verified_sibling_and_preserves_argv(tmp_path):
         )
         == 0
     )
-    assert json.loads(output.read_text()) == argv[1:]
+    assert json.loads(output.read_text()) == [
+        "script with spaces.R",
+        str(tarball.absolute()),
+        "arg with spaces",
+    ]
 
 
 def test_rscript_evidence_keeps_selected_r_and_invoked_sibling_identities(tmp_path):
@@ -238,7 +247,7 @@ def test_rscript_evidence_keeps_selected_r_and_invoked_sibling_identities(tmp_pa
             {"id": "r-release", "driver": "r-binary"},
             "r-binary",
             r_binary,
-            ["script.R", str(tarball)],
+            ["script.R", TARBALL_TOKEN],
             tarball,
             metadata,
             r_entrypoint="rscript",
@@ -265,7 +274,7 @@ def test_r_cmd_uses_selected_r_executable(tmp_path):
             {"id": "r-release", "driver": "r-binary"},
             "r-binary",
             r_binary,
-            [str(output), "check", "--as-cran", str(tarball)],
+            [str(output), "check", "--as-cran", TARBALL_TOKEN],
             tarball,
             metadata,
             r_entrypoint="r-cmd",
@@ -293,7 +302,7 @@ def test_rscript_requires_executable_sibling(tmp_path, sibling_state):
             {"id": "r-release", "driver": "r-binary"},
             "r-binary",
             r_binary,
-            ["script.R", str(tarball)],
+            ["script.R", TARBALL_TOKEN],
             tarball,
             metadata,
             r_entrypoint="rscript",
@@ -309,7 +318,7 @@ def test_r_binary_rejects_wrong_entrypoint_and_non_r_basename(tmp_path):
             {"id": "r-release", "driver": "r-binary"},
             "r-binary",
             not_r,
-            [str(tarball)],
+            [TARBALL_TOKEN],
             tarball,
             metadata,
             r_entrypoint="r-cmd",
@@ -321,7 +330,7 @@ def test_r_binary_rejects_wrong_entrypoint_and_non_r_basename(tmp_path):
             {"id": "r-release", "driver": "r-binary"},
             "r-binary",
             r_binary,
-            [str(tarball)],
+            [TARBALL_TOKEN],
             tarball,
             metadata,
             r_entrypoint="shell",
@@ -337,7 +346,7 @@ def test_native_wrapper_rejects_r_entrypoint_switch(tmp_path):
             {"id": "mkl", "driver": "native-wrapper"},
             "native-wrapper",
             wrapper,
-            [str(tarball)],
+            [TARBALL_TOKEN],
             tarball,
             metadata,
             r_entrypoint="r-cmd",
@@ -358,7 +367,7 @@ def test_corrupted_tarball_blocks_driver_execution(tmp_path):
             {"id": "mkl", "driver": "native-wrapper"},
             "native-wrapper",
             wrapper,
-            [str(tarball)],
+            [TARBALL_TOKEN],
             tarball,
             metadata,
         )
@@ -432,7 +441,7 @@ def test_evidence_is_written_before_driver_runs(tmp_path):
             {"id": "mkl", "driver": "native-wrapper"},
             "native-wrapper",
             wrapper,
-            [str(evidence_path), str(tarball)],
+            [str(evidence_path), TARBALL_TOKEN],
             tarball,
             metadata,
             evidence_path=evidence_path,
@@ -451,7 +460,7 @@ def test_driver_cli_validates_manifest_row_and_propagates_exit(tmp_path):
         "pathlib.Path(sys.argv[1]).write_text(json.dumps(sys.argv[2:]))\n"
         "raise SystemExit(19)\n",
     )
-    command_argv = [str(output), "arg with spaces", str(tarball)]
+    command_argv = [str(output), "arg with spaces", TARBALL_TOKEN]
 
     completed = subprocess.run(
         [
@@ -484,7 +493,10 @@ def test_driver_cli_validates_manifest_row_and_propagates_exit(tmp_path):
     )
 
     assert completed.returncode == 19, completed.stderr
-    assert json.loads(output.read_text()) == command_argv[1:]
+    assert json.loads(output.read_text()) == [
+        "arg with spaces",
+        str(tarball.absolute()),
+    ]
     assert json.loads(evidence.read_text())["executable"]["path"] == str(wrapper)
 
 
@@ -519,7 +531,7 @@ def test_driver_cli_rejects_unknown_environment_without_invocation(tmp_path):
             "--evidence",
             str(tmp_path / "unused-evidence.json"),
             "--",
-            str(tarball),
+            TARBALL_TOKEN,
         ],
         check=False,
         capture_output=True,
@@ -529,3 +541,94 @@ def test_driver_cli_rejects_unknown_environment_without_invocation(tmp_path):
     assert completed.returncode == 2
     assert "environment_id" in completed.stderr
     assert not marker.exists()
+
+
+@pytest.mark.parametrize(
+    "argv_factory",
+    [
+        lambda tarball_b: [str(tarball_b)],
+        lambda tarball_b: [TARBALL_TOKEN, TARBALL_TOKEN],
+        lambda tarball_b: [f"--tarball={TARBALL_TOKEN}"],
+    ],
+    ids=(
+        "different-tarball-no-placeholder",
+        "multiple-placeholders",
+        "embedded-placeholder",
+    ),
+)
+def test_native_wrapper_rejects_unbound_or_ambiguous_tarball_argv(
+    tmp_path, argv_factory
+):
+    tarball_a, metadata_a = make_artifact(tmp_path)
+    tarball_b = tmp_path / "different-package.tar.gz"
+    tarball_b.write_bytes(b"unverified source package")
+    marker = tmp_path / "invoked"
+    wrapper = make_executable(
+        tmp_path / "wrapper",
+        f"import pathlib\npathlib.Path({str(marker)!r}).write_text('bad')\n",
+    )
+
+    with pytest.raises(ValueError, match="exactly one literal.*\\{tarball\\}"):
+        invoke(
+            {"id": "mkl", "driver": "native-wrapper"},
+            "native-wrapper",
+            wrapper,
+            argv_factory(tarball_b),
+            tarball_a,
+            metadata_a,
+        )
+    assert not marker.exists()
+
+
+def test_native_wrapper_substitutes_verified_a_and_never_substitutes_b(tmp_path):
+    tarball_a, metadata_a = make_artifact(tmp_path)
+    tarball_b = tmp_path / "different-package.tar.gz"
+    tarball_b.write_bytes(b"unverified source package")
+    output = tmp_path / "received.json"
+    wrapper = make_executable(
+        tmp_path / "wrapper",
+        "import json, pathlib, sys\n"
+        "pathlib.Path(sys.argv[1]).write_text(json.dumps(sys.argv[2:]))\n",
+    )
+
+    assert (
+        invoke(
+            {"id": "mkl", "driver": "native-wrapper"},
+            "native-wrapper",
+            wrapper,
+            [str(output), TARBALL_TOKEN],
+            tarball_a,
+            metadata_a,
+        )
+        == 0
+    )
+    received = json.loads(output.read_text())
+    assert received == [str(tarball_a.absolute())]
+    assert str(tarball_b) not in received
+
+
+def test_r_binary_substitutes_absolute_lexical_verified_tarball_path(
+    tmp_path, monkeypatch
+):
+    tarball_a, metadata_a = make_artifact(tmp_path)
+    output = tmp_path / "r-received.json"
+    r_binary = make_executable(
+        tmp_path / "R-home" / "bin" / "R",
+        "import json, pathlib, sys\n"
+        "pathlib.Path(sys.argv[2]).write_text(json.dumps(sys.argv[3:]))\n",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    assert (
+        invoke(
+            {"id": "r-release", "driver": "r-binary"},
+            "r-binary",
+            r_binary,
+            [str(output), TARBALL_TOKEN],
+            Path(tarball_a.name),
+            Path(metadata_a.name),
+            r_entrypoint="r-cmd",
+        )
+        == 0
+    )
+    assert json.loads(output.read_text()) == [str(tarball_a)]

@@ -236,6 +236,53 @@ def test_create_metadata_validates_identity_before_writing(tmp_path):
     assert not metadata_path.exists()
 
 
+def test_verify_rejects_symlink_metadata_before_reading(tmp_path):
+    tarball, metadata_path, _ = create_valid_metadata(tmp_path)
+    symlink = tmp_path / "linked-metadata.json"
+    symlink.symlink_to(metadata_path)
+
+    with pytest.raises(ValueError, match="metadata.*regular.*non-symlink"):
+        verify_tarball(
+            tarball,
+            symlink,
+            expected_source_sha=SOURCE_SHA,
+            expected_event_sha=EVENT_SHA,
+        )
+
+
+def test_verify_rejects_directory_metadata_before_reading(tmp_path):
+    tarball, _, _ = create_valid_metadata(tmp_path)
+    directory = tmp_path / "metadata-directory"
+    directory.mkdir()
+
+    with pytest.raises(ValueError, match="metadata.*regular.*non-symlink"):
+        verify_tarball(
+            tarball,
+            directory,
+            expected_source_sha=SOURCE_SHA,
+            expected_event_sha=EVENT_SHA,
+        )
+
+
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="FIFO is unavailable")
+def test_verify_rejects_fifo_metadata_without_reading(tmp_path, monkeypatch):
+    tarball, _, _ = create_valid_metadata(tmp_path)
+    fifo = tmp_path / "metadata-fifo"
+    os.mkfifo(fifo)
+
+    def fail_if_read(*args, **kwargs):
+        raise AssertionError("FIFO metadata must be rejected before read_text")
+
+    monkeypatch.setattr(Path, "read_text", fail_if_read)
+    with pytest.raises(ValueError, match="metadata.*regular.*non-symlink"):
+        verify_tarball(
+            tarball,
+            fifo,
+            expected_source_sha=SOURCE_SHA,
+            expected_event_sha=EVENT_SHA,
+        )
+
+
 def test_atomic_replace_failure_preserves_existing_metadata(tmp_path, monkeypatch):
     tarball, metadata_path, _ = create_valid_metadata(tmp_path, b"first")
     before = metadata_path.read_bytes()
