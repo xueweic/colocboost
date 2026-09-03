@@ -1,0 +1,116 @@
+[workspace]
+name = "colocboost-ci"
+channels = ["conda-forge"]
+platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64", "win-64"]
+
+[system-requirements]
+libc = { family = "glibc", version = "2.17" }
+
+[dependencies]
+python = "3.12.*"
+pyyaml = "*"
+jsonschema = "*"
+pytest = "*"
+
+[target.linux-64.dependencies]
+jq = "*"
+coreutils = "*"
+
+[target.linux-aarch64.dependencies]
+jq = "*"
+coreutils = "*"
+
+[target.osx-64.dependencies]
+jq = "*"
+coreutils = "*"
+
+[target.osx-arm64.dependencies]
+jq = "*"
+coreutils = "*"
+
+[tasks.ci-validate]
+cmd = "python .github/ci/validate_manifest.py .github/ci/check-matrix.yml"
+cwd = "."
+
+[tasks.ci-contract-tests]
+cmd = "pytest -q .github/ci/tests"
+cwd = "."
+
+[tasks.ci-prepare]
+cmd = "python .github/ci/artifact_contract.py create --tarball={{ tarball }} --metadata={{ metadata }} --source-sha={{ source_sha }} --event-sha={{ event_sha }}"
+cwd = "."
+args = ["tarball", "metadata", "source_sha", "event_sha"]
+
+[tasks.ci-unit]
+cmd = "Rscript .github/ci/run-unit-tests.R --package=. --load-package={{ mode }} --context={{ environment_id }} --policy=.github/ci/check-policy.yml --output={{ output }}"
+cwd = "."
+args = ["mode", "output", "environment_id"]
+
+[tasks.ci-check]
+cmd = "python .github/ci/run_driver.py --manifest=.github/ci/check-matrix.yml --environment-id={{ environment_id }} --driver={{ driver }} --executable={{ executable }} --tarball={{ tarball }} --metadata={{ metadata }} --source-sha={{ source_sha }} --event-sha={{ event_sha }} --evidence={{ evidence }} {% if r_entrypoint %}--r-entrypoint={{ r_entrypoint }} {% endif %}--"
+cwd = "."
+args = [
+  "environment_id",
+  "driver",
+  "executable",
+  "tarball",
+  "metadata",
+  "source_sha",
+  "event_sha",
+  "evidence",
+  { arg = "r_entrypoint", default = "" },
+]
+
+[tasks.ci-summary]
+cmd = "python .github/ci/aggregate_results.py"
+cwd = "."
+
+[feature.local-r44]
+platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64"]
+
+[feature.local-r44.dependencies]
+r-base = "4.4.*"
+r-testthat = "*"
+r-devtools = "*"
+r-rcmdcheck = "*"
+r-jsonlite = "*"
+r-rfast = "*"
+r-matrixstats = "*"
+r-knitr = "*"
+r-rmarkdown = "*"
+r-ashr = "*"
+r-mass = "*"
+r-susier = "*"
+r-yaml = "*"
+
+[feature.local-r44.tasks]
+test = { cmd = "Rscript .github/ci/run-unit-tests.R --package=. --load-package=source --context=local-r44 --policy=.github/ci/check-policy.yml --output=.pixi/local-r44/unit-results.json", cwd = "." }
+check = { cmd = """Rscript --vanilla -e "devtools::check(args = '--as-cran', build_args = character(), manual = TRUE)"""", cwd = ".", env = { LC_ALL = "C" } }
+ci-r-contract-tests = { cmd = "Rscript .github/ci/tests/test-unit-policy.R", cwd = "." }
+
+[feature.local-r45]
+platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64"]
+
+[feature.local-r45.dependencies]
+r-base = "4.5.*"
+r-testthat = "*"
+r-devtools = "*"
+r-rcmdcheck = "*"
+r-jsonlite = "*"
+r-rfast = "*"
+r-matrixstats = "*"
+r-knitr = "*"
+r-rmarkdown = "*"
+r-ashr = "*"
+r-mass = "*"
+r-susier = "*"
+r-yaml = "*"
+
+[feature.local-r45.tasks]
+test = { cmd = "Rscript .github/ci/run-unit-tests.R --package=. --load-package=source --context=local-r45 --policy=.github/ci/check-policy.yml --output=.pixi/local-r45/unit-results.json", cwd = "." }
+check = { cmd = """Rscript --vanilla -e "devtools::check(args = '--as-cran', build_args = character(), manual = TRUE)"""", cwd = ".", env = { LC_ALL = "C" } }
+ci-r-contract-tests = { cmd = "Rscript .github/ci/tests/test-unit-policy.R", cwd = "." }
+
+[environments]
+local-r44 = { features = ["local-r44"] }
+local-r45 = { features = ["local-r45"] }

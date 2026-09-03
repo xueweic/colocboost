@@ -1,3 +1,6 @@
+# Legacy release/pkgdown manifest only; retain until those workflows are migrated and verified
+# against the root Pixi control plane.
+
 [project]
 name = "r-colocboost"
 channels = ["dnachun", "conda-forge", "bioconda"]
