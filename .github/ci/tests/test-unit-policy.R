@@ -148,6 +148,8 @@ test_that("a passing fixture produces a structured passing report", {
   expect_identical(result$report$kind, "unit-tests")
   expect_identical(result$report$context, "local-r44")
   expect_identical(result$report$status, "pass")
+  expect_identical(result$report$environment$suite, "filtered")
+  expect_identical(result$report$environment$filter, "pass")
   expect_summary(
     result$report,
     total = 1L, pass = 1L, failure = 0L, error = 0L, warning = 0L,
@@ -160,6 +162,13 @@ test_that("a passing fixture produces a structured passing report", {
   expect_true("call" %in% names(result$report$cases[[1]]))
   expect_true("line" %in% names(result$report$cases[[1]]))
   expect_length(result$report$violations, 0L)
+})
+
+test_that("an invocation without --filter records the full-suite contract", {
+  result <- run_runner()
+
+  expect_identical(result$report$environment$suite, "full")
+  expect_null(result$report$environment$filter)
 })
 
 test_that("failure, error, and warning each fail with their strict class", {

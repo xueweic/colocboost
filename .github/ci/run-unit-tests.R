@@ -36,6 +36,7 @@ if (!is.null(recovered_output)) {
 recovered_context <- extract_recoverable("context")
 recovered_load_package <- extract_recoverable("load-package")
 recovered_package <- extract_recoverable("package")
+recovered_filter <- extract_recoverable("filter")
 
 empty_summary <- function() {
   list(
@@ -69,7 +70,8 @@ new_report <- function(
   cases = list(),
   matched_allowances = list(),
   unused_allowances = list(),
-  violations = list()
+  violations = list(),
+  filter = recovered_filter
 ) {
   list(
     schema_version = 1L,
@@ -80,7 +82,9 @@ new_report <- function(
       id = context,
       load_package = load_package,
       package = package,
-      r_version = as.character(getRversion())
+      r_version = as.character(getRversion()),
+      suite = if (is.null(filter)) "full" else "filtered",
+      filter = filter
     ),
     summary = summary,
     cases = unname(cases),
@@ -192,6 +196,7 @@ recovered_output <- output_path
 recovered_context <- cli$context
 recovered_load_package <- cli[["load-package"]]
 recovered_package <- package_path
+recovered_filter <- cli$filter
 
 if (!requireNamespace("yaml", quietly = TRUE)) {
   exit_with_diagnostic("infrastructure-error", "Package 'yaml' is required.")

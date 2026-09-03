@@ -64,8 +64,16 @@ args = [
 ]
 
 [tasks.ci-summary]
-cmd = "python .github/ci/aggregate_results.py"
+cmd = '''python .github/ci/aggregate_results.py --manifest='{{ manifest | replace("'", "'\"'\"'") }}' --results-root='{{ results_root | replace("'", "'\"'\"'") }}' --expected-source-sha='{{ expected_source_sha | replace("'", "'\"'\"'") }}' --expected-event-sha='{{ expected_event_sha | replace("'", "'\"'\"'") }}' --expected-tarball-sha256='{{ expected_tarball_sha256 | replace("'", "'\"'\"'") }}' --summary='{{ summary | replace("'", "'\"'\"'") }}' '''
 cwd = "."
+args = [
+  "manifest",
+  "results_root",
+  "expected_source_sha",
+  "expected_event_sha",
+  "expected_tarball_sha256",
+  "summary",
+]
 
 [feature.local-r44]
 platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64"]

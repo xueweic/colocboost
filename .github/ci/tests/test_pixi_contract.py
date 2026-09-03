@@ -145,6 +145,14 @@ def test_top_level_task_interfaces_are_explicit(manifest):
         "evidence",
         {"arg": "r_entrypoint", "default": ""},
     ]
+    assert task_args(tasks["ci-summary"]) == [
+        "manifest",
+        "results_root",
+        "expected_source_sha",
+        "expected_event_sha",
+        "expected_tarball_sha256",
+        "summary",
+    ]
 
     commands = {name: task_command(task) for name, task in tasks.items()}
     assert commands["ci-validate"] == (
@@ -162,7 +170,7 @@ def test_top_level_task_interfaces_are_explicit(manifest):
     assert tasks["ci-unit"].get("env") == CI_UNIT_R_TASK_ENV
     assert ".github/ci/run_driver.py" in commands["ci-check"]
     assert commands["ci-check"].rstrip().endswith("--")
-    assert commands["ci-summary"] == "python .github/ci/aggregate_results.py"
+    assert ".github/ci/aggregate_results.py" in commands["ci-summary"]
     assert all(task.get("cwd") == "." for task in tasks.values())
 
 
@@ -181,6 +189,14 @@ def test_typed_task_values_are_shell_quoted(manifest):
             "event_sha",
             "evidence",
             "r_entrypoint",
+        ),
+        "ci-summary": (
+            "manifest",
+            "results_root",
+            "expected_source_sha",
+            "expected_event_sha",
+            "expected_tarball_sha256",
+            "summary",
         ),
     }
     quote_filter = " | replace(\"'\", \"'\\\"'\\\"'\")"
@@ -429,6 +445,21 @@ def test_pixi_renders_typed_task_arguments_and_passthrough():
     check_output = check.stdout + check.stderr
     assert "--r-entrypoint='r-cmd'" in check_output
     assert "-- check --as-cran {tarball}" in check_output
+
+    summary = run_pixi_dry(
+        "ci-summary",
+        "manifest's.yml",
+        "results root's",
+        "a" * 40,
+        "b" * 40,
+        "c" * 64,
+        "summary's.md",
+    )
+    assert summary.returncode == 0, summary.stderr
+    summary_output = summary.stdout + summary.stderr
+    assert "--manifest='manifest'\"'\"'s.yml'" in summary_output
+    assert "--results-root='results root'\"'\"'s'" in summary_output
+    assert "--summary='summary'\"'\"'s.md'" in summary_output
 
     missing_argument = run_pixi_dry("ci-unit", "source", "unit.json")
     assert missing_argument.returncode != 0
