@@ -66,7 +66,8 @@ run_runner <- function(
   policy = empty_policy,
   load_package = "source",
   extra_args = character(),
-  include_defaults = TRUE
+  include_defaults = TRUE,
+  environment = character()
 ) {
   output <- tempfile(fileext = ".json")
   default_args <- c(
@@ -85,7 +86,7 @@ run_runner <- function(
     args,
     stdout = TRUE,
     stderr = TRUE,
-    env = paste0("R_LIBS=", install_library)
+    env = c(paste0("R_LIBS=", install_library), environment)
   ))
   status <- attr(command_output, "status")
   if (is.null(status)) {
@@ -148,6 +149,59 @@ test_that("failure, error, and warning each fail with their strict class", {
     expect_identical(result$report$cases[[1]]$class, filter, info = filter)
     expect_match(result$report$cases[[1]]$message, expected$message, info = filter)
   }
+})
+
+test_that("warnings during testthat setup are strict warning cases", {
+  result <- run_runner(
+    "setup-notice",
+    environment = "COLOCBOOST_FIXTURE_SETUP_WARNING=1"
+  )
+
+  expect_identical(result$status, 1L)
+  expect_identical(result$report$status, "fail")
+  expect_summary(result$report, total = 2L, pass = 1L, warning = 1L)
+  warning_cases <- Filter(
+    function(case) identical(case$class, "warning"),
+    result$report$cases
+  )
+  expect_length(warning_cases, 1L)
+  if (length(warning_cases) == 1L) {
+    expect_match(warning_cases[[1]]$message, "fixture setup warning")
+    expect_true(all(c("call", "file", "line") %in% names(warning_cases[[1]])))
+    expect_identical(warning_cases[[1]]$file, "helper-setup-warning.R")
+    expect_identical(warning_cases[[1]]$line, 2L)
+  }
+  expect_true(any(vapply(
+    result$report$violations,
+    function(x) identical(x$type, "warning"),
+    logical(1)
+  )))
+  expect_silent(jsonlite::validate(result$path))
+})
+
+test_that("mixed results preserve counts and use exact class precedence", {
+  result <- run_runner("mixed-results")
+  expected_classes <- c(
+    "error", "failure", "warning", "empty", "skip-like-success", "skip", "pass"
+  )
+
+  expect_identical(result$status, 1L)
+  expect_identical(
+    vapply(result$report$cases, `[[`, character(1), "class"),
+    expected_classes
+  )
+  expect_summary(
+    result$report,
+    total = 7L, error = 1L, failure = 1L, warning = 1L, empty = 1L,
+    skip_like_success = 1L, skip = 1L, pass = 1L
+  )
+  expect_identical(
+    result$report$summary$observations,
+    list(
+      total = 18L, error = 1L, failure = 2L, warning = 3L, empty = 3L,
+      skip_like_success = 5L, skip = 2L, pass = 2L
+    )
+  )
 })
 
 test_that("empty and executed skip-like success are never accepted", {
@@ -329,6 +383,7 @@ test_that("malformed CLI variants exit 2 and write diagnostics when possible", {
     expect_true(file.exists(output), info = name)
     report <- jsonlite::fromJSON(output, simplifyVector = FALSE)
     expect_identical(report$status, "error", info = name)
+    expect_identical(report$summary$observations$total, 0L, info = name)
   }
 })
 

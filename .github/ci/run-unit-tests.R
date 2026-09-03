@@ -46,7 +46,17 @@ empty_summary <- function() {
     warning = 0L,
     empty = 0L,
     skip_like_success = 0L,
-    skip = 0L
+    skip = 0L,
+    observations = list(
+      total = 0L,
+      error = 0L,
+      failure = 0L,
+      warning = 0L,
+      empty = 0L,
+      skip_like_success = 0L,
+      skip = 0L,
+      pass = 0L
+    )
   )
 }
 
@@ -192,6 +202,7 @@ if (!requireNamespace("testthat", quietly = TRUE)) {
 if (!requireNamespace("jsonlite", quietly = TRUE)) {
   exit_with_diagnostic("infrastructure-error", "Package 'jsonlite' is required.")
 }
+suppressWarnings(suppressPackageStartupMessages(library(testthat)))
 
 is_nonempty_string <- function(value) {
   is.character(value) && length(value) == 1L && !is.na(value) && nzchar(value)
@@ -334,24 +345,96 @@ condition_line <- function(condition) {
   if (length(values) == 0L || is.na(values[[1L]])) NA_integer_ else values[[1L]]
 }
 
+condition_file <- function(condition) {
+  reference <- condition$srcref
+  if (is.null(reference)) {
+    return(NULL)
+  }
+  filename <- tryCatch(
+    getSrcFilename(reference, full.names = TRUE),
+    error = function(error) NULL
+  )
+  if (is.null(filename) || length(filename) == 0L || !nzchar(filename[[1L]])) {
+    NULL
+  } else {
+    basename(filename[[1L]])
+  }
+}
+
+active_source_evidence <- function() {
+  calls <- sys.calls()
+  for (index in rev(seq_along(calls))) {
+    reference <- attr(calls[[index]], "srcref")
+    if (!is.null(reference)) {
+      filename <- tryCatch(
+        getSrcFilename(reference, full.names = TRUE),
+        error = function(error) NULL
+      )
+      return(list(
+        call = paste(deparse(calls[[index]]), collapse = " "),
+        file = if (is.null(filename) || length(filename) == 0L ||
+                   !nzchar(filename[[1L]])) NULL else basename(filename[[1L]]),
+        line = {
+          values <- suppressWarnings(as.integer(reference))
+          if (length(values) == 0L || is.na(values[[1L]])) {
+            NA_integer_
+          } else {
+            values[[1L]]
+          }
+        }
+      ))
+    }
+  }
+  list(call = NULL, file = NULL, line = NA_integer_)
+}
+
 contains_sentinel <- function(condition) {
   text <- paste(condition_message(condition), condition_call(condition), sep = "\n")
   grepl(forbidden_skip_sentinel, text, fixed = TRUE)
 }
 
-classify_case <- function(result_list, row) {
-  is_class <- function(class_name) {
-    vapply(result_list, inherits, logical(1), class_name)
+classify_observation <- function(condition) {
+  message_text <- condition_message(condition)
+  if (inherits(condition, "expectation_error")) {
+    "error"
+  } else if (inherits(condition, "expectation_failure")) {
+    "failure"
+  } else if (inherits(condition, "expectation_warning")) {
+    "warning"
+  } else if (inherits(condition, "expectation_skip") &&
+             identical(message_text, "Reason: empty test")) {
+    "empty"
+  } else if (inherits(condition, "expectation_success") &&
+             contains_sentinel(condition)) {
+    "skip-like-success"
+  } else if (inherits(condition, "expectation_skip")) {
+    "skip"
+  } else {
+    "pass"
   }
-  messages <- vapply(result_list, condition_message, character(1))
-  error_indices <- which(is_class("expectation_error"))
-  failure_indices <- which(is_class("expectation_failure"))
-  warning_indices <- which(is_class("expectation_warning"))
-  empty_indices <- which(is_class("expectation_skip") & messages == "Reason: empty test")
-  skip_like_indices <- which(
-    is_class("expectation_success") & vapply(result_list, contains_sentinel, logical(1))
+}
+
+count_observations <- function(classes) {
+  list(
+    total = as.integer(length(classes)),
+    error = as.integer(sum(classes == "error")),
+    failure = as.integer(sum(classes == "failure")),
+    warning = as.integer(sum(classes == "warning")),
+    empty = as.integer(sum(classes == "empty")),
+    skip_like_success = as.integer(sum(classes == "skip-like-success")),
+    skip = as.integer(sum(classes == "skip")),
+    pass = as.integer(sum(classes == "pass"))
   )
-  skip_indices <- which(is_class("expectation_skip"))
+}
+
+classify_case <- function(result_list, row) {
+  classes <- vapply(result_list, classify_observation, character(1))
+  error_indices <- which(classes == "error")
+  failure_indices <- which(classes == "failure")
+  warning_indices <- which(classes == "warning")
+  empty_indices <- which(classes == "empty")
+  skip_like_indices <- which(classes == "skip-like-success")
+  skip_indices <- which(classes == "skip")
 
   if (length(error_indices) > 0L || isTRUE(row$error)) {
     list(class = "error", index = if (length(error_indices)) error_indices[[1L]] else 1L)
@@ -398,7 +481,28 @@ run_tests <- function() {
   do.call(testthat::test_dir, arguments)
 }
 
-test_results <- tryCatch(run_tests(), error = identity)
+captured_run_warnings <- list()
+capture_run_warning <- function(condition) {
+  source_evidence <- active_source_evidence()
+  call <- condition_call(condition)
+  file <- condition_file(condition)
+  line <- condition_line(condition)
+  captured_run_warnings[[length(captured_run_warnings) + 1L]] <<- list(
+    message = condition_message(condition),
+    call = if (is.null(call)) source_evidence$call else call,
+    file = if (is.null(file)) source_evidence$file else file,
+    line = if (is.na(line)) source_evidence$line else line
+  )
+  restart <- findRestart("muffleWarning")
+  if (!is.null(restart)) {
+    invokeRestart(restart)
+  }
+}
+
+test_results <- tryCatch(
+  withCallingHandlers(run_tests(), warning = capture_run_warning),
+  error = identity
+)
 if (inherits(test_results, "error")) {
   exit_with_diagnostic("execution-error", paste(
     "Unable to execute unit tests:", conditionMessage(test_results)
@@ -412,7 +516,7 @@ if (inherits(test_data, "error")) {
   ))
 }
 
-cases <- vector("list", nrow(test_data))
+cases <- vector("list", nrow(test_data) + length(captured_run_warnings))
 for (index in seq_len(nrow(test_data))) {
   row <- test_data[index, , drop = FALSE]
   result_list <- test_results[[index]]$results
@@ -440,8 +544,30 @@ for (index in seq_len(nrow(test_data))) {
     } else {
       row$context[[1L]]
     },
-    reason = reason
+    reason = reason,
+    observations = count_observations(vapply(
+      result_list,
+      classify_observation,
+      character(1)
+    ))
   )
+}
+
+if (length(captured_run_warnings) > 0L) {
+  for (warning_index in seq_along(captured_run_warnings)) {
+    warning <- captured_run_warnings[[warning_index]]
+    cases[[nrow(test_data) + warning_index]] <- list(
+      class = "warning",
+      message = warning$message,
+      call = warning$call,
+      file = warning$file,
+      line = warning$line,
+      test_title = "<testthat setup/load>",
+      test_context = NULL,
+      reason = NULL,
+      observations = count_observations("warning")
+    )
+  }
 }
 
 case_classes <- vapply(cases, `[[`, character(1), "class")
@@ -456,6 +582,10 @@ summary <- list(
   skip = sum(case_classes == "skip")
 )
 summary <- lapply(summary, as.integer)
+observation_names <- names(count_observations(character()))
+summary$observations <- setNames(lapply(observation_names, function(name) {
+  as.integer(sum(vapply(cases, function(case) case$observations[[name]], integer(1))))
+}), observation_names)
 
 violations <- list()
 matched_allowances <- list()
