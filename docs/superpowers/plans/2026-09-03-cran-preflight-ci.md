@@ -36,8 +36,12 @@
 - .github/ci/result_contract.py: provisional/final result writer and schema validation.
 - .github/ci/validate_manifest.py: inventory, state, proof, and repository-scope validation.
 - .github/ci/artifact_contract.py: source tarball metadata creation and verification.
+- .github/ci/prepare_source.py: clean-HEAD Git export and one-time source build.
+- .github/ci/verify_source.py: exact downloaded-artifact discovery and raw-byte verification.
+- .github/ci/finalize_result.py: fail-closed producer result finalization.
 - .github/ci/aggregate_results.py: fail-closed cross-row aggregation.
 - .github/ci/run_driver.py: explicit r-binary/native-wrapper execution.
+- .github/ci/run_unit_driver.py: explicit R/Rscript binding for unit diagnostics.
 - .github/ci/run-unit-tests.R: structured source or installed unit-test runner.
 - .github/ci/run-r-cmd-check.R: package-check log classification and result finalization.
 - .github/ci/verify-mkl.R: runtime MKL identity proof.
@@ -363,25 +367,37 @@ git commit -m "ci: add strict package and matrix result gates"
 
 **Files:**
 - Create: .github/workflows/cran-preflight.yml
+- Create: .github/ci/prepare_source.py
+- Create: .github/ci/verify_source.py
+- Create: .github/ci/finalize_result.py
+- Modify: .github/ci/artifact_contract.py
+- Modify: pixi.toml
+- Verify/update if required: pixi.lock
 - Create: .github/ci/tests/test-workflow-policy.py
+- Create: .github/ci/tests/test_prepare_source.py
+- Create: .github/ci/tests/test_verify_source.py
+- Create: .github/ci/tests/test_finalize_result.py
+- Modify: .github/ci/tests/test_artifact_contract.py
+- Modify: .github/ci/tests/test_pixi_contract.py
 
 **Interfaces:**
-- Consumes: Pixi tasks, manifest, source tarball contract, result artifacts.
-- Produces: a locally validated prepare/orchestration/summary skeleton. The first push is deferred until Tasks 8-11 provide every expected result producer.
+- Consumes: an exact clean Git HEAD, Pixi's absolute R, manifest, an exact two-file downloaded source contract, result artifacts, and GitHub job/step outcomes.
+- Produces: one archived-HEAD source tarball plus metadata and safe GitHub outputs; fail-closed terminal result finalization; and a locally validated prepare/orchestration/summary skeleton. The first push is deferred until Tasks 9-11 provide every expected result producer.
 
 - [ ] **Step 1: Write failing static workflow tests**
 
-Assert repository guards on every job, contents: read, no pull_request_target, checkout persist-credentials false, immutable action SHAs, fail-fast false, summary condition always plus repository guard, and no secrets.
+Assert the clean-HEAD source builder, exact downloaded-artifact discovery, safe metadata output append, and result finalizer fail closed. Assert repository guards on every job, contents: read, no pull_request_target, checkout persist-credentials false, immutable action SHAs, no empty matrix, summary condition always plus repository guard, and no secrets.
 
 - [ ] **Step 2: Implement prepare and the fail-closed summary skeleton**
 
-Use checkout@3d3c42e5aac5ba805825da76410c181273ba90b1, setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e, upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a, and download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131. Prepare builds and uploads the tarball plus metadata. Summary independently checks out the manifest and aggregates all 60 composite keys with always(); it must remain non-green while any producer is absent. Configure push for every branch and pull_request for both internal and external PR merge refs; maximum coverage takes priority over duplicate-run savings, and this trigger never creates a PR by itself.
+Use checkout@3d3c42e5aac5ba805825da76410c181273ba90b1, setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e, upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a, and download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131. Prepare requires clean HEAD equal to the event SHA, exports with git archive, builds once with the absolute Pixi R and locked Pandoc, and uploads the tarball plus metadata. It exposes source/event identity, filename, and raw digest as job outputs, but never exposes runner-local paths as cross-job outputs. Artifact create/verify may atomically append validated single-line GitHub outputs. The summary-side verifier rejects missing, duplicate, symlinked, non-regular, or extra downloaded entries before recomputing the raw tarball digest. Every later producer uses the result finalizer so a missing, provisional, malformed, identity-mismatched, or falsely green result becomes infrastructure/fail. Summary independently checks out the manifest, downloads without flattening, and aggregates all 60 composite keys with always(); it must remain non-green while any producer is absent. Configure push for every branch and pull_request for both internal and external PR merge refs; maximum coverage takes priority over duplicate-run savings, and this trigger never creates a PR by itself.
 
 - [ ] **Step 3: Validate locally**
 
 ~~~bash
-pytest -q .github/ci/tests/test-workflow-policy.py
+pytest -q .github/ci/tests/test_prepare_source.py .github/ci/tests/test_verify_source.py .github/ci/tests/test_finalize_result.py .github/ci/tests/test_artifact_contract.py .github/ci/tests/test-workflow-policy.py .github/ci/tests/test_pixi_contract.py
 pixi run ci-validate
+pixi lock --check
 git diff --check
 ~~~
 
@@ -390,7 +406,7 @@ Expected: all static checks pass.
 - [ ] **Step 4: Commit locally; do not push the incomplete producer set**
 
 ~~~bash
-git add .github/workflows/cran-preflight.yml .github/ci/tests/test-workflow-policy.py
+git add .github/workflows/cran-preflight.yml .github/ci/prepare_source.py .github/ci/verify_source.py .github/ci/finalize_result.py .github/ci/artifact_contract.py .github/ci/tests/test_prepare_source.py .github/ci/tests/test_verify_source.py .github/ci/tests/test_finalize_result.py .github/ci/tests/test_artifact_contract.py .github/ci/tests/test-workflow-policy.py .github/ci/tests/test_pixi_contract.py pixi.toml pixi.lock docs/superpowers/specs/2026-09-03-cran-preflight-ci-design.md docs/superpowers/plans/2026-09-03-cran-preflight-ci.md
 git commit -m "ci: add fork-scoped preflight skeleton"
 ~~~
 

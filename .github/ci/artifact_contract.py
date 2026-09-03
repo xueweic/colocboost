@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import hashlib
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -20,6 +20,7 @@ _METADATA_FIELDS = frozenset(
 )
 _GIT_SHA = re.compile(r"^[0-9a-f]{40}$")
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_OUTPUT_KEY = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
 def _validate_git_sha(value: Any, field: str) -> None:
@@ -32,6 +33,8 @@ def _validate_filename(value: Any) -> None:
         raise ValueError("filename must be a non-empty basename")
     if value in {".", ".."}:
         raise ValueError("filename must not contain traversal")
+    if any(character in value for character in ("\r", "\n", "\x00")):
+        raise ValueError("filename must not contain output control characters")
     if PurePosixPath(value).name != value or PureWindowsPath(value).name != value:
         raise ValueError("filename must be a basename without traversal")
 
@@ -122,6 +125,107 @@ def _atomic_write_json(path: Path, document: Mapping[str, Any]) -> None:
             temporary_path.unlink(missing_ok=True)
 
 
+def _safe_github_output_path(value: str | os.PathLike[str]) -> Path:
+    raw_path = os.fspath(value)
+    if not isinstance(raw_path, str) or not raw_path:
+        raise ValueError("github output path must be a nonempty string")
+    if any(character in raw_path for character in ("\r", "\n", "\x00")):
+        raise ValueError("github output path contains ambiguous control characters")
+
+    lexical_path = Path(raw_path).absolute()
+    try:
+        parent = lexical_path.parent.resolve(strict=True)
+    except OSError as error:
+        raise ValueError("github output parent must be an existing directory") from error
+    if not parent.is_dir():
+        raise ValueError("github output parent must be an existing directory")
+    resolved_path = parent / lexical_path.name
+    if lexical_path != resolved_path:
+        raise ValueError("github output path contains ambiguous parent components")
+    try:
+        status = resolved_path.lstat()
+    except FileNotFoundError:
+        return resolved_path
+    except OSError as error:
+        raise ValueError("github output path is not accessible") from error
+    if stat.S_ISLNK(status.st_mode) or not stat.S_ISREG(status.st_mode):
+        raise ValueError("github output must be a regular non-symlink file")
+    return resolved_path
+
+
+def append_github_outputs(
+    output_path: str | os.PathLike[str], values: Mapping[str, Any]
+) -> None:
+    """Atomically append trusted single-line values to a GitHub output file."""
+
+    if not isinstance(values, Mapping) or not values:
+        raise ValueError("github outputs must be a nonempty mapping")
+    lines = []
+    for key, raw_value in values.items():
+        if not isinstance(key, str) or _OUTPUT_KEY.fullmatch(key) is None:
+            raise ValueError(f"invalid github output key: {key!r}")
+        value = str(raw_value)
+        if any(character in value for character in ("\r", "\n", "\x00")):
+            raise ValueError(f"github output {key} must be a single line")
+        lines.append(f"{key}={value}\n")
+
+    path = _safe_github_output_path(output_path)
+    existing = b""
+    if path.exists():
+        try:
+            existing = path.read_bytes()
+            existing.decode("utf-8")
+        except (OSError, UnicodeError) as error:
+            raise ValueError("github output must contain valid UTF-8 text") from error
+        if existing and not existing.endswith(b"\n"):
+            raise ValueError("existing github output must end with a newline")
+
+    payload = "".join(lines).encode("utf-8")
+    temporary_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="wb",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as stream:
+            temporary_path = Path(stream.name)
+            stream.write(existing)
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary_path, path)
+        temporary_path = None
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
+
+
+def github_output_values(
+    document: Mapping[str, Any],
+    tarball: str | os.PathLike[str],
+    metadata_path: str | os.PathLike[str],
+) -> dict[str, str | int]:
+    """Map validated source metadata to stable single-line workflow outputs."""
+
+    validate_metadata(document)
+    tarball_path = Path(tarball).absolute()
+    metadata_file = Path(metadata_path).absolute()
+    for label, path in (("tarball", tarball_path), ("metadata", metadata_file)):
+        if any(character in os.fspath(path) for character in ("\r", "\n", "\x00")):
+            raise ValueError(f"{label} path contains output control characters")
+    return {
+        "source_sha": document["source_sha"],
+        "event_sha": document["event_sha"],
+        "tarball_filename": document["filename"],
+        "tarball_path": os.fspath(tarball_path),
+        "metadata_path": os.fspath(metadata_file),
+        "tarball_size": document["size"],
+        "tarball_sha256": document["sha256"],
+    }
+
+
 def create_metadata(
     tarball: str | os.PathLike[str],
     metadata_path: str | os.PathLike[str],
@@ -192,6 +296,7 @@ def _argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--metadata", required=True)
     parser.add_argument("--source-sha", required=True)
     parser.add_argument("--event-sha", required=True)
+    parser.add_argument("--github-output")
     return parser
 
 
@@ -212,7 +317,12 @@ def main(argv: list[str] | None = None) -> int:
                 expected_source_sha=args.source_sha,
                 expected_event_sha=args.event_sha,
             )
-    except ValueError as error:
+        if args.github_output is not None:
+            append_github_outputs(
+                args.github_output,
+                github_output_values(document, args.tarball, args.metadata),
+            )
+    except (OSError, ValueError) as error:
         print(f"artifact contract error: {error}", file=sys.stderr)
         return 2
     print(json.dumps(document, sort_keys=True))

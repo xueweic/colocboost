@@ -1,7 +1,7 @@
 # Pixi-Managed CRAN Preflight CI Design
 
 Date: 2026-09-03
-Status: Design complete; pending user review before implementation plan
+Status: Accepted; implementation in progress
 
 ## Context
 
@@ -203,8 +203,12 @@ The workflow has these job groups:
 
 1. `prepare`
    - Validate the coverage manifest.
-   - Build one source tarball.
-   - Record its SHA256 digest.
+   - Require a clean Git HEAD equal to the event SHA, export that commit with
+     `git archive`, and build one source tarball with the absolute Pixi R and
+     locked Pandoc.
+   - Record the raw tarball SHA256 digest and immutable source metadata.
+   - Expose source/event identity, filename, and digest to later jobs without
+     exposing runner-local artifact paths.
    - Upload it for every downstream package-check job.
 2. `unit-tests`
    - Run the source-directory unit tests on the primary OS/R matrix and on
@@ -236,6 +240,14 @@ minimal `result.schema.json` contract without discarding a non-green condition.
 The summary gate validates these documents rather than relying only on the
 aggregate `needs.<job>.result`, which cannot prove that every matrix row
 reported.
+
+Repository-owned finalization turns a missing, provisional, malformed, or
+identity-mismatched producer document into a terminal infrastructure failure;
+a green result is accepted only when both the job and producer step succeeded.
+The summary independently discovers exactly one regular non-symlink tarball
+and its one regular metadata file from the downloaded source artifact, rejects
+extra entries, and recomputes the digest from raw bytes rather than using the
+GitHub Actions artifact digest.
 
 `fail-fast` is disabled so one failing environment does not hide results from
 the others. Concurrency is scoped by branch or pull request, and a newer commit
@@ -392,8 +404,9 @@ the diagnostic artifact. There is no automatic retry for test or check failures.
 
 ## Planned repository files
 
-- `pixi.toml`: canonical user-facing task and environment definition.
-- `pixi.lock`: reproducible Pixi resolution.
+- `pixi.toml`: canonical user-facing task and environment definition, including
+  Pandoc for complete local-R source builds.
+- `pixi.lock`: reproducible Pixi resolution, checked after dependency changes.
 - `.github/workflows/cran-preflight.yml`: new fork-scoped orchestration and
   aggregate gate; the existing CI/codecov workflow remains unchanged.
 - `.github/ci/check-matrix.yml`: coverage inventory, mappings, and the exact 18
@@ -401,6 +414,15 @@ the diagnostic artifact. There is no automatic retry for test or check failures.
 - `.github/ci/check-policy.yml`: exact, expiring unit-skip and R CMD check NOTE
   waivers plus numerical-backend identity rules.
 - `.github/ci/result.schema.json`: per-environment artifact contract.
+- `.github/ci/artifact_contract.py`: raw source metadata create/verify contract
+  and atomic single-line GitHub output emission.
+- `.github/ci/prepare_source.py`: exact clean-HEAD export and one-time source
+  build with the Pixi R.
+- `.github/ci/verify_source.py`: exact downloaded source-contract discovery and
+  raw-byte verification.
+- `.github/ci/finalize_result.py`: fail-closed terminal producer result
+  finalization.
+- `.github/ci/run_unit_driver.py`: absolute R/Rscript binding for unit runners.
 - `.github/ci/run-unit-tests.R`: structured, strict unit-test runner.
 - `.github/ci/check-policy.yml`: exact skip-policy, semantic-skip, NOTE, and
   numerical-backend rules consumed by the unit and package-check runners.

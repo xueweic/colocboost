@@ -1,0 +1,178 @@
+name: CRAN-like preflight
+
+"on":
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONDONTWRITEBYTECODE: "1"
+
+concurrency:
+  group: cran-preflight-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    if: ${{ github.repository == 'xueweic/colocboost' }}
+    runs-on: ubuntu-24.04
+    outputs:
+      source_sha: ${{ steps.prepare-source.outputs.source_sha }}
+      event_sha: ${{ steps.prepare-source.outputs.event_sha }}
+      tarball_filename: ${{ steps.prepare-source.outputs.tarball_filename }}
+      tarball_sha256: ${{ steps.prepare-source.outputs.tarball_sha256 }}
+    steps:
+      - name: Checkout exact event commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up locked Pixi
+        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e
+        with:
+          pixi-version: v0.67.2
+          locked: true
+          cache: true
+          cache-write: ${{ github.event_name == 'push' }}
+
+      - name: Validate the complete result inventory
+        run: pixi run --locked ci-validate
+
+      - name: Build the source artifact once
+        id: prepare-source
+        env:
+          EVENT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          source_output_dir="$RUNNER_TEMP/cran-preflight-source"
+          mkdir "$source_output_dir"
+          pixi run --locked --environment local-r45 ci-prepare-source \
+            "$GITHUB_WORKSPACE" \
+            "$source_output_dir" \
+            "$EVENT_SHA" \
+            "$GITHUB_OUTPUT"
+
+      - name: Upload the source tarball contract
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: cran-preflight-source
+          path: |
+            ${{ steps.prepare-source.outputs.tarball_path }}
+            ${{ steps.prepare-source.outputs.metadata_path }}
+          if-no-files-found: error
+
+  summary-gate:
+    if: ${{ always() && github.repository == 'xueweic/colocboost' }}
+    needs: prepare
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout exact event commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up locked Pixi
+        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e
+        with:
+          pixi-version: v0.67.2
+          locked: true
+          cache: true
+          cache-write: ${{ github.event_name == 'push' }}
+
+      - name: Initialize fail-closed inputs
+        env:
+          SOURCE_DOWNLOAD_DIR: ${{ runner.temp }}/cran-preflight-source-download
+          RESULTS_ROOT: ${{ runner.temp }}/cran-preflight-results
+          SUMMARY_DIRECTORY: ${{ runner.temp }}/cran-preflight-summary
+        run: |
+          set -euo pipefail
+          mkdir "$SOURCE_DOWNLOAD_DIR"
+          mkdir "$RESULTS_ROOT"
+          mkdir "$SUMMARY_DIRECTORY"
+
+      - name: Download the source contract
+        id: download-source
+        continue-on-error: true
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          name: cran-preflight-source
+          path: ${{ runner.temp }}/cran-preflight-source-download
+
+      - name: Download all producer results without flattening
+        id: download-results
+        continue-on-error: true
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          pattern: cran-preflight-result-*
+          path: ${{ runner.temp }}/cran-preflight-results
+          merge-multiple: false
+
+      - name: Verify downloaded raw source bytes
+        id: verify-source
+        continue-on-error: true
+        env:
+          EVENT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-verify-source \
+            "$RUNNER_TEMP/cran-preflight-source-download" \
+            "$EVENT_SHA" \
+            "$EVENT_SHA" \
+            "$GITHUB_OUTPUT"
+
+      - name: Aggregate all 60 manifest-declared results
+        id: aggregate
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.sha }}
+          EXPECTED_EVENT_SHA: ${{ github.sha }}
+          EXPECTED_TARBALL_SHA256: ${{ steps.verify-source.outputs.tarball_sha256 }}
+          RESULTS_ROOT: ${{ runner.temp }}/cran-preflight-results
+          SUMMARY_PATH: ${{ runner.temp }}/cran-preflight-summary/summary.md
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-summary \
+            ".github/ci/check-matrix.yml" \
+            "$RESULTS_ROOT" \
+            "$EXPECTED_SOURCE_SHA" \
+            "$EXPECTED_EVENT_SHA" \
+            "$EXPECTED_TARBALL_SHA256" \
+            "$SUMMARY_PATH"
+
+      - name: Publish the aggregate table
+        id: publish-summary
+        if: ${{ always() }}
+        env:
+          SUMMARY_PATH: ${{ runner.temp }}/cran-preflight-summary/summary.md
+        run: |
+          set -euo pipefail
+          if [ -f "$SUMMARY_PATH" ]; then
+            cat "$SUMMARY_PATH" >> "$GITHUB_STEP_SUMMARY"
+          else
+            printf '%s\n' '# CRAN preflight summary' '' \
+              '**Overall: FAIL**' '' \
+              'The aggregate summary could not be created.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Enforce every orchestration outcome
+        id: final-gate
+        if: ${{ always() }}
+        env:
+          PREPARE_RESULT: ${{ needs.prepare.result }}
+          SOURCE_DOWNLOAD_OUTCOME: ${{ steps.download-source.outcome }}
+          RESULT_DOWNLOAD_OUTCOME: ${{ steps.download-results.outcome }}
+          SOURCE_VERIFY_OUTCOME: ${{ steps.verify-source.outcome }}
+          AGGREGATE_OUTCOME: ${{ steps.aggregate.outcome }}
+        run: |
+          set -eu
+          test "$PREPARE_RESULT" = success
+          test "$SOURCE_DOWNLOAD_OUTCOME" = success
+          test "$RESULT_DOWNLOAD_OUTCOME" = success
+          test "$SOURCE_VERIFY_OUTCOME" = success
+          test "$AGGREGATE_OUTCOME" = success

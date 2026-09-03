@@ -34,6 +34,7 @@ HELPER_DEPENDENCIES = {
     "pytest",
 }
 R_DEPENDENCIES = {
+    "pandoc",
     "r-base",
     "r-testthat",
     "r-devtools",
@@ -122,6 +123,8 @@ def test_top_level_task_interfaces_are_explicit(manifest):
         "ci-validate",
         "ci-contract-tests",
         "ci-prepare",
+        "ci-prepare-source",
+        "ci-verify-source",
         "ci-unit",
         "ci-check",
         "ci-summary",
@@ -138,6 +141,18 @@ def test_top_level_task_interfaces_are_explicit(manifest):
         "metadata",
         "source_sha",
         "event_sha",
+    ]
+    assert task_args(tasks["ci-prepare-source"]) == [
+        "repository",
+        "output_dir",
+        "event_sha",
+        "github_output",
+    ]
+    assert task_args(tasks["ci-verify-source"]) == [
+        "source_dir",
+        "source_sha",
+        "event_sha",
+        "github_output",
     ]
     assert task_args(tasks["ci-check"]) == [
         "environment_id",
@@ -170,6 +185,13 @@ def test_top_level_task_interfaces_are_explicit(manifest):
         "PYTHONDONTWRITEBYTECODE": "1"
     }
     assert ".github/ci/artifact_contract.py create" in commands["ci-prepare"]
+    assert commands["ci-prepare-source"].startswith(
+        "python -B .github/ci/prepare_source.py"
+    )
+    assert tasks["ci-prepare-source"].get("env") == R_TASK_ENV
+    assert commands["ci-verify-source"].startswith(
+        "python -B .github/ci/verify_source.py"
+    )
     assert ".github/ci/run_unit_driver.py" in commands["ci-unit"]
     assert commands["ci-unit"].startswith("python ")
     assert tasks["ci-unit"].get("env") == CI_UNIT_R_TASK_ENV
@@ -183,6 +205,18 @@ def test_typed_task_values_are_shell_quoted(manifest):
     tasks = manifest["tasks"]
     required_quoted_values = {
         "ci-prepare": ("tarball", "metadata", "source_sha", "event_sha"),
+        "ci-prepare-source": (
+            "repository",
+            "output_dir",
+            "event_sha",
+            "github_output",
+        ),
+        "ci-verify-source": (
+            "source_dir",
+            "source_sha",
+            "event_sha",
+            "github_output",
+        ),
         "ci-unit": ("mode", "output", "r_executable", "runner_context"),
         "ci-check": (
             "environment_id",
@@ -435,6 +469,31 @@ def test_pixi_renders_typed_task_arguments_and_passthrough():
     prepare_output = prepare.stdout + prepare.stderr
     assert "--tarball='package.tar.gz'" in prepare_output
     assert "--metadata='metadata.json'" in prepare_output
+
+    prepare_source = run_pixi_dry(
+        "ci-prepare-source",
+        "repository's path",
+        "output directory's path",
+        "a" * 40,
+        "github output's path",
+    )
+    assert prepare_source.returncode == 0, prepare_source.stderr
+    prepare_source_output = prepare_source.stdout + prepare_source.stderr
+    assert "--repository='repository'\"'\"'s path'" in prepare_source_output
+    assert "--output-dir='output directory'\"'\"'s path'" in prepare_source_output
+    assert "--github-output='github output'\"'\"'s path'" in prepare_source_output
+
+    verify_source = run_pixi_dry(
+        "ci-verify-source",
+        "downloaded source's path",
+        "a" * 40,
+        "b" * 40,
+        "github output's path",
+    )
+    assert verify_source.returncode == 0, verify_source.stderr
+    verify_source_output = verify_source.stdout + verify_source.stderr
+    assert "--source-dir='downloaded source'\"'\"'s path'" in verify_source_output
+    assert "--github-output='github output'\"'\"'s path'" in verify_source_output
 
     check = run_pixi_dry(
         "ci-check",

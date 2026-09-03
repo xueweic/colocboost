@@ -347,3 +347,160 @@ def test_artifact_contract_cli_creates_then_verifies_metadata(tmp_path):
     )
     assert verified.returncode == 0, verified.stderr
     assert json.loads(verified.stdout) == json.loads(created.stdout)
+
+
+def parse_github_outputs(path):
+    return dict(
+        line.split("=", 1)
+        for line in path.read_text(encoding="utf-8").splitlines()
+    )
+
+
+@pytest.mark.parametrize("operation", ["create", "verify"])
+def test_artifact_cli_atomically_appends_verified_github_outputs(tmp_path, operation):
+    tarball, metadata_path, metadata = create_valid_metadata(tmp_path, b"verified")
+    github_output = tmp_path / "github-output.txt"
+    github_output.write_text("existing=value\n", encoding="utf-8")
+    script = CI_DIR / "artifact_contract.py"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(script),
+            operation,
+            "--tarball",
+            str(tarball),
+            "--metadata",
+            str(metadata_path),
+            "--source-sha",
+            SOURCE_SHA,
+            "--event-sha",
+            EVENT_SHA,
+            "--github-output",
+            str(github_output),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert parse_github_outputs(github_output) == {
+        "existing": "value",
+        "source_sha": SOURCE_SHA,
+        "event_sha": EVENT_SHA,
+        "tarball_filename": tarball.name,
+        "tarball_path": str(tarball.resolve()),
+        "metadata_path": str(metadata_path.resolve()),
+        "tarball_size": str(metadata["size"]),
+        "tarball_sha256": metadata["sha256"],
+    }
+    assert not list(tmp_path.glob(f".{github_output.name}.*.tmp"))
+
+
+def test_artifact_cli_github_output_is_optional(tmp_path):
+    tarball, metadata_path, _ = create_valid_metadata(tmp_path)
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(CI_DIR / "artifact_contract.py"),
+            "verify",
+            "--tarball",
+            str(tarball),
+            "--metadata",
+            str(metadata_path),
+            "--source-sha",
+            SOURCE_SHA,
+            "--event-sha",
+            EVENT_SHA,
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+
+
+@pytest.mark.parametrize("unsafe_character", ["\n", "\r", "\x00"])
+def test_metadata_rejects_output_ambiguous_filename(tmp_path, unsafe_character):
+    tarball, metadata_path, metadata = create_valid_metadata(tmp_path)
+    metadata["filename"] = f"package{unsafe_character}.tar.gz"
+    metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="filename"):
+        verify_tarball(
+            tarball,
+            metadata_path,
+            expected_source_sha=SOURCE_SHA,
+            expected_event_sha=EVENT_SHA,
+        )
+
+
+@pytest.mark.parametrize("target_kind", ["symlink", "fifo"])
+def test_artifact_cli_rejects_non_regular_github_output_without_following_or_blocking(
+    tmp_path, target_kind
+):
+    if target_kind == "fifo" and not hasattr(os, "mkfifo"):
+        pytest.skip("FIFO is unavailable")
+    tarball, metadata_path, _ = create_valid_metadata(tmp_path)
+    github_output = tmp_path / "github-output"
+    protected = tmp_path / "protected"
+    protected.write_text("keep\n", encoding="utf-8")
+    if target_kind == "symlink":
+        github_output.symlink_to(protected)
+    else:
+        os.mkfifo(github_output)
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(CI_DIR / "artifact_contract.py"),
+            "verify",
+            "--tarball",
+            str(tarball),
+            "--metadata",
+            str(metadata_path),
+            "--source-sha",
+            SOURCE_SHA,
+            "--event-sha",
+            EVENT_SHA,
+            "--github-output",
+            str(github_output),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=5,
+    )
+
+    assert completed.returncode == 2
+    assert "github output" in completed.stderr.lower()
+    assert protected.read_text(encoding="utf-8") == "keep\n"
+
+
+def test_artifact_cli_rejects_newline_in_github_output_path(tmp_path):
+    tarball, metadata_path, _ = create_valid_metadata(tmp_path)
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(CI_DIR / "artifact_contract.py"),
+            "verify",
+            "--tarball",
+            str(tarball),
+            "--metadata",
+            str(metadata_path),
+            "--source-sha",
+            SOURCE_SHA,
+            "--event-sha",
+            EVENT_SHA,
+            "--github-output",
+            str(tmp_path / "unsafe\noutput"),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 2
+    assert "github output" in completed.stderr.lower()

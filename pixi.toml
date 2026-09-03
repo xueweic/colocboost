@@ -42,6 +42,17 @@ cmd = '''python .github/ci/artifact_contract.py create --tarball='{{ tarball | r
 cwd = "."
 args = ["tarball", "metadata", "source_sha", "event_sha"]
 
+[tasks.ci-prepare-source]
+cmd = '''python -B .github/ci/prepare_source.py --repository='{{ repository | replace("'", "'\"'\"'") }}' --output-dir='{{ output_dir | replace("'", "'\"'\"'") }}' --event-sha='{{ event_sha | replace("'", "'\"'\"'") }}' --github-output='{{ github_output | replace("'", "'\"'\"'") }}' '''
+cwd = "."
+args = ["repository", "output_dir", "event_sha", "github_output"]
+env = { LC_ALL = "C", R_ENVIRON_USER = "/dev/null", R_PROFILE_USER = "/dev/null", R_LIBS_USER = "$CONDA_PREFIX/lib/R/library" }
+
+[tasks.ci-verify-source]
+cmd = '''python -B .github/ci/verify_source.py --source-dir='{{ source_dir | replace("'", "'\"'\"'") }}' --source-sha='{{ source_sha | replace("'", "'\"'\"'") }}' --event-sha='{{ event_sha | replace("'", "'\"'\"'") }}' --github-output='{{ github_output | replace("'", "'\"'\"'") }}' '''
+cwd = "."
+args = ["source_dir", "source_sha", "event_sha", "github_output"]
+
 [tasks.ci-unit]
 cmd = '''python .github/ci/run_unit_driver.py --r-executable='{{ r_executable | replace("'", "'\"'\"'") }}' --package=. --load-package='{{ mode | replace("'", "'\"'\"'") }}' --context='{{ runner_context | replace("'", "'\"'\"'") }}' --policy=.github/ci/check-policy.yml --output='{{ output | replace("'", "'\"'\"'") }}' '''
 cwd = "."
@@ -79,6 +90,7 @@ args = [
 platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64"]
 
 [feature.local-r44.dependencies]
+pandoc = "*"
 r-base = "4.4.*"
 r-testthat = "*"
 r-devtools = "*"
@@ -102,6 +114,7 @@ ci-r-contract-tests = { cmd = "Rscript --vanilla .github/ci/tests/test-unit-poli
 platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64"]
 
 [feature.local-r45.dependencies]
+pandoc = "*"
 r-base = "4.5.*"
 r-testthat = "*"
 r-devtools = "*"
