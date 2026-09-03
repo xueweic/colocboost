@@ -185,6 +185,36 @@ GOLDEN_WAIVERS = {
     "installed-model-workhorse": ("r-cmd-check-installed", "test_model.R", "colocboost_workhorse performs boosting iterations", "colocboost_workhorse not directly accessible", 1, "The legacy installed-package test cannot access this unexported internal; source-mode tests exercise it.", "2027-03-03"),
     "installed-utils-dictionary-mapping": ("r-cmd-check-installed", "test_utils.R", "colocboost_init_data handles complex dictionary mappings", "colocboost_init_data not directly accessible", 1, "The legacy installed-package test cannot access this unexported internal; source-mode tests exercise it.", "2027-03-03"),
 }
+
+
+def predicate_contract(data):
+    return {
+        row["cran_name"]: (
+            row["predicate"]["input"],
+            tuple(row["predicate"]["command"]),
+        )
+        for row in data["coverage"]
+        if row["state"] == "not-applicable"
+    }
+
+
+def test_all_ten_committed_predicates_match_independent_golden_contract(manifest):
+    assert len(GOLDEN_PREDICATES) == 10
+    assert predicate_contract(manifest) == GOLDEN_PREDICATES
+
+
+@pytest.mark.parametrize("cran_name", sorted(GOLDEN_PREDICATES))
+def test_each_not_applicable_predicate_rejects_coordinated_drift(
+    manifest, cran_name
+):
+    mutated = copy.deepcopy(manifest)
+    row_for(mutated, cran_name)["predicate"] = {
+        "input": "built-source-tarball",
+        "command": ["true", "{tarball}"],
+    }
+
+    with pytest.raises(ValueError, match="predicate"):
+        validate_manifest(mutated)
 @pytest.fixture
 def manifest():
     return load_manifest(MANIFEST_PATH)
