@@ -487,7 +487,7 @@ Expected: static producer coverage grows without changing the exact 60-key inven
 
 **Interfaces:**
 - Consumes: source tarball and remaining manifest rows.
-- Produces: ten executed not-applicable records, six purpose-specific proxy results, and the declared BLIS and OpenBLAS unit results that complete the 60-key producer set.
+- Produces: ten executed not-applicable records, six purpose-specific proxy results, two direct package-check results for musl and linux-arm64, and the declared BLIS and OpenBLAS unit results that complete the 60-key producer set.
 
 - [ ] **Step 1: Test tarball-based native applicability**
 
