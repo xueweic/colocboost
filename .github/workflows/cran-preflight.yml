@@ -68,7 +68,7 @@ jobs:
           if-no-files-found: error
 
   mkl:
-    if: ${{ github.repository == 'xueweic/colocboost' }}
+    if: ${{ always() && github.repository == 'xueweic/colocboost' }}
     needs: prepare
     runs-on: ubuntu-24.04
     container:
@@ -203,7 +203,8 @@ jobs:
           source /opt/intel/oneapi/setvars.sh
           set +a
           pixi run --locked ci-verify-mkl \
-            "$SYSTEM_R" "$DIAGNOSTIC_DIR/mkl-runtime.json"
+            "$SYSTEM_R" "$GITHUB_WORKSPACE/.github/ci/check-policy.yml" \
+            "$DIAGNOSTIC_DIR/mkl-runtime.json"
 
       - name: Run targeted MKL utils regression sidecar
         id: unit-utils
@@ -389,8 +390,11 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: cran-preflight-diagnostics-mkl
-          path: ${{ runner.temp }}/mkl-diagnostics
-          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/mkl-diagnostics
+            ${{ runner.temp }}/mkl-native-check/input/*.Rcheck
+          if-no-files-found: error
+          include-hidden-files: true
 
       - name: Enforce MKL producer outcomes
         id: producer-gate
@@ -410,7 +414,7 @@ jobs:
           test "$DIAGNOSTIC_UPLOAD_OUTCOME" = success
 
   nosuggests:
-    if: ${{ github.repository == 'xueweic/colocboost' }}
+    if: ${{ always() && github.repository == 'xueweic/colocboost' }}
     needs: prepare
     runs-on: ubuntu-24.04
     container:
@@ -671,8 +675,11 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: cran-preflight-diagnostics-nosuggests
-          path: ${{ runner.temp }}/nosuggests-diagnostics
-          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/nosuggests-diagnostics
+            ${{ runner.temp }}/nosuggests-native-check/input/*.Rcheck
+          if-no-files-found: error
+          include-hidden-files: true
 
       - name: Enforce noSuggests producer outcomes
         id: producer-gate

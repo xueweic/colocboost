@@ -183,7 +183,11 @@ def test_top_level_task_interfaces_are_explicit(manifest):
         "r_executable", "environment_id", "tarball", "library", "evidence", "install_package"
     ]
     assert task_args(tasks["ci-verify-dependencies"]) == ["environment_id", "evidence"]
-    assert task_args(tasks["ci-verify-mkl"]) == ["r_executable", "evidence"]
+    assert task_args(tasks["ci-verify-mkl"]) == [
+        "r_executable",
+        "policy",
+        "evidence",
+    ]
     assert task_args(tasks["ci-native-check"]) == [
         "environment_id", "wrapper", "r_executable", "tarball", "metadata",
         "source_sha", "event_sha", "work_dir", "check_library", "evidence", "log"
@@ -276,7 +280,7 @@ def test_typed_task_values_are_shell_quoted(manifest):
         "ci-extract-source": ("tarball", "metadata", "source_sha", "event_sha", "destination", "github_output"),
         "ci-r-dependencies": ("r_executable", "environment_id", "tarball", "library", "evidence", "install_package"),
         "ci-verify-dependencies": ("environment_id", "evidence"),
-        "ci-verify-mkl": ("r_executable", "evidence"),
+        "ci-verify-mkl": ("r_executable", "policy", "evidence"),
         "ci-native-check": ("environment_id", "wrapper", "r_executable", "tarball", "metadata", "source_sha", "event_sha", "work_dir", "check_library", "evidence", "log"),
         "ci-unit-result": ("diagnostic", "output", "environment_id", "source_sha", "event_sha", "tarball_sha256", "sidecar_1", "sidecar_2"),
         "ci-package-result": ("r_executable", "log", "reported_log_path", "output", "environment_id", "source_sha", "event_sha", "tarball_sha256", "check_exit_code"),
@@ -546,6 +550,21 @@ def test_pixi_renders_typed_task_arguments_and_passthrough():
     verify_source_output = verify_source.stdout + verify_source.stderr
     assert "--source-dir='downloaded source'\"'\"'s path'" in verify_source_output
     assert "--github-output='github output'\"'\"'s path'" in verify_source_output
+
+    verify_mkl = run_pixi_dry(
+        "ci-verify-mkl",
+        "/opt/R/devel-mkl/bin/R",
+        "/workspace path's/.github/ci/check-policy.yml",
+        "MKL evidence's.json",
+    )
+    assert verify_mkl.returncode == 0, verify_mkl.stderr
+    verify_mkl_output = verify_mkl.stdout + verify_mkl.stderr
+    assert "--r-executable='/opt/R/devel-mkl/bin/R'" in verify_mkl_output
+    assert (
+        "--policy='/workspace path'\"'\"'s/.github/ci/check-policy.yml'"
+        in verify_mkl_output
+    )
+    assert "--evidence='MKL evidence'\"'\"'s.json'" in verify_mkl_output
 
     check = run_pixi_dry(
         "ci-check",

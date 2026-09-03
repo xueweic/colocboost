@@ -70,9 +70,9 @@ cwd = "."
 args = ["environment_id", "evidence"]
 
 [tasks.ci-verify-mkl]
-cmd = '''python -B .github/ci/run_r_helper.py --r-executable='{{ r_executable | replace("'", "'\"'\"'") }}' --helper=verify-mkl -- --policy=.github/ci/check-policy.yml --evidence='{{ evidence | replace("'", "'\"'\"'") }}' '''
+cmd = '''python -B .github/ci/run_r_helper.py --r-executable='{{ r_executable | replace("'", "'\"'\"'") }}' --helper=verify-mkl -- --policy='{{ policy | replace("'", "'\"'\"'") }}' --evidence='{{ evidence | replace("'", "'\"'\"'") }}' '''
 cwd = "."
-args = ["r_executable", "evidence"]
+args = ["r_executable", "policy", "evidence"]
 env = { LC_ALL = "C", R_ENVIRON_USER = "{% if pixi.is_win %}NUL{% else %}/dev/null{% endif %}", R_PROFILE_USER = "{% if pixi.is_win %}NUL{% else %}/dev/null{% endif %}" }
 
 [tasks.ci-unit]

@@ -61,7 +61,9 @@ def test_every_job_is_inert_outside_the_fork_and_summary_always_runs():
 
     assert workflow["jobs"]["prepare"]["if"] == "${{ " + FORK_GUARD + " }}"
     for name in ("mkl", "nosuggests"):
-        assert workflow["jobs"][name]["if"] == "${{ " + FORK_GUARD + " }}"
+        assert workflow["jobs"][name]["if"] == (
+            "${{ always() && " + FORK_GUARD + " }}"
+        )
         assert workflow["jobs"][name]["needs"] == "prepare"
     summary = workflow["jobs"]["summary-gate"]
     assert summary["if"] == "${{ always() && " + FORK_GUARD + " }}"
@@ -181,7 +183,14 @@ def test_mkl_order_and_targeted_sidecars_are_strictly_declared():
     assert '"$DIAGNOSTIC_DIR/unit-utils.json"' in adapter_run
     assert '"$DIAGNOSTIC_DIR/unit-xref.json"' in adapter_run
     assert "verify-mkl" in step_with_id(mkl, "verify-mkl")["run"]
-    assert "source /opt/intel/oneapi/setvars.sh" in step_with_id(mkl, "verify-mkl")["run"]
+    verify_mkl = step_with_id(mkl, "verify-mkl")["run"]
+    assert "source /opt/intel/oneapi/setvars.sh" in verify_mkl
+    normalized_verify_mkl = " ".join(verify_mkl.replace("\\\n", " ").split())
+    assert (
+        'pixi run --locked ci-verify-mkl "$SYSTEM_R" '
+        '"$GITHUB_WORKSPACE/.github/ci/check-policy.yml" '
+        '"$DIAGNOSTIC_DIR/mkl-runtime.json"'
+    ) in normalized_verify_mkl
 
 
 def test_nosuggests_proves_runtime_policy_installed_tests_and_native_log():
@@ -233,6 +242,27 @@ def test_each_special_producer_finalizes_and_uploads_two_independent_results():
             ids.index("upload-check"),
             ids.index("upload-diagnostics"),
         ) < ids.index("producer-gate")
+
+
+def test_special_diagnostics_uploads_include_complete_native_check_tree():
+    _, workflow = load_workflow()
+    expected = {
+        "mkl": "${{ runner.temp }}/mkl-native-check/input/*.Rcheck",
+        "nosuggests": (
+            "${{ runner.temp }}/nosuggests-native-check/input/*.Rcheck"
+        ),
+    }
+    for name, check_tree in expected.items():
+        upload = step_with_id(workflow["jobs"][name], "upload-diagnostics")
+        assert upload["if"] == "${{ always() }}"
+        assert upload["continue-on-error"] is True
+        assert upload["uses"] == UPLOAD
+        assert upload["with"]["path"].splitlines() == [
+            f"${{{{ runner.temp }}}}/{name}-diagnostics",
+            check_tree,
+        ]
+        assert upload["with"]["if-no-files-found"] == "error"
+        assert upload["with"]["include-hidden-files"] is True
 
 
 def test_package_and_unit_gates_are_independent():
