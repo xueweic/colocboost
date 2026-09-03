@@ -68,7 +68,7 @@ jobs:
           if-no-files-found: error
 
   mkl:
-    if: ${{ always() && github.repository == 'xueweic/colocboost' }}
+    if: ${{ always() && !cancelled() && github.repository == 'xueweic/colocboost' }}
     needs: prepare
     runs-on: ubuntu-24.04
     container:
@@ -414,7 +414,7 @@ jobs:
           test "$DIAGNOSTIC_UPLOAD_OUTCOME" = success
 
   nosuggests:
-    if: ${{ always() && github.repository == 'xueweic/colocboost' }}
+    if: ${{ always() && !cancelled() && github.repository == 'xueweic/colocboost' }}
     needs: prepare
     runs-on: ubuntu-24.04
     container:
@@ -699,7 +699,7 @@ jobs:
           test "$DIAGNOSTIC_UPLOAD_OUTCOME" = success
 
   summary-gate:
-    if: ${{ always() && github.repository == 'xueweic/colocboost' }}
+    if: ${{ always() && !cancelled() && github.repository == 'xueweic/colocboost' }}
     needs: [prepare, mkl, nosuggests]
     runs-on: ubuntu-24.04
     steps:

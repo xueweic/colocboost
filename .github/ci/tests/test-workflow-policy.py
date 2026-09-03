@@ -56,17 +56,19 @@ def test_triggers_permissions_concurrency_and_job_inventory_are_exact():
     assert all("strategy" not in job for job in workflow["jobs"].values())
 
 
-def test_every_job_is_inert_outside_the_fork_and_summary_always_runs():
+def test_every_job_is_inert_outside_the_fork_and_dependents_stop_when_cancelled():
     _, workflow = load_workflow()
 
     assert workflow["jobs"]["prepare"]["if"] == "${{ " + FORK_GUARD + " }}"
     for name in ("mkl", "nosuggests"):
         assert workflow["jobs"][name]["if"] == (
-            "${{ always() && " + FORK_GUARD + " }}"
+            "${{ always() && !cancelled() && " + FORK_GUARD + " }}"
         )
         assert workflow["jobs"][name]["needs"] == "prepare"
     summary = workflow["jobs"]["summary-gate"]
-    assert summary["if"] == "${{ always() && " + FORK_GUARD + " }}"
+    assert summary["if"] == (
+        "${{ always() && !cancelled() && " + FORK_GUARD + " }}"
+    )
     assert summary["needs"] == ["prepare", "mkl", "nosuggests"]
 
 
