@@ -54,6 +54,6 @@ numerical_backends:
       - '(?i)(?:^|/)libmkl_sequential(?:\.so(?:\.\d+)*)?(?:$|\s)'
     forbidden_library_patterns:
       - '(?i)(?:^|/)libmkl_(?:intel|gnu|tbb)_thread(?:\.so(?:\.\d+)*)?(?:$|\s)'
-      - '(?i)(?:^|/)libopenblas(?:\.so(?:\.\d+)*)?(?:$|\s)'
+      - '(?i)libopenblas'
       - '(?i)(?:^|/)lib(?:s?atlas)(?:\.so(?:\.\d+)*)?(?:$|\s)'
       - '(?i)(?:^|/)libblis(?:\.so(?:\.\d+)*)?(?:$|\s)'

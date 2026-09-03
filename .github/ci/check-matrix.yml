@@ -125,7 +125,7 @@ coverage:
     state: direct
     driver: native-wrapper
     image: ghcr.io/r-hub/containers/atlas@sha256:7597f7d0b6b2f009ae7bb425391523d8f4388223238db50d7dfb1572add63a88
-    proof: [source-tarball-sha256, container-system-r, r-executable, blas-identity, lapack-identity, la-library, process-mappings, loaded-atlas]
+    proof: [source-tarball-sha256, container-system-r, r-executable, extsoftversion-blas, la-library, process-mappings, loaded-atlas]
 
   - id: blis
     group: additional
@@ -314,7 +314,7 @@ coverage:
     state: direct
     driver: native-wrapper
     image: ghcr.io/r-hub/containers/nosuggests@sha256:588bd73470d657d0d2560a90e5fe036d191a89fde394b2c67c6423b71d7a12df
-    proof: [source-tarball-sha256, container-system-r, r-executable, depends-only-policy, allowed-test-frameworks, allowed-vignette-builders, nonexempt-suggests-absent, nonzero-installed-test-count]
+    proof: [source-tarball-sha256, container-system-r, r-executable, depends-only-policy, allowed-test-frameworks, allowed-vignette-builders, ashr-absent, susier-absent, nonzero-installed-test-count]
 
   - id: valgrind
     group: additional

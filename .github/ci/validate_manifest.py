@@ -7,6 +7,7 @@ import re
 import sys
 from collections import Counter
 from collections.abc import Mapping, Sequence
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -60,6 +61,50 @@ ADDITIONAL_STATES = {
     "vnu": "direct",
 }
 EXPECTED_STATES = {"primary": PRIMARY_STATES, "additional": ADDITIONAL_STATES}
+EXPECTED_ROW_CORE = {
+    "r-devel-linux-x86_64-debian-clang": ("primary", "r-devel-linux-x86-64-debian-clang", "proxy", "native-wrapper", "image", "ghcr.io/r-hub/containers/clang22@sha256:f4193769412c461365849dd664b3d42bd2a0aebe520eab3ae6cd426a19d8b71e"),
+    "r-devel-linux-x86_64-debian-gcc": ("primary", "r-devel-linux-x86-64-debian-gcc", "proxy", "native-wrapper", "image", "ghcr.io/r-hub/containers/ubuntu-gcc16@sha256:2e9576e51ad17a706887b7e06fc4057388765226ec795f3c7af0e7348fb8fbf1"),
+    "r-devel-linux-x86_64-fedora-clang": ("primary", "r-devel-linux-x86-64-fedora-clang", "proxy", "native-wrapper", "image", "ghcr.io/r-hub/containers/clang22@sha256:f4193769412c461365849dd664b3d42bd2a0aebe520eab3ae6cd426a19d8b71e"),
+    "r-devel-linux-x86_64-fedora-gcc": ("primary", "r-devel-linux-x86-64-fedora-gcc", "direct", "native-wrapper", "image", "ghcr.io/r-hub/containers/gcc16@sha256:1127418efe3938f0e72fc29c55596a8cdde03293928b60aeb0ac44b6586960d2"),
+    "r-devel-windows-x86_64": ("primary", "r-devel-windows-x86-64", "proxy", "r-binary", "runner", "windows-2022"),
+    "r-patched-linux-x86_64": ("primary", "r-patched-linux-x86-64", "proxy", "native-wrapper", "image", "ghcr.io/r-hub/containers/ubuntu-next@sha256:1c29eed93b0aa05fe147e476e6b3510a09fb0476460eeefbbe99a4a1eb2c3bd9"),
+    "r-release-linux-x86_64": ("primary", "r-release-linux-x86-64", "proxy", "native-wrapper", "image", "ghcr.io/r-hub/containers/ubuntu-release@sha256:714722b7ecb4307fbf88a707f83fb045181482c0c8ce6086a0e26860416ca9c2"),
+    "r-release-macos-arm64": ("primary", "r-release-macos-arm64", "proxy", "r-binary", "runner", "macos-15"),
+    "r-release-macos-x86_64": ("primary", "r-release-macos-x86-64", "proxy", "r-binary", "runner", "macos-15-intel"),
+    "r-release-windows-x86_64": ("primary", "r-release-windows-x86-64", "proxy", "r-binary", "runner", "windows-2022"),
+    "r-oldrel-macos-arm64": ("primary", "r-oldrel-macos-arm64", "proxy", "r-binary", "runner", "macos-15"),
+    "r-oldrel-macos-x86_64": ("primary", "r-oldrel-macos-x86-64", "proxy", "r-binary", "runner", "macos-15-intel"),
+    "r-oldrel-windows-x86_64": ("primary", "r-oldrel-windows-x86-64", "proxy", "r-binary", "runner", "windows-2022"),
+    "ATLAS": ("additional", "atlas", "direct", "native-wrapper", "image", "ghcr.io/r-hub/containers/atlas@sha256:7597f7d0b6b2f009ae7bb425391523d8f4388223238db50d7dfb1572add63a88"),
+    "BLIS": ("additional", "blis", "proxy", "native-wrapper", "image", "local/colocboost-blis-proxy"),
+    "BLAS": ("additional", "blas", "not-applicable", "r-binary", "runner", "ubuntu-24.04"),
+    "C23": ("additional", "c23", "not-applicable", "r-binary", "runner", "ubuntu-24.04"),
+    "Intel": ("additional", "intel", "not-applicable", "r-binary", "runner", "ubuntu-24.04"),
+    "LTO": ("additional", "lto", "not-applicable", "r-binary", "runner", "ubuntu-24.04"),
+    "M1mac": ("additional", "m1mac", "proxy", "r-binary", "runner", "macos-15"),
+    "MKL": ("additional", "mkl", "direct", "native-wrapper", "image", "ghcr.io/r-hub/containers/mkl@sha256:d84847130b3ae0b9b0402208ee17360ab527df1c448c44ba045b44524b17620a"),
+    "OpenBLAS": ("additional", "openblas", "proxy", "native-wrapper", "image", "ghcr.io/r-hub/containers/gcc16@sha256:1127418efe3938f0e72fc29c55596a8cdde03293928b60aeb0ac44b6586960d2"),
+    "Strict": ("additional", "strict", "not-applicable", "r-binary", "runner", "ubuntu-24.04"),
+    "clang-ASAN": ("additional", "clang-asan", "direct", "native-wrapper", "image", "ghcr.io/r-hub/containers/clang-asan@sha256:dfab3d2274151577eb705d2be9acd3391798ba4b56d384ca9df84544e5b6be96"),
+    "clang-UBSAN": ("additional", "clang-ubsan", "direct", "native-wrapper", "image", "ghcr.io/r-hub/containers/clang-ubsan@sha256:a58b00b52e9c4b210c3474eac4c28dc18bf70c912d75bb45e466410452a694e6"),
+    "donttest": ("additional", "donttest", "direct", "native-wrapper", "image", "ghcr.io/r-hub/containers/donttest@sha256:fd1942c8b8627d7e1d80582a023b2792acfa158a6edfeeeba3edd27a52c57967"),
+    "gcc-ASAN": ("additional", "gcc-asan", "direct", "native-wrapper", "image", "ghcr.io/r-hub/containers/gcc-asan@sha256:32c9ad423cbca983bae893c2f0f44021ddbd5ac236c29fba8078b97acd80d78f"),
+    "gcc-UBSAN": ("additional", "gcc-ubsan", "direct", "native-wrapper", "image", "ghcr.io/r-hub/containers/gcc-asan@sha256:32c9ad423cbca983bae893c2f0f44021ddbd5ac236c29fba8078b97acd80d78f"),
+    "gcc": ("additional", "gcc", "not-applicable", "r-binary", "runner", "ubuntu-24.04"),
+    "gcc15": ("additional", "gcc15", "not-applicable", "r-binary", "runner", "ubuntu-24.04"),
+    "noLD": ("additional", "nold", "direct", "native-wrapper", "image", "ghcr.io/r-hub/containers/nold@sha256:9dac23acd0e610b5fb5f82957c8136ffc6acf216a328a067795241542b3dc091"),
+    "noOMP": ("additional", "noomp", "proxy", "native-wrapper", "image", "local/colocboost-noomp-proxy"),
+    "noRemap": ("additional", "noremap", "not-applicable", "r-binary", "runner", "ubuntu-24.04"),
+    "noSuggests": ("additional", "nosuggests", "direct", "native-wrapper", "image", "ghcr.io/r-hub/containers/nosuggests@sha256:588bd73470d657d0d2560a90e5fe036d191a89fde394b2c67c6423b71d7a12df"),
+    "valgrind": ("additional", "valgrind", "direct", "native-wrapper", "image", "ghcr.io/r-hub/containers/valgrind@sha256:98dfda5016513c269e33c8155ea57745d977dad4b1a703b28db82fcb1237ef9c"),
+    "0len": ("additional", "0len", "not-applicable", "r-binary", "runner", "ubuntu-24.04"),
+    "rchk": ("additional", "rchk", "not-applicable", "r-binary", "runner", "ubuntu-24.04"),
+    "rcnst": ("additional", "rcnst", "proxy", "native-wrapper", "image", "ghcr.io/r-hub/containers/ubuntu-clang@sha256:b66e5f86ce6f8fa3e6afd497fabfdb3aeac79c74ee3525e8a8814de79aa2bc82"),
+    "rlibro": ("additional", "rlibro", "proxy", "native-wrapper", "image", "local/colocboost-rlibro-proxy"),
+    "musl": ("additional", "musl", "direct", "native-wrapper", "image", "cran-linked-public-musl-reproduction"),
+    "linux-arm64": ("additional", "linux-arm64", "direct", "r-binary", "runner", ("ubuntu-24.04", "ubuntu-24.04-arm")),
+    "vnu": ("additional", "vnu", "direct", "native-wrapper", "image", "ghcr.io/r-hub/containers/vnu@sha256:03f45d5944fc092627cae2e944f16f037fed9795f8768c90d9511799098a7884"),
+}
 ARTIFACT_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 RHUB_IMAGE = re.compile(
     r"^ghcr\.io/r-hub/containers/(?P<name>[a-z0-9-]+)@sha256:[0-9a-f]{64}$"
@@ -73,6 +118,76 @@ PRIMARY_PROOF = {
     "compiler",
     "architecture",
     "locale",
+}
+
+
+def _proofs(tokens: str) -> frozenset[str]:
+    return frozenset(tokens.split())
+
+
+REQUIRED_PROOFS = {
+    "r-devel-linux-x86_64-debian-clang": _proofs("source-tarball-sha256 container-system-r r-executable r-version r-devel-revision operating-system compiler clang-22 flang-22 libcxx architecture locale"),
+    "r-devel-linux-x86_64-debian-gcc": _proofs("source-tarball-sha256 container-system-r r-executable r-version r-devel-revision operating-system compiler gcc-16 architecture locale"),
+    "r-devel-linux-x86_64-fedora-clang": _proofs("source-tarball-sha256 container-system-r r-executable r-version r-devel-revision operating-system compiler clang-22 flang-22 libcxx architecture locale"),
+    "r-devel-linux-x86_64-fedora-gcc": _proofs("source-tarball-sha256 container-system-r r-executable r-version r-devel-revision operating-system fedora-44 compiler gcc-version architecture locale"),
+    "r-devel-windows-x86_64": _proofs("source-tarball-sha256 r-executable r-version r-devel-revision operating-system windows-server-2022 compiler rtools-gcc architecture locale"),
+    "r-patched-linux-x86_64": _proofs("source-tarball-sha256 container-system-r r-executable r-version r-revision r-patched operating-system compiler architecture locale"),
+    "r-release-linux-x86_64": _proofs("source-tarball-sha256 container-system-r r-executable r-version r-release operating-system compiler architecture locale"),
+    "r-release-macos-arm64": _proofs("source-tarball-sha256 r-executable r-version r-release operating-system macos-version compiler apple-and-gnu-compilers architecture arm64 locale"),
+    "r-release-macos-x86_64": _proofs("source-tarball-sha256 r-executable r-version r-release operating-system macos-version compiler apple-and-gnu-compilers architecture x86-64 locale"),
+    "r-release-windows-x86_64": _proofs("source-tarball-sha256 r-executable r-version r-release operating-system windows-server-2022 compiler rtools-gcc architecture locale"),
+    "r-oldrel-macos-arm64": _proofs("source-tarball-sha256 r-executable r-version r-oldrel operating-system macos-version compiler apple-and-gnu-compilers architecture arm64 locale"),
+    "r-oldrel-macos-x86_64": _proofs("source-tarball-sha256 r-executable r-version r-oldrel operating-system macos-version compiler apple-and-gnu-compilers architecture x86-64 locale"),
+    "r-oldrel-windows-x86_64": _proofs("source-tarball-sha256 r-executable r-version r-oldrel operating-system windows-server-2022 compiler rtools-gcc architecture locale"),
+    "ATLAS": _proofs("source-tarball-sha256 container-system-r r-executable extsoftversion-blas la-library process-mappings loaded-atlas"),
+    "BLIS": _proofs("source-tarball-sha256 r-executable r-devel-revision operating-system compiler architecture loaded-blis blis-version single-thread"),
+    "BLAS": _proofs("source-tarball-sha256 no-package-owned-native-source no-linkingto no-compilation-marker no-direct-native-call"),
+    "C23": _proofs("source-tarball-sha256 no-package-c-source obsolete-special-area"),
+    "Intel": _proofs("source-tarball-sha256 no-package-owned-native-source obsolete-special-area"),
+    "LTO": _proofs("source-tarball-sha256 no-package-owned-native-object no-compilation-target"),
+    "M1mac": _proofs("source-tarball-sha256 r-executable r-version r-devel-revision operating-system macos-version compiler architecture arm64"),
+    "MKL": _proofs("source-tarball-sha256 container-system-r r-executable r-version operating-system compiler architecture session-info blas-identity lapack-identity la-library la-version process-mappings loaded-mkl blas-operation mkl-verbose single-thread"),
+    "OpenBLAS": _proofs("source-tarball-sha256 container-system-r r-executable r-devel-revision operating-system compiler loaded-openblas single-thread"),
+    "Strict": _proofs("source-tarball-sha256 no-package-owned-compilation-target strict-r-headers-not-applicable"),
+    "clang-ASAN": _proofs("source-tarball-sha256 container-system-r r-executable sanitizer-compiler-flags sanitizer-linker-flags asan-runtime sanitizer-output-scan"),
+    "clang-UBSAN": _proofs("source-tarball-sha256 container-system-r r-executable sanitizer-compiler-flags sanitizer-linker-flags ubsan-runtime undefined-behavior-output-scan"),
+    "donttest": _proofs("source-tarball-sha256 container-system-r r-executable check-donttest-examples-true expanded-examples-executed"),
+    "gcc-ASAN": _proofs("source-tarball-sha256 container-system-r r-executable gcc-asan-flags asan-preload asan-runtime sanitizer-output-scan"),
+    "gcc-UBSAN": _proofs("source-tarball-sha256 container-system-r r-executable gcc-ubsan-flags ubsan-preload ubsan-runtime sanitizer-output-scan"),
+    "gcc": _proofs("source-tarball-sha256 no-package-owned-compiled-source"),
+    "gcc15": _proofs("source-tarball-sha256 no-package-owned-native-source obsolete-special-area"),
+    "noLD": _proofs("source-tarball-sha256 container-system-r r-executable opt-r-devel-nold long-double-disabled"),
+    "noOMP": _proofs("source-tarball-sha256 r-executable r-devel-revision no-openmp-compile-flags no-openmp-link-flags no-loaded-openmp-runtime dependency-openmp-audit"),
+    "noRemap": _proofs("source-tarball-sha256 no-package-cpp-source obsolete-special-area"),
+    "noSuggests": _proofs("source-tarball-sha256 container-system-r r-executable depends-only-policy allowed-test-frameworks allowed-vignette-builders ashr-absent susier-absent nonzero-installed-test-count"),
+    "valgrind": _proofs("source-tarball-sha256 container-system-r r-executable opt-r-devel-valgrind use-valgrind valgrind-runtime suppression-and-error-scan"),
+    "0len": _proofs("source-tarball-sha256 no-direct-native-interface removed-official-experimental-support"),
+    "rchk": _proofs("source-tarball-sha256 no-package-c-cpp-object compiled-dependencies-visible-limitation"),
+    "rcnst": _proofs("source-tarball-sha256 container-system-r r-executable r-devel-revision r-compile-pkgs-1 r-jit-strategy-4 r-check-constants-5 constant-corruption-diagnostics"),
+    "rlibro": _proofs("source-tarball-sha256 r-executable nonroot-uid readonly-bind-mount write-failure installed-library-path package-check-executed"),
+    "musl": _proofs("source-tarball-sha256 r-executable r-version musl-libc alpine-version locale architecture"),
+    "linux-arm64": _proofs("source-tarball-sha256 r-executable native-amd64 native-arm64 identical-rcheckserver-image identical-tarball-and-configuration architecture-only-comparison"),
+    "vnu": _proofs("source-tarball-sha256 container-system-r r-executable vnu-special-dispatch nu-validator-executed zero-bad-entries validator-output"),
+}
+
+PREDICATE_PREFIX = (
+    "python",
+    ".github/ci/evaluate_native_features.py",
+    "--tarball",
+    "{tarball}",
+    "--rule",
+)
+EXPECTED_PREDICATES = {
+    "BLAS": ("built-source-tarball", PREDICATE_PREFIX + ("no-native-source-linkingto-compilation-or-direct-call",)),
+    "C23": ("built-source-tarball", PREDICATE_PREFIX + ("no-c-source",)),
+    "Intel": ("built-source-tarball", PREDICATE_PREFIX + ("no-package-owned-native-source",)),
+    "LTO": ("built-source-tarball", PREDICATE_PREFIX + ("no-native-object",)),
+    "Strict": ("built-source-tarball", PREDICATE_PREFIX + ("no-native-compilation-target",)),
+    "gcc": ("built-source-tarball", PREDICATE_PREFIX + ("no-compiled-source",)),
+    "gcc15": ("built-source-tarball", PREDICATE_PREFIX + ("no-package-owned-native-source",)),
+    "noRemap": ("built-source-tarball", PREDICATE_PREFIX + ("no-cpp-source",)),
+    "0len": ("built-source-tarball", PREDICATE_PREFIX + ("no-direct-native-call",)),
+    "rchk": ("built-source-tarball", PREDICATE_PREFIX + ("no-c-cpp-object",)),
 }
 ACCEPTANCE_SPIKE_PROOFS = {
     "BLIS": {"loaded-blis", "blis-version", "single-thread"},
@@ -102,7 +217,8 @@ SPECIAL_IMAGE_PROOFS = {
         "depends-only-policy",
         "allowed-test-frameworks",
         "allowed-vignette-builders",
-        "nonexempt-suggests-absent",
+        "ashr-absent",
+        "susier-absent",
         "nonzero-installed-test-count",
     },
     "valgrind": {
@@ -142,6 +258,36 @@ APPROVED_RHUB_IMAGE = {
     "vnu": "vnu",
 }
 DRIVER_ENDPOINT = {"native-wrapper": "image", "r-binary": "runner"}
+WAIVER_FIELDS = {
+    "id",
+    "context",
+    "file",
+    "test_title",
+    "reason",
+    "expected_count",
+    "rationale",
+    "expires",
+}
+EXPECTED_WAIVERS = {
+    "installed-model-init-data": ("r-cmd-check-installed", "test_model.R", "colocboost_init_data correctly initializes data", "colocboost_init_data not directly accessible", 1, "The legacy installed-package test cannot access this unexported internal; source-mode tests exercise it.", "2027-03-03"),
+    "installed-model-dictionary-mapping": ("r-cmd-check-installed", "test_model.R", "colocboost correctly maps focal outcome to keep_variables with dict_keep_variables", "colocboost_init_data not directly accessible for integration test", 1, "The legacy installed-package integration branch cannot access this unexported internal; source-mode tests exercise it.", "2027-03-03"),
+    "installed-model-assemble": ("r-cmd-check-installed", "test_model.R", "colocboost_assemble processes model results", "colocboost_assemble not directly accessible", 1, "The legacy installed-package test cannot access this unexported internal; source-mode tests exercise it.", "2027-03-03"),
+    "installed-model-workhorse": ("r-cmd-check-installed", "test_model.R", "colocboost_workhorse performs boosting iterations", "colocboost_workhorse not directly accessible", 1, "The legacy installed-package test cannot access this unexported internal; source-mode tests exercise it.", "2027-03-03"),
+    "installed-utils-dictionary-mapping": ("r-cmd-check-installed", "test_utils.R", "colocboost_init_data handles complex dictionary mappings", "colocboost_init_data not directly accessible", 1, "The legacy installed-package test cannot access this unexported internal; source-mode tests exercise it.", "2027-03-03"),
+}
+EXPECTED_MKL_POLICY = {
+    "required_library_patterns": [
+        r"(?i)(?:^|/)libmkl_intel_lp64(?:\.so(?:\.\d+)*)?(?:$|\s)",
+        r"(?i)(?:^|/)libmkl_core(?:\.so(?:\.\d+)*)?(?:$|\s)",
+        r"(?i)(?:^|/)libmkl_sequential(?:\.so(?:\.\d+)*)?(?:$|\s)",
+    ],
+    "forbidden_library_patterns": [
+        r"(?i)(?:^|/)libmkl_(?:intel|gnu|tbb)_thread(?:\.so(?:\.\d+)*)?(?:$|\s)",
+        r"(?i)libopenblas",
+        r"(?i)(?:^|/)lib(?:s?atlas)(?:\.so(?:\.\d+)*)?(?:$|\s)",
+        r"(?i)(?:^|/)libblis(?:\.so(?:\.\d+)*)?(?:$|\s)",
+    ],
+}
 
 
 def _require_nonempty_string(value: Any, label: str) -> None:
@@ -195,6 +341,10 @@ def _validate_predicate(row: Mapping[str, Any]) -> None:
         raise ValueError(
             f"{row['cran_name']} predicate command must be an executable argv list using {{tarball}}"
         )
+    expected = EXPECTED_PREDICATES.get(row["cran_name"])
+    actual = (predicate["input"], tuple(command))
+    if actual != expected:
+        raise ValueError(f"{row['cran_name']} predicate does not match approved contract")
 
 
 def _validate_row(row: Any, index: int) -> None:
@@ -257,6 +407,20 @@ def _validate_row(row: Any, index: int) -> None:
                     f"{row['id']}.proof must include container-system-r"
                 )
 
+    endpoint_value = row[endpoint]
+    if isinstance(endpoint_value, list):
+        endpoint_value = tuple(endpoint_value)
+    actual_core = (
+        row["group"],
+        row["id"],
+        row["state"],
+        row["driver"],
+        endpoint,
+        endpoint_value,
+    )
+    if actual_core != EXPECTED_ROW_CORE.get(row["cran_name"]):
+        raise ValueError(f"{row['id']} does not match approved row contract")
+
     if row["group"] == "primary":
         missing_proof = PRIMARY_PROOF - proof
         if missing_proof:
@@ -283,6 +447,13 @@ def _validate_row(row: Any, index: int) -> None:
         missing_special = sorted(required_special_proof - proof)[0]
         raise ValueError(
             f"{row['cran_name']} special image proof is missing {missing_special}"
+        )
+    required_proof = REQUIRED_PROOFS.get(row["cran_name"])
+    if required_proof is None or not required_proof <= proof:
+        missing_proof = sorted((required_proof or set()) - proof)
+        raise ValueError(
+            f"{row['id']} proof contract is missing "
+            f"{missing_proof[0] if missing_proof else 'an approved inventory entry'}"
         )
 
 
@@ -358,6 +529,75 @@ def expected_result_ids(data: Mapping[str, Any]) -> list[str]:
     return [row["id"] for row in data["coverage"]]
 
 
+def validate_policy(
+    data: Mapping[str, Any], today: date | None = None
+) -> Mapping[str, Any]:
+    """Validate exact, unexpired check waivers and numerical-backend rules."""
+
+    if not isinstance(data, Mapping):
+        raise ValueError("policy must be an object")
+    if set(data) != {"version", "unit_tests", "r_cmd_check", "numerical_backends"}:
+        raise ValueError("policy has unexpected or missing top-level fields")
+    if isinstance(data["version"], bool) or data["version"] != 1:
+        raise ValueError("policy version must be 1")
+    if today is None:
+        today = datetime.now(timezone.utc).date()
+    if not isinstance(today, date):
+        raise ValueError("today must be a date")
+
+    unit_tests = data["unit_tests"]
+    if not isinstance(unit_tests, Mapping) or set(unit_tests) != {"allowed_skips"}:
+        raise ValueError("unit_tests must contain only allowed_skips")
+    waivers = unit_tests["allowed_skips"]
+    if not isinstance(waivers, list):
+        raise ValueError("allowed_skips must be a list")
+
+    actual_waivers = {}
+    for index, waiver in enumerate(waivers):
+        if not isinstance(waiver, Mapping) or set(waiver) != WAIVER_FIELDS:
+            raise ValueError(f"waiver {index} has unexpected or missing fields")
+        expires = waiver["expires"]
+        if not isinstance(expires, str):
+            raise ValueError(f"waiver {index} expires must be an ISO expiry date")
+        try:
+            expiry = date.fromisoformat(expires)
+        except ValueError as error:
+            raise ValueError(
+                f"waiver {index} expires must be an ISO expiry date"
+            ) from error
+        if expiry.isoformat() != expires:
+            raise ValueError(f"waiver {index} expires must be an ISO expiry date")
+        if expiry < today:
+            raise ValueError(f"waiver {waiver['id']} expired on {expires}")
+
+        waiver_id = waiver["id"]
+        _require_nonempty_string(waiver_id, f"waiver {index}.id")
+        if waiver_id in actual_waivers:
+            raise ValueError(f"duplicate waiver id {waiver_id}")
+        actual_waivers[waiver_id] = (
+            waiver["context"],
+            waiver["file"],
+            waiver["test_title"],
+            waiver["reason"],
+            waiver["expected_count"],
+            waiver["rationale"],
+            expires,
+        )
+
+    if actual_waivers != EXPECTED_WAIVERS:
+        raise ValueError("installed skip waivers do not match approved policy contract")
+    if data["r_cmd_check"] != {"allowed_notes": []}:
+        raise ValueError("r_cmd_check must have an empty allowed_notes list")
+    if data["numerical_backends"] != {"mkl": EXPECTED_MKL_POLICY}:
+        raise ValueError("MKL policy does not match approved library patterns")
+    for pattern in (
+        EXPECTED_MKL_POLICY["required_library_patterns"]
+        + EXPECTED_MKL_POLICY["forbidden_library_patterns"]
+    ):
+        re.compile(pattern)
+    return data
+
+
 def main(argv: list[str]) -> int:
     if len(argv) != 2:
         print(f"usage: {Path(argv[0]).name} MANIFEST", file=sys.stderr)
@@ -365,6 +605,9 @@ def main(argv: list[str]) -> int:
     try:
         data = load_manifest(argv[1])
         validate_manifest(data)
+        policy_path = Path(argv[1]).with_name("check-policy.yml")
+        policy = load_manifest(policy_path)
+        validate_policy(policy)
     except ValueError as error:
         print(f"manifest invalid: {error}", file=sys.stderr)
         return 1
