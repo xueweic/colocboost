@@ -12,6 +12,12 @@ SETUP_PIXI = "prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e"
 UPLOAD = "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
 DOWNLOAD = "actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131"
 ALLOWED_ACTIONS = {CHECKOUT, SETUP_PIXI, UPLOAD, DOWNLOAD}
+MKL_IMAGE = "ghcr.io/r-hub/containers/mkl@sha256:d84847130b3ae0b9b0402208ee17360ab527df1c448c44ba045b44524b17620a"
+NOSUGGESTS_IMAGE = "ghcr.io/r-hub/containers/nosuggests@sha256:588bd73470d657d0d2560a90e5fe036d191a89fde394b2c67c6423b71d7a12df"
+WRAPPER_SHA256 = {
+    "mkl": "680c40e9c70355c4dd47c4404b4107fc980748efd08da62a1784aeb5a787d87e",
+    "nosuggests": "a8559fbb931019e59aa683aa631deeaa0d14fe96719d058d9af4e9c95ba991c0",
+}
 
 
 def load_workflow():
@@ -46,7 +52,7 @@ def test_triggers_permissions_concurrency_and_job_inventory_are_exact():
         "group": "cran-preflight-${{ github.event_name }}-${{ github.ref }}",
         "cancel-in-progress": True,
     }
-    assert set(workflow["jobs"]) == {"prepare", "summary-gate"}
+    assert set(workflow["jobs"]) == {"prepare", "mkl", "nosuggests", "summary-gate"}
     assert all("strategy" not in job for job in workflow["jobs"].values())
 
 
@@ -54,9 +60,12 @@ def test_every_job_is_inert_outside_the_fork_and_summary_always_runs():
     _, workflow = load_workflow()
 
     assert workflow["jobs"]["prepare"]["if"] == "${{ " + FORK_GUARD + " }}"
+    for name in ("mkl", "nosuggests"):
+        assert workflow["jobs"][name]["if"] == "${{ " + FORK_GUARD + " }}"
+        assert workflow["jobs"][name]["needs"] == "prepare"
     summary = workflow["jobs"]["summary-gate"]
     assert summary["if"] == "${{ always() && " + FORK_GUARD + " }}"
-    assert summary["needs"] == "prepare"
+    assert summary["needs"] == ["prepare", "mkl", "nosuggests"]
 
 
 def test_all_actions_are_immutable_allowlisted_and_checkout_is_safe():
@@ -83,7 +92,159 @@ def test_all_actions_are_immutable_allowlisted_and_checkout_is_safe():
             "locked": True,
             "cache": True,
             "cache-write": "${{ github.event_name == 'push' }}",
+            "activate-environment": False,
         }
+
+
+def test_special_producers_use_pinned_job_containers_and_system_r_bindings():
+    _, workflow = load_workflow()
+    expected = {
+        "mkl": (MKL_IMAGE, "/opt/R/devel-mkl/bin/R"),
+        "nosuggests": (NOSUGGESTS_IMAGE, "/opt/R/devel/bin/R"),
+    }
+    for name, (image, system_r) in expected.items():
+        job = workflow["jobs"][name]
+        assert job["runs-on"] == "ubuntu-24.04"
+        assert job["container"] == {"image": image, "options": "--user 0"}
+        assert job["defaults"] == {"run": {"shell": "bash"}}
+        assert job["env"]["SYSTEM_R"] == system_r
+        assert job["env"]["NATIVE_WRAPPER"] == "/usr/local/bin/r-check"
+        assert job["env"]["WRAPPER_SHA256"] == WRAPPER_SHA256[name]
+        assert all(
+            "runner.temp" not in str(value) for value in job.get("env", {}).values()
+        )
+        initialize = step_with_id(job, "initialize")["run"]
+        assert "$GITHUB_ENV" in initialize
+        assert "$RUNNER_TEMP" in initialize
+        for variable in (
+            "UNIT_LIBRARY",
+            "CHECK_LIBRARY",
+            "SOURCE_DOWNLOAD_DIR",
+            "SOURCE_TREE",
+            "DIAGNOSTIC_DIR",
+            "RESULT_DIR",
+            "CHECK_WORK_DIR",
+        ):
+            assert f"{variable}=" in initialize
+
+
+def test_special_producers_consume_verified_tarball_and_not_checkout_package():
+    _, workflow = load_workflow()
+    for name in ("mkl", "nosuggests"):
+        job = workflow["jobs"][name]
+        download = step_with_id(job, "download-source")
+        assert download["uses"] == DOWNLOAD
+        assert download["with"]["name"] == "cran-preflight-source"
+        verify = step_with_id(job, "verify-source")
+        extract = step_with_id(job, "extract-source")
+        assert "ci-verify-source" in verify["run"]
+        assert "ci-extract-source" in extract["run"]
+        assert extract["env"]["TARBALL"] == "${{ steps.verify-source.outputs.tarball_path }}"
+        assert extract["env"]["METADATA"] == "${{ steps.verify-source.outputs.metadata_path }}"
+        unit_steps = [
+            step
+            for step in job["steps"]
+            if step.get("id") in {"unit-utils", "unit-xref", "unit-full"}
+        ]
+        assert unit_steps
+        for step in unit_steps:
+            expected_package = (
+                "${{ steps.extract-source.outputs.package_path }}"
+                if name == "mkl"
+                else "${{ runner.temp }}/nosuggests-unit-library/colocboost"
+            )
+            assert step["env"]["PACKAGE_PATH"] == expected_package
+            assert '"$PACKAGE_PATH"' in step["run"]
+            assert " --package=." not in step["run"]
+
+
+def test_mkl_order_and_targeted_sidecars_are_strictly_declared():
+    _, workflow = load_workflow()
+    mkl = workflow["jobs"]["mkl"]
+    ids = [step.get("id") for step in mkl["steps"]]
+    ordered = [
+        "prepare-dependencies",
+        "verify-dependencies",
+        "verify-mkl",
+        "unit-utils",
+        "unit-xref",
+        "unit-full",
+        "adapt-unit",
+        "native-check",
+    ]
+    assert [ids.index(step_id) for step_id in ordered] == sorted(
+        ids.index(step_id) for step_id in ordered
+    )
+    assert '"^utils$"' in step_with_id(mkl, "unit-utils")["run"]
+    assert '"^Xref$"' in step_with_id(mkl, "unit-xref")["run"]
+    adapter_run = step_with_id(mkl, "adapt-unit")["run"]
+    assert '"$DIAGNOSTIC_DIR/unit-utils.json"' in adapter_run
+    assert '"$DIAGNOSTIC_DIR/unit-xref.json"' in adapter_run
+    assert "verify-mkl" in step_with_id(mkl, "verify-mkl")["run"]
+    assert "source /opt/intel/oneapi/setvars.sh" in step_with_id(mkl, "verify-mkl")["run"]
+
+
+def test_nosuggests_proves_runtime_policy_installed_tests_and_native_log():
+    text, workflow = load_workflow()
+    job = workflow["jobs"]["nosuggests"]
+    ids = [step.get("id") for step in job["steps"]]
+    ordered = [
+        "prepare-dependencies",
+        "verify-dependencies",
+        "unit-full",
+        "adapt-unit",
+        "native-check",
+    ]
+    assert [ids.index(step_id) for step_id in ordered] == sorted(
+        ids.index(step_id) for step_id in ordered
+    )
+    assert "verify-dependencies" in step_with_id(job, "verify-dependencies")["run"]
+    native = step_with_id(job, "native-check")
+    assert "ci-native-check" in native["run"]
+    assert "ci-package-result" in native["run"]
+    assert "testthat.Rout" in text
+    assert "devtools" not in job["env"]
+
+
+def test_each_special_producer_finalizes_and_uploads_two_independent_results():
+    _, workflow = load_workflow()
+    for name in ("mkl", "nosuggests"):
+        job = workflow["jobs"][name]
+        for step_id in ("finalize-unit", "finalize-check"):
+            step = step_with_id(job, step_id)
+            assert step["if"] == "${{ always() }}"
+            assert "ci-finalize-result" in step["run"]
+        uploads = [
+            step for step in job["steps"]
+            if step.get("uses") == UPLOAD and step["with"]["name"].startswith("cran-preflight-result-")
+        ]
+        assert {step["with"]["name"] for step in uploads} == {
+            f"cran-preflight-result-package-check-{name}",
+            f"cran-preflight-result-unit-{name}",
+        }
+        assert all(step["if"] == "${{ always() }}" for step in uploads)
+        assert all(step["with"]["if-no-files-found"] == "error" for step in uploads)
+        assert step_with_id(job, "producer-gate")["if"] == "${{ always() }}"
+        ids = [step.get("id") for step in job["steps"]]
+        assert ids.index("finalize-unit") < ids.index("upload-unit")
+        assert ids.index("finalize-check") < ids.index("upload-check")
+        assert max(
+            ids.index("upload-unit"),
+            ids.index("upload-check"),
+            ids.index("upload-diagnostics"),
+        ) < ids.index("producer-gate")
+
+
+def test_package_and_unit_gates_are_independent():
+    _, workflow = load_workflow()
+    for name in ("mkl", "nosuggests"):
+        package_gate = step_with_id(workflow["jobs"][name], "package-result-gate")
+        assert "UNIT_GATE_OUTCOME" not in package_gate["env"]
+        assert "steps.unit-full.outcome" not in package_gate["env"].values()
+        assert "steps.adapt-unit.outcome" not in package_gate["env"].values()
+        assert package_gate["env"]["NATIVE_CHECK_OUTCOME"] == (
+            "${{ steps.native-check.outcome }}"
+        )
 
 
 def test_prepare_builds_one_source_with_local_r45_and_uploads_only_its_contract():
@@ -162,6 +323,8 @@ def test_summary_publication_and_explicit_outcome_gate_run_after_failures():
     assert final_gate["if"] == "${{ always() }}"
     assert final_gate["env"] == {
         "PREPARE_RESULT": "${{ needs.prepare.result }}",
+        "MKL_RESULT": "${{ needs.mkl.result }}",
+        "NOSUGGESTS_RESULT": "${{ needs.nosuggests.result }}",
         "SOURCE_DOWNLOAD_OUTCOME": "${{ steps.download-source.outcome }}",
         "RESULT_DOWNLOAD_OUTCOME": "${{ steps.download-results.outcome }}",
         "SOURCE_VERIFY_OUTCOME": "${{ steps.verify-source.outcome }}",

@@ -258,6 +258,18 @@ APPROVED_RHUB_IMAGE = {
     "vnu": "vnu",
 }
 DRIVER_ENDPOINT = {"native-wrapper": "image", "r-binary": "runner"}
+SPECIAL_NATIVE_BINDINGS = {
+    "mkl": {
+        "wrapper_path": "/usr/local/bin/r-check",
+        "system_r": "/opt/R/devel-mkl/bin/R",
+        "wrapper_input": "tarball-parent",
+    },
+    "nosuggests": {
+        "wrapper_path": "/usr/local/bin/r-check",
+        "system_r": "/opt/R/devel/bin/R",
+        "wrapper_input": "tarball-parent",
+    },
+}
 UNIT_LANE_FIELDS = {
     "environment_id",
     "coverage_id",
@@ -459,6 +471,19 @@ def _validate_row(row: Any, index: int) -> None:
     )
     if actual_core != EXPECTED_ROW_CORE.get(row["cran_name"]):
         raise ValueError(f"{row['id']} does not match approved row contract")
+
+    expected_binding = SPECIAL_NATIVE_BINDINGS.get(row["id"])
+    binding_fields = {"wrapper_path", "system_r", "wrapper_input"}
+    if expected_binding is not None:
+        actual_binding = {field: row.get(field) for field in binding_fields}
+        if actual_binding != expected_binding:
+            raise ValueError(
+                f"{row['id']} native wrapper binding does not match approved contract"
+            )
+    elif binding_fields & set(row):
+        raise ValueError(
+            f"{row['id']} must not declare a special native wrapper binding"
+        )
 
     if row["group"] == "primary":
         missing_proof = PRIMARY_PROOF - proof

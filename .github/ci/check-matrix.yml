@@ -195,6 +195,9 @@ coverage:
     state: direct
     driver: native-wrapper
     image: ghcr.io/r-hub/containers/mkl@sha256:d84847130b3ae0b9b0402208ee17360ab527df1c448c44ba045b44524b17620a
+    wrapper_path: /usr/local/bin/r-check
+    system_r: /opt/R/devel-mkl/bin/R
+    wrapper_input: tarball-parent
     proof: [source-tarball-sha256, container-system-r, r-executable, r-version, operating-system, compiler, architecture, session-info, blas-identity, lapack-identity, la-library, la-version, process-mappings, loaded-mkl, blas-operation, mkl-verbose, single-thread]
     limitation: The R-hub MKL version may differ from the exact current CRAN MKL version and is reported explicitly.
 
@@ -314,6 +317,9 @@ coverage:
     state: direct
     driver: native-wrapper
     image: ghcr.io/r-hub/containers/nosuggests@sha256:588bd73470d657d0d2560a90e5fe036d191a89fde394b2c67c6423b71d7a12df
+    wrapper_path: /usr/local/bin/r-check
+    system_r: /opt/R/devel/bin/R
+    wrapper_input: tarball-parent
     proof: [source-tarball-sha256, container-system-r, r-executable, depends-only-policy, allowed-test-frameworks, allowed-vignette-builders, ashr-absent, susier-absent, nonzero-installed-test-count]
 
   - id: valgrind

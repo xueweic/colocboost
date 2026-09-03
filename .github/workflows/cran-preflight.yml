@@ -39,6 +39,7 @@ jobs:
           locked: true
           cache: true
           cache-write: ${{ github.event_name == 'push' }}
+          activate-environment: false
 
       - name: Validate the complete result inventory
         run: pixi run --locked ci-validate
@@ -66,9 +67,633 @@ jobs:
             ${{ steps.prepare-source.outputs.metadata_path }}
           if-no-files-found: error
 
+  mkl:
+    if: ${{ github.repository == 'xueweic/colocboost' }}
+    needs: prepare
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/r-hub/containers/mkl@sha256:d84847130b3ae0b9b0402208ee17360ab527df1c448c44ba045b44524b17620a
+      options: --user 0
+    defaults:
+      run:
+        shell: bash
+    env:
+      SYSTEM_R: /opt/R/devel-mkl/bin/R
+      NATIVE_WRAPPER: /usr/local/bin/r-check
+      WRAPPER_SHA256: 680c40e9c70355c4dd47c4404b4107fc980748efd08da62a1784aeb5a787d87e
+      SOURCE_SHA: ${{ needs.prepare.outputs.source_sha || github.sha }}
+      EVENT_SHA: ${{ needs.prepare.outputs.event_sha || github.sha }}
+      FALLBACK_TARBALL_SHA256: ${{ needs.prepare.outputs.tarball_sha256 || '0000000000000000000000000000000000000000000000000000000000000000' }}
+      MKL_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_VERBOSE: "1"
+    steps:
+      - name: Checkout exact event commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up locked Pixi helper
+        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e
+        with:
+          pixi-version: v0.67.2
+          locked: true
+          cache: true
+          cache-write: ${{ github.event_name == 'push' }}
+          activate-environment: false
+
+      - name: Initialize fresh producer paths
+        id: initialize
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          UNIT_LIBRARY="$RUNNER_TEMP/mkl-unit-library"
+          CHECK_LIBRARY="$RUNNER_TEMP/mkl-check-library"
+          SOURCE_DOWNLOAD_DIR="$RUNNER_TEMP/mkl-source"
+          SOURCE_TREE="$RUNNER_TEMP/mkl-source-tree"
+          DIAGNOSTIC_DIR="$RUNNER_TEMP/mkl-diagnostics"
+          RESULT_DIR="$RUNNER_TEMP/mkl-results"
+          CHECK_WORK_DIR="$RUNNER_TEMP/mkl-native-check"
+          export UNIT_LIBRARY CHECK_LIBRARY SOURCE_DOWNLOAD_DIR SOURCE_TREE
+          export DIAGNOSTIC_DIR RESULT_DIR CHECK_WORK_DIR
+          printf '%s\n' \
+            "UNIT_LIBRARY=$UNIT_LIBRARY" \
+            "CHECK_LIBRARY=$CHECK_LIBRARY" \
+            "SOURCE_DOWNLOAD_DIR=$SOURCE_DOWNLOAD_DIR" \
+            "SOURCE_TREE=$SOURCE_TREE" \
+            "DIAGNOSTIC_DIR=$DIAGNOSTIC_DIR" \
+            "RESULT_DIR=$RESULT_DIR" \
+            "CHECK_WORK_DIR=$CHECK_WORK_DIR" >> "$GITHUB_ENV"
+          mkdir "$SOURCE_DOWNLOAD_DIR"
+          mkdir "$DIAGNOSTIC_DIR"
+          mkdir "$RESULT_DIR"
+          test ! -e "$UNIT_LIBRARY"
+          test ! -e "$CHECK_LIBRARY"
+          test ! -e "$CHECK_WORK_DIR"
+
+      - name: Download the shared source contract
+        id: download-source
+        continue-on-error: true
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          name: cran-preflight-source
+          path: ${{ runner.temp }}/mkl-source
+
+      - name: Verify downloaded source bytes
+        id: verify-source
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-verify-source \
+            "$SOURCE_DOWNLOAD_DIR" "$SOURCE_SHA" "$EVENT_SHA" "$GITHUB_OUTPUT"
+
+      - name: Extract only the verified source package
+        id: extract-source
+        continue-on-error: true
+        env:
+          TARBALL: ${{ steps.verify-source.outputs.tarball_path }}
+          METADATA: ${{ steps.verify-source.outputs.metadata_path }}
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-extract-source \
+            "$TARBALL" "$METADATA" "$SOURCE_SHA" "$EVENT_SHA" \
+            "$SOURCE_TREE" "$GITHUB_OUTPUT"
+
+      - name: Verify native wrapper and system R identity
+        id: verify-wrapper
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          printf '%s  %s\n' "$WRAPPER_SHA256" "$NATIVE_WRAPPER" | sha256sum -c -
+          test "$(command -v R)" = "$SYSTEM_R"
+
+      - name: Install complete source-unit dependencies first
+        id: prepare-dependencies
+        continue-on-error: true
+        env:
+          TARBALL: ${{ steps.verify-source.outputs.tarball_path }}
+          R_LIBS_USER: ${{ runner.temp }}/mkl-unit-library
+        run: |
+          set -euo pipefail
+          set -a
+          source /opt/intel/oneapi/setvars.sh
+          set +a
+          pixi run --locked ci-r-dependencies \
+            "$SYSTEM_R" mkl "$TARBALL" "$UNIT_LIBRARY" \
+            "$DIAGNOSTIC_DIR/dependencies.json" false
+
+      - name: Validate actual dependency evidence
+        id: verify-dependencies
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-verify-dependencies \
+            mkl "$DIAGNOSTIC_DIR/dependencies.json"
+
+      - name: Prove serial MKL executed
+        id: verify-mkl
+        continue-on-error: true
+        env:
+          R_LIBS_USER: ${{ runner.temp }}/mkl-unit-library
+        run: |
+          set -euo pipefail
+          set -a
+          source /opt/intel/oneapi/setvars.sh
+          set +a
+          pixi run --locked ci-verify-mkl \
+            "$SYSTEM_R" "$DIAGNOSTIC_DIR/mkl-runtime.json"
+
+      - name: Run targeted MKL utils regression sidecar
+        id: unit-utils
+        continue-on-error: true
+        env:
+          PACKAGE_PATH: ${{ steps.extract-source.outputs.package_path }}
+          R_LIBS_USER: ${{ runner.temp }}/mkl-unit-library
+        run: |
+          set -euo pipefail
+          set -a
+          source /opt/intel/oneapi/setvars.sh
+          set +a
+          pixi run --locked ci-unit source \
+            "$DIAGNOSTIC_DIR/unit-utils.json" "$SYSTEM_R" mkl \
+            "$PACKAGE_PATH" "^utils$"
+
+      - name: Run targeted MKL Xref regression sidecar
+        id: unit-xref
+        continue-on-error: true
+        env:
+          PACKAGE_PATH: ${{ steps.extract-source.outputs.package_path }}
+          R_LIBS_USER: ${{ runner.temp }}/mkl-unit-library
+        run: |
+          set -euo pipefail
+          set -a
+          source /opt/intel/oneapi/setvars.sh
+          set +a
+          pixi run --locked ci-unit source \
+            "$DIAGNOSTIC_DIR/unit-xref.json" "$SYSTEM_R" mkl \
+            "$PACKAGE_PATH" "^Xref$"
+
+      - name: Run complete MKL source unit suite
+        id: unit-full
+        continue-on-error: true
+        env:
+          PACKAGE_PATH: ${{ steps.extract-source.outputs.package_path }}
+          R_LIBS_USER: ${{ runner.temp }}/mkl-unit-library
+        run: |
+          set -euo pipefail
+          set -a
+          source /opt/intel/oneapi/setvars.sh
+          set +a
+          pixi run --locked ci-unit source \
+            "$DIAGNOSTIC_DIR/unit-full.json" "$SYSTEM_R" mkl "$PACKAGE_PATH"
+
+      - name: Adapt the complete suite with required sidecars
+        id: adapt-unit
+        continue-on-error: true
+        env:
+          TARBALL_SHA256: ${{ steps.verify-source.outputs.tarball_sha256 || env.FALLBACK_TARBALL_SHA256 }}
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-unit-result \
+            "$DIAGNOSTIC_DIR/unit-full.json" "$RESULT_DIR/unit/result.json" \
+            mkl "$SOURCE_SHA" "$EVENT_SHA" "$TARBALL_SHA256" \
+            "$DIAGNOSTIC_DIR/unit-utils.json" "$DIAGNOSTIC_DIR/unit-xref.json"
+
+      - name: Gate all MKL unit prerequisites
+        id: unit-result-gate
+        continue-on-error: true
+        env:
+          INITIALIZE_OUTCOME: ${{ steps.initialize.outcome }}
+          DOWNLOAD_OUTCOME: ${{ steps.download-source.outcome }}
+          VERIFY_SOURCE_OUTCOME: ${{ steps.verify-source.outcome }}
+          EXTRACT_OUTCOME: ${{ steps.extract-source.outcome }}
+          WRAPPER_OUTCOME: ${{ steps.verify-wrapper.outcome }}
+          PREP_OUTCOME: ${{ steps.prepare-dependencies.outcome }}
+          DEPENDENCY_PROOF_OUTCOME: ${{ steps.verify-dependencies.outcome }}
+          MKL_PROOF_OUTCOME: ${{ steps.verify-mkl.outcome }}
+          UTILS_OUTCOME: ${{ steps.unit-utils.outcome }}
+          XREF_OUTCOME: ${{ steps.unit-xref.outcome }}
+          FULL_OUTCOME: ${{ steps.unit-full.outcome }}
+          ADAPTER_OUTCOME: ${{ steps.adapt-unit.outcome }}
+        run: |
+          set -eu
+          for value in "$INITIALIZE_OUTCOME" "$DOWNLOAD_OUTCOME" \
+            "$VERIFY_SOURCE_OUTCOME" "$EXTRACT_OUTCOME" "$WRAPPER_OUTCOME" \
+            "$PREP_OUTCOME" "$DEPENDENCY_PROOF_OUTCOME" "$MKL_PROOF_OUTCOME" \
+            "$UTILS_OUTCOME" "$XREF_OUTCOME" "$FULL_OUTCOME" "$ADAPTER_OUTCOME"; do
+            test "$value" = success
+          done
+
+      - name: Run native wrapper and parse its unique real check log
+        id: native-check
+        continue-on-error: true
+        env:
+          TARBALL: ${{ steps.verify-source.outputs.tarball_path }}
+          METADATA: ${{ steps.verify-source.outputs.metadata_path }}
+          TARBALL_SHA256: ${{ steps.verify-source.outputs.tarball_sha256 || env.FALLBACK_TARBALL_SHA256 }}
+          R_LIBS_USER: ${{ runner.temp }}/mkl-check-library
+        run: |
+          set -uo pipefail
+          set -a
+          source /opt/intel/oneapi/setvars.sh
+          set +a
+          set +e
+          pixi run --locked ci-native-check \
+            mkl "$NATIVE_WRAPPER" "$SYSTEM_R" "$TARBALL" "$METADATA" \
+            "$SOURCE_SHA" "$EVENT_SHA" "$CHECK_WORK_DIR" "$CHECK_LIBRARY" \
+            "$DIAGNOSTIC_DIR/native-check.json" "$DIAGNOSTIC_DIR/00check.log"
+          check_exit_code=$?
+          set -e
+          pixi run --locked ci-package-result \
+            "$SYSTEM_R" "$DIAGNOSTIC_DIR/00check.log" \
+            "mkl/colocboost.Rcheck/00check.log" \
+            "$RESULT_DIR/package-check/result.json" mkl "$SOURCE_SHA" \
+            "$EVENT_SHA" "$TARBALL_SHA256" "$check_exit_code"
+
+      - name: Gate all MKL package-check prerequisites
+        id: package-result-gate
+        continue-on-error: true
+        env:
+          INITIALIZE_OUTCOME: ${{ steps.initialize.outcome }}
+          DOWNLOAD_OUTCOME: ${{ steps.download-source.outcome }}
+          VERIFY_SOURCE_OUTCOME: ${{ steps.verify-source.outcome }}
+          WRAPPER_OUTCOME: ${{ steps.verify-wrapper.outcome }}
+          PREP_OUTCOME: ${{ steps.prepare-dependencies.outcome }}
+          DEPENDENCY_PROOF_OUTCOME: ${{ steps.verify-dependencies.outcome }}
+          MKL_PROOF_OUTCOME: ${{ steps.verify-mkl.outcome }}
+          NATIVE_CHECK_OUTCOME: ${{ steps.native-check.outcome }}
+        run: |
+          set -eu
+          for value in "$INITIALIZE_OUTCOME" "$DOWNLOAD_OUTCOME" \
+            "$VERIFY_SOURCE_OUTCOME" "$WRAPPER_OUTCOME" "$PREP_OUTCOME" \
+            "$DEPENDENCY_PROOF_OUTCOME" "$MKL_PROOF_OUTCOME" \
+            "$NATIVE_CHECK_OUTCOME"; do
+            test "$value" = success
+          done
+
+      - name: Finalize MKL unit result
+        id: finalize-unit
+        if: ${{ always() }}
+        continue-on-error: true
+        env:
+          TARBALL_SHA256: ${{ steps.verify-source.outputs.tarball_sha256 || env.FALLBACK_TARBALL_SHA256 }}
+          JOB_STATUS: ${{ job.status }}
+          PRODUCER_OUTCOME: ${{ steps.unit-result-gate.outcome }}
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-finalize-result \
+            "$RESULT_DIR/unit/result.json" unit mkl "$SOURCE_SHA" "$EVENT_SHA" \
+            "$TARBALL_SHA256" "$JOB_STATUS" "$PRODUCER_OUTCOME"
+
+      - name: Finalize MKL package-check result
+        id: finalize-check
+        if: ${{ always() }}
+        continue-on-error: true
+        env:
+          TARBALL_SHA256: ${{ steps.verify-source.outputs.tarball_sha256 || env.FALLBACK_TARBALL_SHA256 }}
+          JOB_STATUS: ${{ job.status }}
+          PRODUCER_OUTCOME: ${{ steps.package-result-gate.outcome }}
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-finalize-result \
+            "$RESULT_DIR/package-check/result.json" package-check mkl \
+            "$SOURCE_SHA" "$EVENT_SHA" "$TARBALL_SHA256" \
+            "$JOB_STATUS" "$PRODUCER_OUTCOME"
+
+      - name: Upload MKL unit result
+        id: upload-unit
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: cran-preflight-result-unit-mkl
+          path: ${{ runner.temp }}/mkl-results/unit/result.json
+          if-no-files-found: error
+
+      - name: Upload MKL package-check result
+        id: upload-check
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: cran-preflight-result-package-check-mkl
+          path: ${{ runner.temp }}/mkl-results/package-check/result.json
+          if-no-files-found: error
+
+      - name: Upload MKL diagnostics
+        id: upload-diagnostics
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: cran-preflight-diagnostics-mkl
+          path: ${{ runner.temp }}/mkl-diagnostics
+          if-no-files-found: warn
+
+      - name: Enforce MKL producer outcomes
+        id: producer-gate
+        if: ${{ always() }}
+        env:
+          UNIT_FINALIZER_OUTCOME: ${{ steps.finalize-unit.outcome }}
+          CHECK_FINALIZER_OUTCOME: ${{ steps.finalize-check.outcome }}
+          UNIT_UPLOAD_OUTCOME: ${{ steps.upload-unit.outcome }}
+          CHECK_UPLOAD_OUTCOME: ${{ steps.upload-check.outcome }}
+          DIAGNOSTIC_UPLOAD_OUTCOME: ${{ steps.upload-diagnostics.outcome }}
+        run: |
+          set -eu
+          test "$UNIT_FINALIZER_OUTCOME" = success
+          test "$CHECK_FINALIZER_OUTCOME" = success
+          test "$UNIT_UPLOAD_OUTCOME" = success
+          test "$CHECK_UPLOAD_OUTCOME" = success
+          test "$DIAGNOSTIC_UPLOAD_OUTCOME" = success
+
+  nosuggests:
+    if: ${{ github.repository == 'xueweic/colocboost' }}
+    needs: prepare
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/r-hub/containers/nosuggests@sha256:588bd73470d657d0d2560a90e5fe036d191a89fde394b2c67c6423b71d7a12df
+      options: --user 0
+    defaults:
+      run:
+        shell: bash
+    env:
+      SYSTEM_R: /opt/R/devel/bin/R
+      NATIVE_WRAPPER: /usr/local/bin/r-check
+      WRAPPER_SHA256: a8559fbb931019e59aa683aa631deeaa0d14fe96719d058d9af4e9c95ba991c0
+      SOURCE_SHA: ${{ needs.prepare.outputs.source_sha || github.sha }}
+      EVENT_SHA: ${{ needs.prepare.outputs.event_sha || github.sha }}
+      FALLBACK_TARBALL_SHA256: ${{ needs.prepare.outputs.tarball_sha256 || '0000000000000000000000000000000000000000000000000000000000000000' }}
+    steps:
+      - name: Checkout exact event commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up locked Pixi helper
+        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e
+        with:
+          pixi-version: v0.67.2
+          locked: true
+          cache: true
+          cache-write: ${{ github.event_name == 'push' }}
+          activate-environment: false
+
+      - name: Initialize fresh producer paths
+        id: initialize
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          UNIT_LIBRARY="$RUNNER_TEMP/nosuggests-unit-library"
+          CHECK_LIBRARY="$RUNNER_TEMP/nosuggests-check-library"
+          SOURCE_DOWNLOAD_DIR="$RUNNER_TEMP/nosuggests-source"
+          SOURCE_TREE="$RUNNER_TEMP/nosuggests-source-tree"
+          DIAGNOSTIC_DIR="$RUNNER_TEMP/nosuggests-diagnostics"
+          RESULT_DIR="$RUNNER_TEMP/nosuggests-results"
+          CHECK_WORK_DIR="$RUNNER_TEMP/nosuggests-native-check"
+          export UNIT_LIBRARY CHECK_LIBRARY SOURCE_DOWNLOAD_DIR SOURCE_TREE
+          export DIAGNOSTIC_DIR RESULT_DIR CHECK_WORK_DIR
+          printf '%s\n' \
+            "UNIT_LIBRARY=$UNIT_LIBRARY" \
+            "CHECK_LIBRARY=$CHECK_LIBRARY" \
+            "SOURCE_DOWNLOAD_DIR=$SOURCE_DOWNLOAD_DIR" \
+            "SOURCE_TREE=$SOURCE_TREE" \
+            "DIAGNOSTIC_DIR=$DIAGNOSTIC_DIR" \
+            "RESULT_DIR=$RESULT_DIR" \
+            "CHECK_WORK_DIR=$CHECK_WORK_DIR" >> "$GITHUB_ENV"
+          mkdir "$SOURCE_DOWNLOAD_DIR"
+          mkdir "$DIAGNOSTIC_DIR"
+          mkdir "$RESULT_DIR"
+          test ! -e "$UNIT_LIBRARY"
+          test ! -e "$CHECK_LIBRARY"
+          test ! -e "$CHECK_WORK_DIR"
+
+      - name: Download the shared source contract
+        id: download-source
+        continue-on-error: true
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          name: cran-preflight-source
+          path: ${{ runner.temp }}/nosuggests-source
+
+      - name: Verify downloaded source bytes
+        id: verify-source
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-verify-source \
+            "$SOURCE_DOWNLOAD_DIR" "$SOURCE_SHA" "$EVENT_SHA" "$GITHUB_OUTPUT"
+
+      - name: Extract only the verified source package
+        id: extract-source
+        continue-on-error: true
+        env:
+          TARBALL: ${{ steps.verify-source.outputs.tarball_path }}
+          METADATA: ${{ steps.verify-source.outputs.metadata_path }}
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-extract-source \
+            "$TARBALL" "$METADATA" "$SOURCE_SHA" "$EVENT_SHA" \
+            "$SOURCE_TREE" "$GITHUB_OUTPUT"
+
+      - name: Verify native wrapper and system R identity
+        id: verify-wrapper
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          printf '%s  %s\n' "$WRAPPER_SHA256" "$NATIVE_WRAPPER" | sha256sum -c -
+          test "$(command -v R)" = "$SYSTEM_R"
+
+      - name: Install exact noSuggests dependencies and target tests
+        id: prepare-dependencies
+        continue-on-error: true
+        env:
+          TARBALL: ${{ steps.verify-source.outputs.tarball_path }}
+          R_LIBS_USER: ${{ runner.temp }}/nosuggests-unit-library
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-r-dependencies \
+            "$SYSTEM_R" nosuggests "$TARBALL" "$UNIT_LIBRARY" \
+            "$DIAGNOSTIC_DIR/dependencies.json" true
+
+      - name: Validate actual noSuggests dependency evidence
+        id: verify-dependencies
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-verify-dependencies \
+            nosuggests "$DIAGNOSTIC_DIR/dependencies.json"
+
+      - name: Run complete installed-package unit suite
+        id: unit-full
+        continue-on-error: true
+        env:
+          PACKAGE_PATH: ${{ runner.temp }}/nosuggests-unit-library/colocboost
+          R_LIBS_USER: ${{ runner.temp }}/nosuggests-unit-library
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-unit installed \
+            "$DIAGNOSTIC_DIR/unit-full.json" "$SYSTEM_R" \
+            r-cmd-check-installed "$PACKAGE_PATH"
+
+      - name: Adapt noSuggests installed unit result
+        id: adapt-unit
+        continue-on-error: true
+        env:
+          TARBALL_SHA256: ${{ steps.verify-source.outputs.tarball_sha256 || env.FALLBACK_TARBALL_SHA256 }}
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-unit-result \
+            "$DIAGNOSTIC_DIR/unit-full.json" "$RESULT_DIR/unit/result.json" \
+            nosuggests "$SOURCE_SHA" "$EVENT_SHA" "$TARBALL_SHA256"
+
+      - name: Gate all noSuggests unit prerequisites
+        id: unit-result-gate
+        continue-on-error: true
+        env:
+          INITIALIZE_OUTCOME: ${{ steps.initialize.outcome }}
+          DOWNLOAD_OUTCOME: ${{ steps.download-source.outcome }}
+          VERIFY_SOURCE_OUTCOME: ${{ steps.verify-source.outcome }}
+          EXTRACT_OUTCOME: ${{ steps.extract-source.outcome }}
+          WRAPPER_OUTCOME: ${{ steps.verify-wrapper.outcome }}
+          PREP_OUTCOME: ${{ steps.prepare-dependencies.outcome }}
+          DEPENDENCY_PROOF_OUTCOME: ${{ steps.verify-dependencies.outcome }}
+          FULL_OUTCOME: ${{ steps.unit-full.outcome }}
+          ADAPTER_OUTCOME: ${{ steps.adapt-unit.outcome }}
+        run: |
+          set -eu
+          for value in "$INITIALIZE_OUTCOME" "$DOWNLOAD_OUTCOME" \
+            "$VERIFY_SOURCE_OUTCOME" "$EXTRACT_OUTCOME" "$WRAPPER_OUTCOME" \
+            "$PREP_OUTCOME" "$DEPENDENCY_PROOF_OUTCOME" "$FULL_OUTCOME" \
+            "$ADAPTER_OUTCOME"; do
+            test "$value" = success
+          done
+
+      - name: Run noSuggests wrapper and prove nonzero testthat.Rout
+        id: native-check
+        continue-on-error: true
+        env:
+          TARBALL: ${{ steps.verify-source.outputs.tarball_path }}
+          METADATA: ${{ steps.verify-source.outputs.metadata_path }}
+          TARBALL_SHA256: ${{ steps.verify-source.outputs.tarball_sha256 || env.FALLBACK_TARBALL_SHA256 }}
+          R_LIBS_USER: ${{ runner.temp }}/nosuggests-check-library
+        run: |
+          set -uo pipefail
+          set +e
+          pixi run --locked ci-native-check \
+            nosuggests "$NATIVE_WRAPPER" "$SYSTEM_R" "$TARBALL" "$METADATA" \
+            "$SOURCE_SHA" "$EVENT_SHA" "$CHECK_WORK_DIR" "$CHECK_LIBRARY" \
+            "$DIAGNOSTIC_DIR/native-check.json" "$DIAGNOSTIC_DIR/00check.log"
+          check_exit_code=$?
+          set -e
+          pixi run --locked ci-package-result \
+            "$SYSTEM_R" "$DIAGNOSTIC_DIR/00check.log" \
+            "nosuggests/colocboost.Rcheck/00check.log" \
+            "$RESULT_DIR/package-check/result.json" nosuggests "$SOURCE_SHA" \
+            "$EVENT_SHA" "$TARBALL_SHA256" "$check_exit_code"
+
+      - name: Gate all noSuggests package-check prerequisites
+        id: package-result-gate
+        continue-on-error: true
+        env:
+          INITIALIZE_OUTCOME: ${{ steps.initialize.outcome }}
+          DOWNLOAD_OUTCOME: ${{ steps.download-source.outcome }}
+          VERIFY_SOURCE_OUTCOME: ${{ steps.verify-source.outcome }}
+          WRAPPER_OUTCOME: ${{ steps.verify-wrapper.outcome }}
+          PREP_OUTCOME: ${{ steps.prepare-dependencies.outcome }}
+          DEPENDENCY_PROOF_OUTCOME: ${{ steps.verify-dependencies.outcome }}
+          NATIVE_CHECK_OUTCOME: ${{ steps.native-check.outcome }}
+        run: |
+          set -eu
+          for value in "$INITIALIZE_OUTCOME" "$DOWNLOAD_OUTCOME" \
+            "$VERIFY_SOURCE_OUTCOME" "$WRAPPER_OUTCOME" "$PREP_OUTCOME" \
+            "$DEPENDENCY_PROOF_OUTCOME" "$NATIVE_CHECK_OUTCOME"; do
+            test "$value" = success
+          done
+
+      - name: Finalize noSuggests unit result
+        id: finalize-unit
+        if: ${{ always() }}
+        continue-on-error: true
+        env:
+          TARBALL_SHA256: ${{ steps.verify-source.outputs.tarball_sha256 || env.FALLBACK_TARBALL_SHA256 }}
+          JOB_STATUS: ${{ job.status }}
+          PRODUCER_OUTCOME: ${{ steps.unit-result-gate.outcome }}
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-finalize-result \
+            "$RESULT_DIR/unit/result.json" unit nosuggests "$SOURCE_SHA" \
+            "$EVENT_SHA" "$TARBALL_SHA256" "$JOB_STATUS" "$PRODUCER_OUTCOME"
+
+      - name: Finalize noSuggests package-check result
+        id: finalize-check
+        if: ${{ always() }}
+        continue-on-error: true
+        env:
+          TARBALL_SHA256: ${{ steps.verify-source.outputs.tarball_sha256 || env.FALLBACK_TARBALL_SHA256 }}
+          JOB_STATUS: ${{ job.status }}
+          PRODUCER_OUTCOME: ${{ steps.package-result-gate.outcome }}
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-finalize-result \
+            "$RESULT_DIR/package-check/result.json" package-check nosuggests \
+            "$SOURCE_SHA" "$EVENT_SHA" "$TARBALL_SHA256" \
+            "$JOB_STATUS" "$PRODUCER_OUTCOME"
+
+      - name: Upload noSuggests unit result
+        id: upload-unit
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: cran-preflight-result-unit-nosuggests
+          path: ${{ runner.temp }}/nosuggests-results/unit/result.json
+          if-no-files-found: error
+
+      - name: Upload noSuggests package-check result
+        id: upload-check
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: cran-preflight-result-package-check-nosuggests
+          path: ${{ runner.temp }}/nosuggests-results/package-check/result.json
+          if-no-files-found: error
+
+      - name: Upload noSuggests diagnostics
+        id: upload-diagnostics
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: cran-preflight-diagnostics-nosuggests
+          path: ${{ runner.temp }}/nosuggests-diagnostics
+          if-no-files-found: warn
+
+      - name: Enforce noSuggests producer outcomes
+        id: producer-gate
+        if: ${{ always() }}
+        env:
+          UNIT_FINALIZER_OUTCOME: ${{ steps.finalize-unit.outcome }}
+          CHECK_FINALIZER_OUTCOME: ${{ steps.finalize-check.outcome }}
+          UNIT_UPLOAD_OUTCOME: ${{ steps.upload-unit.outcome }}
+          CHECK_UPLOAD_OUTCOME: ${{ steps.upload-check.outcome }}
+          DIAGNOSTIC_UPLOAD_OUTCOME: ${{ steps.upload-diagnostics.outcome }}
+        run: |
+          set -eu
+          test "$UNIT_FINALIZER_OUTCOME" = success
+          test "$CHECK_FINALIZER_OUTCOME" = success
+          test "$UNIT_UPLOAD_OUTCOME" = success
+          test "$CHECK_UPLOAD_OUTCOME" = success
+          test "$DIAGNOSTIC_UPLOAD_OUTCOME" = success
+
   summary-gate:
     if: ${{ always() && github.repository == 'xueweic/colocboost' }}
-    needs: prepare
+    needs: [prepare, mkl, nosuggests]
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout exact event commit
@@ -85,6 +710,7 @@ jobs:
           locked: true
           cache: true
           cache-write: ${{ github.event_name == 'push' }}
+          activate-environment: false
 
       - name: Initialize fail-closed inputs
         env:
@@ -165,6 +791,8 @@ jobs:
         if: ${{ always() }}
         env:
           PREPARE_RESULT: ${{ needs.prepare.result }}
+          MKL_RESULT: ${{ needs.mkl.result }}
+          NOSUGGESTS_RESULT: ${{ needs.nosuggests.result }}
           SOURCE_DOWNLOAD_OUTCOME: ${{ steps.download-source.outcome }}
           RESULT_DOWNLOAD_OUTCOME: ${{ steps.download-results.outcome }}
           SOURCE_VERIFY_OUTCOME: ${{ steps.verify-source.outcome }}
@@ -172,6 +800,8 @@ jobs:
         run: |
           set -eu
           test "$PREPARE_RESULT" = success
+          test "$MKL_RESULT" = success
+          test "$NOSUGGESTS_RESULT" = success
           test "$SOURCE_DOWNLOAD_OUTCOME" = success
           test "$RESULT_DOWNLOAD_OUTCOME" = success
           test "$SOURCE_VERIFY_OUTCOME" = success

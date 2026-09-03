@@ -18,12 +18,11 @@ def make_executable(path, body="raise SystemExit(0)\n"):
     return path
 
 
-def invoke(r_executable, tmp_path):
+def invoke(r_executable, tmp_path, filter_value=None):
     received = tmp_path / "received args.json"
     environment = os.environ.copy()
     environment["UNIT_DRIVER_RECEIVED"] = os.fspath(received)
-    completed = subprocess.run(
-        [
+    arguments = [
             sys.executable,
             os.fspath(SCRIPT),
             "--r-executable",
@@ -38,7 +37,11 @@ def invoke(r_executable, tmp_path):
             "policy path's value.yml",
             "--output",
             "output path's value.json",
-        ],
+        ]
+    if filter_value is not None:
+        arguments.extend(["--filter", filter_value])
+    completed = subprocess.run(
+        arguments,
         check=False,
         capture_output=True,
         text=True,
@@ -73,6 +76,22 @@ def test_unit_driver_uses_only_absolute_rscript_sibling_and_preserves_arguments(
         "--output=output path's value.json",
     ]
     assert rscript.is_file()
+
+
+def test_unit_driver_forwards_an_optional_filter_as_one_literal_argument(tmp_path):
+    r_binary = make_executable(tmp_path / "R home" / "bin" / "R")
+    recorder = (
+        "import json, os, sys\n"
+        "from pathlib import Path\n"
+        "Path(os.environ['UNIT_DRIVER_RECEIVED']).write_text(json.dumps(sys.argv[1:]))\n"
+    )
+    make_executable(r_binary.with_name("Rscript"), recorder)
+
+    completed, received = invoke(r_binary, tmp_path, "^utils$; literal $(no-shell)")
+
+    assert completed.returncode == 0, completed.stderr
+    arguments = json.loads(received.read_text(encoding="utf-8"))
+    assert arguments[-1] == "--filter=^utils$; literal $(no-shell)"
 
 
 @pytest.mark.parametrize("kind", ["relative", "symlink", "nonexec", "wrong-basename"])

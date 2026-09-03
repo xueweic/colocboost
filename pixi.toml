@@ -53,14 +53,36 @@ cmd = '''python -B .github/ci/verify_source.py --source-dir='{{ source_dir | rep
 cwd = "."
 args = ["source_dir", "source_sha", "event_sha", "github_output"]
 
-[tasks.ci-unit]
-cmd = '''python .github/ci/run_unit_driver.py --r-executable='{{ r_executable | replace("'", "'\"'\"'") }}' --package=. --load-package='{{ mode | replace("'", "'\"'\"'") }}' --context='{{ runner_context | replace("'", "'\"'\"'") }}' --policy=.github/ci/check-policy.yml --output='{{ output | replace("'", "'\"'\"'") }}' '''
+[tasks.ci-extract-source]
+cmd = '''python -B .github/ci/extract_source.py --tarball='{{ tarball | replace("'", "'\"'\"'") }}' --metadata='{{ metadata | replace("'", "'\"'\"'") }}' --source-sha='{{ source_sha | replace("'", "'\"'\"'") }}' --event-sha='{{ event_sha | replace("'", "'\"'\"'") }}' --destination='{{ destination | replace("'", "'\"'\"'") }}' --github-output='{{ github_output | replace("'", "'\"'\"'") }}' '''
 cwd = "."
-args = ["mode", "output", "r_executable", "runner_context"]
+args = ["tarball", "metadata", "source_sha", "event_sha", "destination", "github_output"]
+
+[tasks.ci-r-dependencies]
+cmd = '''python -B .github/ci/run_r_helper.py --r-executable='{{ r_executable | replace("'", "'\"'\"'") }}' --helper=prepare-rhub-dependencies -- --environment-id='{{ environment_id | replace("'", "'\"'\"'") }}' --tarball='{{ tarball | replace("'", "'\"'\"'") }}' --library='{{ library | replace("'", "'\"'\"'") }}' --evidence='{{ evidence | replace("'", "'\"'\"'") }}' --install-package='{{ install_package | replace("'", "'\"'\"'") }}' '''
+cwd = "."
+args = ["r_executable", "environment_id", "tarball", "library", "evidence", "install_package"]
+env = { LC_ALL = "C", R_ENVIRON_USER = "{% if pixi.is_win %}NUL{% else %}/dev/null{% endif %}", R_PROFILE_USER = "{% if pixi.is_win %}NUL{% else %}/dev/null{% endif %}" }
+
+[tasks.ci-verify-dependencies]
+cmd = '''python -B .github/ci/verify_dependency_evidence.py --environment-id='{{ environment_id | replace("'", "'\"'\"'") }}' --evidence='{{ evidence | replace("'", "'\"'\"'") }}' '''
+cwd = "."
+args = ["environment_id", "evidence"]
+
+[tasks.ci-verify-mkl]
+cmd = '''python -B .github/ci/run_r_helper.py --r-executable='{{ r_executable | replace("'", "'\"'\"'") }}' --helper=verify-mkl -- --policy=.github/ci/check-policy.yml --evidence='{{ evidence | replace("'", "'\"'\"'") }}' '''
+cwd = "."
+args = ["r_executable", "evidence"]
+env = { LC_ALL = "C", R_ENVIRON_USER = "{% if pixi.is_win %}NUL{% else %}/dev/null{% endif %}", R_PROFILE_USER = "{% if pixi.is_win %}NUL{% else %}/dev/null{% endif %}" }
+
+[tasks.ci-unit]
+cmd = '''python .github/ci/run_unit_driver.py --r-executable='{{ r_executable | replace("'", "'\"'\"'") }}' --package='{{ package | replace("'", "'\"'\"'") }}' --load-package='{{ mode | replace("'", "'\"'\"'") }}' --context='{{ runner_context | replace("'", "'\"'\"'") }}' --policy=.github/ci/check-policy.yml --output='{{ output | replace("'", "'\"'\"'") }}' {% if filter %}--filter='{{ filter | replace("'", "'\"'\"'") }}' {% endif %}'''
+cwd = "."
+args = ["mode", "output", "r_executable", "runner_context", { arg = "package", default = "." }, { arg = "filter", default = "" }]
 env = { LC_ALL = "C", R_ENVIRON_USER = "{% if pixi.is_win %}NUL{% else %}/dev/null{% endif %}", R_PROFILE_USER = "{% if pixi.is_win %}NUL{% else %}/dev/null{% endif %}" }
 
 [tasks.ci-check]
-cmd = '''python .github/ci/run_driver.py --manifest=.github/ci/check-matrix.yml --environment-id='{{ environment_id | replace("'", "'\"'\"'") }}' --driver='{{ driver | replace("'", "'\"'\"'") }}' --executable='{{ executable | replace("'", "'\"'\"'") }}' --tarball='{{ tarball | replace("'", "'\"'\"'") }}' --metadata='{{ metadata | replace("'", "'\"'\"'") }}' --source-sha='{{ source_sha | replace("'", "'\"'\"'") }}' --event-sha='{{ event_sha | replace("'", "'\"'\"'") }}' --evidence='{{ evidence | replace("'", "'\"'\"'") }}' {% if r_entrypoint %}--r-entrypoint='{{ r_entrypoint | replace("'", "'\"'\"'") }}' {% endif %}--'''
+cmd = '''python .github/ci/run_driver.py --manifest=.github/ci/check-matrix.yml --environment-id='{{ environment_id | replace("'", "'\"'\"'") }}' --driver='{{ driver | replace("'", "'\"'\"'") }}' --executable='{{ executable | replace("'", "'\"'\"'") }}' --tarball='{{ tarball | replace("'", "'\"'\"'") }}' --metadata='{{ metadata | replace("'", "'\"'\"'") }}' --source-sha='{{ source_sha | replace("'", "'\"'\"'") }}' --event-sha='{{ event_sha | replace("'", "'\"'\"'") }}' --evidence='{{ evidence | replace("'", "'\"'\"'") }}' {% if r_entrypoint %}--r-entrypoint='{{ r_entrypoint | replace("'", "'\"'\"'") }}' {% endif %}{% if required_r_executable %}--required-r-executable='{{ required_r_executable | replace("'", "'\"'\"'") }}' {% endif %}--'''
 cwd = "."
 args = [
   "environment_id",
@@ -72,7 +94,29 @@ args = [
   "event_sha",
   "evidence",
   { arg = "r_entrypoint", default = "" },
+  { arg = "required_r_executable", default = "" },
 ]
+
+[tasks.ci-native-check]
+cmd = '''python -B .github/ci/run_native_check.py --manifest=.github/ci/check-matrix.yml --environment-id='{{ environment_id | replace("'", "'\"'\"'") }}' --wrapper='{{ wrapper | replace("'", "'\"'\"'") }}' --required-r-executable='{{ r_executable | replace("'", "'\"'\"'") }}' --tarball='{{ tarball | replace("'", "'\"'\"'") }}' --metadata='{{ metadata | replace("'", "'\"'\"'") }}' --source-sha='{{ source_sha | replace("'", "'\"'\"'") }}' --event-sha='{{ event_sha | replace("'", "'\"'\"'") }}' --work-dir='{{ work_dir | replace("'", "'\"'\"'") }}' --check-library='{{ check_library | replace("'", "'\"'\"'") }}' --evidence='{{ evidence | replace("'", "'\"'\"'") }}' --log='{{ log | replace("'", "'\"'\"'") }}' '''
+cwd = "."
+args = ["environment_id", "wrapper", "r_executable", "tarball", "metadata", "source_sha", "event_sha", "work_dir", "check_library", "evidence", "log"]
+
+[tasks.ci-unit-result]
+cmd = '''python -B .github/ci/adapt_unit_result.py --diagnostic='{{ diagnostic | replace("'", "'\"'\"'") }}' --manifest=.github/ci/check-matrix.yml --policy=.github/ci/check-policy.yml --output='{{ output | replace("'", "'\"'\"'") }}' --environment-id='{{ environment_id | replace("'", "'\"'\"'") }}' --source-sha='{{ source_sha | replace("'", "'\"'\"'") }}' --event-sha='{{ event_sha | replace("'", "'\"'\"'") }}' --tarball-sha256='{{ tarball_sha256 | replace("'", "'\"'\"'") }}' {% if sidecar_1 %}--sidecar='{{ sidecar_1 | replace("'", "'\"'\"'") }}' {% endif %}{% if sidecar_2 %}--sidecar='{{ sidecar_2 | replace("'", "'\"'\"'") }}' {% endif %}'''
+cwd = "."
+args = ["diagnostic", "output", "environment_id", "source_sha", "event_sha", "tarball_sha256", { arg = "sidecar_1", default = "" }, { arg = "sidecar_2", default = "" }]
+
+[tasks.ci-package-result]
+cmd = '''python -B .github/ci/run_r_helper.py --r-executable='{{ r_executable | replace("'", "'\"'\"'") }}' --helper=parse-check -- --log='{{ log | replace("'", "'\"'\"'") }}' --reported-log-path='{{ reported_log_path | replace("'", "'\"'\"'") }}' --policy=.github/ci/check-policy.yml --output='{{ output | replace("'", "'\"'\"'") }}' --environment-id='{{ environment_id | replace("'", "'\"'\"'") }}' --source-sha='{{ source_sha | replace("'", "'\"'\"'") }}' --event-sha='{{ event_sha | replace("'", "'\"'\"'") }}' --tarball-sha256='{{ tarball_sha256 | replace("'", "'\"'\"'") }}' --check-exit-code='{{ check_exit_code | replace("'", "'\"'\"'") }}' '''
+cwd = "."
+args = ["r_executable", "log", "reported_log_path", "output", "environment_id", "source_sha", "event_sha", "tarball_sha256", "check_exit_code"]
+env = { LC_ALL = "C", R_ENVIRON_USER = "{% if pixi.is_win %}NUL{% else %}/dev/null{% endif %}", R_PROFILE_USER = "{% if pixi.is_win %}NUL{% else %}/dev/null{% endif %}" }
+
+[tasks.ci-finalize-result]
+cmd = '''python -B .github/ci/finalize_result.py --result='{{ result | replace("'", "'\"'\"'") }}' --expected-kind='{{ expected_kind | replace("'", "'\"'\"'") }}' --environment-id='{{ environment_id | replace("'", "'\"'\"'") }}' --source-sha='{{ source_sha | replace("'", "'\"'\"'") }}' --event-sha='{{ event_sha | replace("'", "'\"'\"'") }}' --tarball-sha256='{{ tarball_sha256 | replace("'", "'\"'\"'") }}' --job-status='{{ job_status | replace("'", "'\"'\"'") }}' --producer-outcome='{{ producer_outcome | replace("'", "'\"'\"'") }}' '''
+cwd = "."
+args = ["result", "expected_kind", "environment_id", "source_sha", "event_sha", "tarball_sha256", "job_status", "producer_outcome"]
 
 [tasks.ci-summary]
 cmd = '''python .github/ci/aggregate_results.py --manifest='{{ manifest | replace("'", "'\"'\"'") }}' --results-root='{{ results_root | replace("'", "'\"'\"'") }}' --expected-source-sha='{{ expected_source_sha | replace("'", "'\"'\"'") }}' --expected-event-sha='{{ expected_event_sha | replace("'", "'\"'\"'") }}' --expected-tarball-sha256='{{ expected_tarball_sha256 | replace("'", "'\"'\"'") }}' --summary='{{ summary | replace("'", "'\"'\"'") }}' '''

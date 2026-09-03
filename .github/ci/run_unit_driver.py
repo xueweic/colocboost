@@ -32,6 +32,7 @@ def _argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--context", required=True)
     parser.add_argument("--policy", required=True)
     parser.add_argument("--output", required=True)
+    parser.add_argument("--filter")
     return parser
 
 
@@ -54,6 +55,8 @@ def main(argv: list[str] | None = None) -> int:
         f"--policy={arguments.policy}",
         f"--output={arguments.output}",
     ]
+    if arguments.filter is not None:
+        command.append(f"--filter={arguments.filter}")
     try:
         completed = subprocess.run(command, check=False, shell=False)
     except OSError as error:

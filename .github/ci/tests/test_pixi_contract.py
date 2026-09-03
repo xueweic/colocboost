@@ -128,6 +128,14 @@ def test_top_level_task_interfaces_are_explicit(manifest):
         "ci-unit",
         "ci-check",
         "ci-summary",
+        "ci-extract-source",
+        "ci-r-dependencies",
+        "ci-verify-dependencies",
+        "ci-verify-mkl",
+        "ci-native-check",
+        "ci-unit-result",
+        "ci-package-result",
+        "ci-finalize-result",
     }
 
     assert task_args(tasks["ci-unit"]) == [
@@ -135,6 +143,8 @@ def test_top_level_task_interfaces_are_explicit(manifest):
         "output",
         "r_executable",
         "runner_context",
+        {"arg": "package", "default": "."},
+        {"arg": "filter", "default": ""},
     ]
     assert task_args(tasks["ci-prepare"]) == [
         "tarball",
@@ -164,6 +174,31 @@ def test_top_level_task_interfaces_are_explicit(manifest):
         "event_sha",
         "evidence",
         {"arg": "r_entrypoint", "default": ""},
+        {"arg": "required_r_executable", "default": ""},
+    ]
+    assert task_args(tasks["ci-extract-source"]) == [
+        "tarball", "metadata", "source_sha", "event_sha", "destination", "github_output"
+    ]
+    assert task_args(tasks["ci-r-dependencies"]) == [
+        "r_executable", "environment_id", "tarball", "library", "evidence", "install_package"
+    ]
+    assert task_args(tasks["ci-verify-dependencies"]) == ["environment_id", "evidence"]
+    assert task_args(tasks["ci-verify-mkl"]) == ["r_executable", "evidence"]
+    assert task_args(tasks["ci-native-check"]) == [
+        "environment_id", "wrapper", "r_executable", "tarball", "metadata",
+        "source_sha", "event_sha", "work_dir", "check_library", "evidence", "log"
+    ]
+    assert task_args(tasks["ci-unit-result"])[-2:] == [
+        {"arg": "sidecar_1", "default": ""},
+        {"arg": "sidecar_2", "default": ""},
+    ]
+    assert task_args(tasks["ci-package-result"]) == [
+        "r_executable", "log", "reported_log_path", "output", "environment_id",
+        "source_sha", "event_sha", "tarball_sha256", "check_exit_code"
+    ]
+    assert task_args(tasks["ci-finalize-result"]) == [
+        "result", "expected_kind", "environment_id", "source_sha", "event_sha",
+        "tarball_sha256", "job_status", "producer_outcome"
     ]
     assert task_args(tasks["ci-summary"]) == [
         "manifest",
@@ -198,6 +233,14 @@ def test_top_level_task_interfaces_are_explicit(manifest):
     assert ".github/ci/run_driver.py" in commands["ci-check"]
     assert commands["ci-check"].rstrip().endswith("--")
     assert ".github/ci/aggregate_results.py" in commands["ci-summary"]
+    assert ".github/ci/extract_source.py" in commands["ci-extract-source"]
+    assert "--helper=prepare-rhub-dependencies" in commands["ci-r-dependencies"]
+    assert ".github/ci/verify_dependency_evidence.py" in commands["ci-verify-dependencies"]
+    assert "--helper=verify-mkl" in commands["ci-verify-mkl"]
+    assert ".github/ci/run_native_check.py" in commands["ci-native-check"]
+    assert ".github/ci/adapt_unit_result.py" in commands["ci-unit-result"]
+    assert "--helper=parse-check" in commands["ci-package-result"]
+    assert ".github/ci/finalize_result.py" in commands["ci-finalize-result"]
     assert all(task.get("cwd") == "." for task in tasks.values())
 
 
@@ -217,7 +260,7 @@ def test_typed_task_values_are_shell_quoted(manifest):
             "event_sha",
             "github_output",
         ),
-        "ci-unit": ("mode", "output", "r_executable", "runner_context"),
+        "ci-unit": ("mode", "output", "r_executable", "runner_context", "package", "filter"),
         "ci-check": (
             "environment_id",
             "driver",
@@ -228,7 +271,16 @@ def test_typed_task_values_are_shell_quoted(manifest):
             "event_sha",
             "evidence",
             "r_entrypoint",
+            "required_r_executable",
         ),
+        "ci-extract-source": ("tarball", "metadata", "source_sha", "event_sha", "destination", "github_output"),
+        "ci-r-dependencies": ("r_executable", "environment_id", "tarball", "library", "evidence", "install_package"),
+        "ci-verify-dependencies": ("environment_id", "evidence"),
+        "ci-verify-mkl": ("r_executable", "evidence"),
+        "ci-native-check": ("environment_id", "wrapper", "r_executable", "tarball", "metadata", "source_sha", "event_sha", "work_dir", "check_library", "evidence", "log"),
+        "ci-unit-result": ("diagnostic", "output", "environment_id", "source_sha", "event_sha", "tarball_sha256", "sidecar_1", "sidecar_2"),
+        "ci-package-result": ("r_executable", "log", "reported_log_path", "output", "environment_id", "source_sha", "event_sha", "tarball_sha256", "check_exit_code"),
+        "ci-finalize-result": ("result", "expected_kind", "environment_id", "source_sha", "event_sha", "tarball_sha256", "job_status", "producer_outcome"),
         "ci-summary": (
             "manifest",
             "results_root",

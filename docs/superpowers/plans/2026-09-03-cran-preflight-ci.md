@@ -42,6 +42,12 @@
 - .github/ci/aggregate_results.py: fail-closed cross-row aggregation.
 - .github/ci/run_driver.py: explicit r-binary/native-wrapper execution.
 - .github/ci/run_unit_driver.py: explicit R/Rscript binding for unit diagnostics.
+- .github/ci/extract_source.py: traversal-safe extraction of the verified shared tarball.
+- .github/ci/run_r_helper.py: fixed-script launcher bound to an absolute R/Rscript pair.
+- .github/ci/run_native_check.py: fresh-library native-wrapper execution and unique real-log discovery.
+- .github/ci/prepare-rhub-dependencies.R: exact MKL and noSuggests dependency preparation and runtime evidence.
+- .github/ci/verify_dependency_evidence.py: fail-closed validation of the dependency policy actually observed.
+- .github/ci/adapt_unit_result.py: strict full-suite and required-sidecar adapter.
 - .github/ci/run-unit-tests.R: structured source or installed unit-test runner.
 - .github/ci/run-r-cmd-check.R: package-check log classification and result finalization.
 - .github/ci/verify-mkl.R: runtime MKL identity proof.
@@ -418,13 +424,35 @@ Confirm no push occurs in Task 8. The first fork run is deferred until Tasks 9-1
 
 **Files:**
 - Create: .github/ci/verify-mkl.R
+- Create: .github/ci/extract_source.py
+- Create: .github/ci/run_r_helper.py
+- Create: .github/ci/run_native_check.py
+- Create: .github/ci/prepare-rhub-dependencies.R
+- Create: .github/ci/verify_dependency_evidence.py
 - Modify: .github/workflows/cran-preflight.yml
 - Modify: .github/ci/check-matrix.yml
+- Modify: .github/ci/validate_manifest.py
+- Modify: .github/ci/run_driver.py
+- Modify: .github/ci/run_unit_driver.py
+- Modify: .github/ci/adapt_unit_result.py
+- Modify: pixi.toml
 - Create: .github/ci/tests/test-mkl-policy.R
+- Create: .github/ci/tests/test_extract_source.py
+- Create: .github/ci/tests/test_r_helper_driver.py
+- Create: .github/ci/tests/test_native_check.py
+- Create: .github/ci/tests/test_dependency_evidence.py
+- Modify: .github/ci/tests/test-workflow-policy.py
+- Modify: .github/ci/tests/test_driver.py
+- Modify: .github/ci/tests/test_unit_driver.py
+- Modify: .github/ci/tests/test_manifest.py
+- Modify: .github/ci/tests/test_pixi_contract.py
+- Modify: .github/ci/tests/test_aggregate.py
 
 **Interfaces:**
-- Consumes: R-hub mkl and nosuggests native wrappers plus the shared tarball.
-- Produces: direct MKL and noSuggests package-check results plus their declared unit results and diagnostic runtime proof.
+- Consumes: immutable R-hub mkl and nosuggests images, their checksum-bound native wrappers, and the one verified shared tarball.
+- Produces: independent direct MKL and noSuggests package-check results, independent declared unit results, exact required MKL regression sidecars, and validated runtime/dependency proof.
+- Native wrapper interface: accept exactly one literal `{tarball-parent}`, bind PATH `R` to the manifest-declared absolute system R, run in a fresh work directory and check library, preserve the wrapper exit, and discover exactly one regular non-symlink `.Rcheck/00check.log`.
+- Unit interface: extract the verified tarball safely; run MKL source tests from that tree and noSuggests installed tests from the separate unit library. Filtered MKL runs are diagnostics only and the adapter requires the exact manifest sidecar set before emitting the full-suite result.
 
 - [ ] **Step 1: Test MKL proof rejection locally with non-MKL R**
 
@@ -440,12 +468,12 @@ After a matrix multiply, require /proc/self/maps to contain libmkl_core, an LP64
 
 - [ ] **Step 3: Add native-wrapper jobs**
 
-Run ghcr.io/r-hub/containers/mkl and ghcr.io/r-hub/containers/nosuggests by immutable digest. The MKL row runs targeted test_utils.R/test_Xref.R, full source tests, then package check. The noSuggests row calls the container r-check policy, proves ashr and susieR absent, confirms testthat is the allowed framework exception, and requires nonzero installed-test counts.
+Run ghcr.io/r-hub/containers/mkl and ghcr.io/r-hub/containers/nosuggests by immutable digest. Prepare dependencies with the declared absolute system R and verify structured evidence before testing. The MKL row runs targeted test_utils.R/test_Xref.R sidecars, the full source suite, then its native package check. The noSuggests row installs only hard dependencies, the upstream-recognized testing frameworks, and declared vignette builders; it proves non-exempt Suggests such as ashr and susieR are unavailable, installs the verified tarball with tests into a separate unit library, runs the full installed suite, and requires a nonempty native `testthat.Rout`. Package and unit finalization remain independent so one result cannot relabel the other as infrastructure failure.
 
 - [ ] **Step 4: Commit locally and enforce stop/go without pushing**
 
 ~~~bash
-git add .github/ci/verify-mkl.R .github/ci/tests/test-mkl-policy.R .github/workflows/cran-preflight.yml .github/ci/check-matrix.yml
+git add .github/ci .github/workflows/cran-preflight.yml pixi.toml docs/superpowers/plans/2026-09-03-cran-preflight-ci.md docs/superpowers/specs/2026-09-03-cran-preflight-ci-design.md
 git commit -m "ci: prove MKL and noSuggests environments"
 ~~~
 

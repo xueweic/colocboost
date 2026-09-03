@@ -275,6 +275,11 @@ runner will:
 
 The MKL environment additionally runs `test_utils.R` and `test_Xref.R` before
 the complete suite so the CRAN regression is isolated clearly in the log.
+Those filtered runs are diagnostic sidecars, not substitute aggregate results.
+The adapter requires exactly the sidecars declared by the manifest, proves
+their filters and source context, and accepts each only with a nonzero pass
+count and zero failures, errors, warnings, empty tests, skip-like successes, or
+skips. The aggregate unit result always comes from the unfiltered full suite.
 
 Skip handling is explicit rather than inferred from a baseline count. Each
 allowed skip is keyed by execution context, test file, test description, exact
@@ -302,6 +307,16 @@ runs an explicit installed-package test invocation with the allowed `testthat`,
 then the container-native package check, and proves that both produced nonzero
 test counts. It records the installed package set and proves that non-exempt
 Suggests such as `ashr` and `susieR` are unavailable.
+
+Both special rows consume the same metadata-verified source tarball. A
+repository-owned extractor rejects path traversal, links, special files,
+duplicate members, and multiple package roots. MKL source tests run from that
+extracted tree; noSuggests installs that tarball with `--install-tests` and
+runs against the installed package directory. Unit and native-check libraries
+are separate and initially absent. Structured dependency evidence records
+effective package availability and packages installed into the lane library;
+a separate verifier rejects planned-only, stale, or fabricated evidence before
+either result can pass.
 
 The design review found one pre-existing test-only defect that would make a
 green gate misleading: one block in `test_inference.R` reads the misspelled or
@@ -336,6 +351,11 @@ not a production-code change; any broader test refactor remains out of scope.
 - Full logs and the `.Rcheck` directory are uploaded even on failure.
 - The noSuggests package check uses its container-native dependency policy; it
   does not preinstall the package's ordinary Suggests through Pixi.
+- Special native checks run their checksum-bound wrapper in a fresh work
+  directory with a fresh check library. The wrapper receives a directory that
+  contains exactly the verified tarball; orchestration requires exactly one
+  regular non-symlink `.Rcheck/00check.log`, preserves the wrapper exit, and,
+  for noSuggests, requires a nonempty `testthat.Rout` before parsing results.
 
 ## MKL proof and regression gate
 
@@ -352,6 +372,15 @@ additional check as closely as the available container permits. It will:
 5. Enable MKL verbose output for a small operation and preserve that evidence.
 6. Run the targeted regression tests, the complete unit-test suite, and the
    full source-package check.
+
+The MKL manifest binds `/usr/local/bin/r-check`,
+`/opt/R/devel-mkl/bin/R`, and wrapper input `tarball-parent`; noSuggests binds
+the same wrapper path, `/opt/R/devel/bin/R`, and the same input form. The
+driver verifies that PATH resolves exactly to the declared system R and never
+accepts a Pixi R shadow. The MKL proof requires the core, LP64 interface, and
+sequential libraries after a matrix operation, rejects threaded MKL and other
+BLAS implementations, and records thread variables plus setvars and verbose
+runtime evidence.
 
 Merely installing an MKL package is insufficient. A job that silently falls
 back to OpenBLAS or reference BLAS must fail before running the tests.
@@ -423,6 +452,18 @@ the diagnostic artifact. There is no automatic retry for test or check failures.
 - `.github/ci/finalize_result.py`: fail-closed terminal producer result
   finalization.
 - `.github/ci/run_unit_driver.py`: absolute R/Rscript binding for unit runners.
+- `.github/ci/extract_source.py`: safe extraction of the verified shared source
+  artifact for source-mode testing.
+- `.github/ci/run_r_helper.py`: fixed repository-script launcher using an
+  explicit absolute system R and sibling Rscript.
+- `.github/ci/run_native_check.py`: fresh native-wrapper invocation, wrapper
+  exit preservation, and strict check-log/test-output discovery.
+- `.github/ci/prepare-rhub-dependencies.R`: exact MKL and noSuggests dependency
+  policy execution plus structured actual-state evidence.
+- `.github/ci/verify_dependency_evidence.py`: closed validation of that actual
+  dependency state before producers can pass.
+- `.github/ci/adapt_unit_result.py`: full-suite result adapter with exact
+  manifest-required MKL sidecar enforcement.
 - `.github/ci/run-unit-tests.R`: structured, strict unit-test runner.
 - `.github/ci/check-policy.yml`: exact skip-policy, semantic-skip, NOTE, and
   numerical-backend rules consumed by the unit and package-check runners.

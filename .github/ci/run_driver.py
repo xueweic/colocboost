@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 import os
+import shutil
 import stat
 import subprocess
 import sys
@@ -20,6 +21,7 @@ from validate_manifest import load_manifest, validate_manifest
 
 _DRIVERS = frozenset({"r-binary", "native-wrapper"})
 _TARBALL_TOKEN = "{tarball}"
+_TARBALL_PARENT_TOKEN = "{tarball-parent}"
 _EVIDENCE_ENVIRONMENT_FIELDS = (
     "PATH",
     "R_HOME",
@@ -137,6 +139,76 @@ def _normalize_argv(argv: Sequence[str | os.PathLike[str]]) -> list[str]:
     return normalized
 
 
+def _require_tarball_parent(tarball: Path) -> Path:
+    parent = tarball.parent
+    try:
+        parent_status = parent.lstat()
+    except OSError as error:
+        raise ValueError(f"tarball parent does not exist: {parent}") from error
+    if stat.S_ISLNK(parent_status.st_mode) or not stat.S_ISDIR(parent_status.st_mode):
+        raise ValueError(f"tarball parent must be a regular non-symlink directory: {parent}")
+
+    candidates = []
+    try:
+        entries = list(parent.iterdir())
+    except OSError as error:
+        raise ValueError(f"could not inspect tarball parent {parent}: {error}") from error
+    for entry in entries:
+        if entry.name.endswith(".tar.gz"):
+            candidates.append(entry)
+    if len(candidates) != 1:
+        raise ValueError(
+            "tarball parent must contain exactly one regular non-symlink *.tar.gz"
+        )
+    candidate = candidates[0]
+    try:
+        candidate_status = candidate.lstat()
+    except OSError as error:
+        raise ValueError(
+            "tarball parent must contain exactly one regular non-symlink *.tar.gz"
+        ) from error
+    if stat.S_ISLNK(candidate_status.st_mode) or not stat.S_ISREG(candidate_status.st_mode):
+        raise ValueError(
+            "tarball parent must contain exactly one regular non-symlink *.tar.gz"
+        )
+    if candidate != tarball:
+        raise ValueError("tarball parent does not contain the verified tarball")
+    return parent
+
+
+def _verify_native_r_binding(
+    manifest_row: Mapping[str, Any],
+    executable: Path,
+    required_r_executable: str | os.PathLike[str] | None,
+    environment: Mapping[str, str],
+) -> tuple[Path, Path]:
+    if required_r_executable is None:
+        raise ValueError("required_r_executable is mandatory for native-wrapper")
+    system_r = _require_executable(required_r_executable, label="required system R")
+    if system_r.name not in {"R", "R.exe"}:
+        raise ValueError("required system R executable basename must be R or R.exe")
+
+    declared_wrapper = manifest_row.get("wrapper_path")
+    if declared_wrapper is not None and os.fspath(executable) != declared_wrapper:
+        raise ValueError("native wrapper executable does not match manifest wrapper_path")
+    declared_r = manifest_row.get("system_r")
+    if declared_r is not None and os.fspath(system_r) != declared_r:
+        raise ValueError("required system R does not match manifest system_r")
+
+    path_value = environment.get("PATH")
+    if not isinstance(path_value, str) or not path_value:
+        raise ValueError("PATH must resolve the required system R for native-wrapper")
+    selected = shutil.which("R", path=path_value)
+    if selected is None:
+        raise ValueError("PATH does not resolve R for native-wrapper")
+    path_r = _require_executable(Path(os.path.abspath(selected)), label="PATH R")
+    if path_r != system_r:
+        raise ValueError(
+            f"PATH R {path_r} is not the required system R {system_r}"
+        )
+    return system_r, path_r
+
+
 def _build_command(
     driver: str,
     executable: Path,
@@ -173,6 +245,7 @@ def run_driver(
     expected_source_sha: str,
     expected_event_sha: str,
     r_entrypoint: str | None = None,
+    required_r_executable: str | os.PathLike[str] | None = None,
     evidence_path: str | os.PathLike[str] | None = None,
     environment: Mapping[str, str] | None = None,
     cwd: str | os.PathLike[str] | None = None,
@@ -191,11 +264,38 @@ def run_driver(
         )
 
     executable_path = _require_executable(executable)
-    unbound_arguments = _normalize_argv(argv)
-    if unbound_arguments.count(_TARBALL_TOKEN) != 1:
-        raise ValueError(
-            "argv must contain exactly one literal {tarball} placeholder"
+    selected_environment = os.environ if environment is None else environment
+    required_system_r = None
+    path_r = None
+    if manifest_driver == "native-wrapper":
+        required_system_r, path_r = _verify_native_r_binding(
+            manifest_row,
+            executable_path,
+            required_r_executable,
+            selected_environment,
         )
+    elif required_r_executable is not None:
+        raise ValueError("required_r_executable is forbidden for r-binary")
+
+    unbound_arguments = _normalize_argv(argv)
+    token_count = sum(
+        unbound_arguments.count(token)
+        for token in (_TARBALL_TOKEN, _TARBALL_PARENT_TOKEN)
+    )
+    if token_count != 1:
+        raise ValueError(
+            "argv must contain exactly one literal {tarball} or {tarball-parent} placeholder"
+        )
+    if manifest_driver == "r-binary" and _TARBALL_PARENT_TOKEN in unbound_arguments:
+        raise ValueError("r-binary requires the literal {tarball} placeholder")
+    declared_input = manifest_row.get("wrapper_input")
+    if declared_input is not None:
+        expected_token = {
+            "tarball": _TARBALL_TOKEN,
+            "tarball-parent": _TARBALL_PARENT_TOKEN,
+        }.get(declared_input)
+        if expected_token is None or expected_token not in unbound_arguments:
+            raise ValueError("argv does not match manifest wrapper_input")
     verified_tarball = Path(os.path.abspath(os.fspath(tarball)))
     verify_tarball(
         verified_tarball,
@@ -203,10 +303,17 @@ def run_driver(
         expected_source_sha=expected_source_sha,
         expected_event_sha=expected_event_sha,
     )
-    bound_arguments = [
-        str(verified_tarball) if argument == _TARBALL_TOKEN else argument
-        for argument in unbound_arguments
-    ]
+    tarball_parent = None
+    if _TARBALL_PARENT_TOKEN in unbound_arguments:
+        tarball_parent = _require_tarball_parent(verified_tarball)
+    bound_arguments = []
+    for argument in unbound_arguments:
+        if argument == _TARBALL_TOKEN:
+            bound_arguments.append(str(verified_tarball))
+        elif argument == _TARBALL_PARENT_TOKEN:
+            bound_arguments.append(str(tarball_parent))
+        else:
+            bound_arguments.append(argument)
     command, invoked_executable = _build_command(
         manifest_driver, executable_path, bound_arguments, r_entrypoint
     )
@@ -224,6 +331,13 @@ def run_driver(
             ),
         )
         evidence["invoked_executable"] = invoked_evidence["executable"]
+    if required_system_r is not None:
+        r_evidence = capture_environment_evidence(
+            required_system_r,
+            environment=selected_environment,
+        )
+        evidence["required_r_executable"] = r_evidence["executable"]
+        evidence["path_r_resolution"] = os.fspath(path_r)
     if evidence_path is not None:
         _atomic_write_json(Path(evidence_path), evidence)
 
@@ -251,6 +365,7 @@ def _argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--event-sha", required=True)
     parser.add_argument("--evidence", required=True)
     parser.add_argument("--r-entrypoint", choices=("rscript", "r-cmd"))
+    parser.add_argument("--required-r-executable")
     parser.add_argument("driver_argv", nargs=argparse.REMAINDER)
     return parser
 
@@ -283,6 +398,7 @@ def main(argv: list[str] | None = None) -> int:
             expected_source_sha=args.source_sha,
             expected_event_sha=args.event_sha,
             r_entrypoint=args.r_entrypoint,
+            required_r_executable=args.required_r_executable,
             evidence_path=args.evidence,
         )
     except ValueError as error:

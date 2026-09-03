@@ -379,7 +379,17 @@ def detailed_case(case_class="pass", *, file="test-pass.R", title="pass case", r
     }
 
 
-def detailed_report(context, mode, cases, *, status="pass", matched=None, unused=None, violations=None):
+def detailed_report(
+    context,
+    mode,
+    cases,
+    *,
+    status="pass",
+    matched=None,
+    unused=None,
+    violations=None,
+    filter_value=None,
+):
     classes = [case["class"] for case in cases]
     summary = {
         "total": len(cases),
@@ -415,8 +425,8 @@ def detailed_report(context, mode, cases, *, status="pass", matched=None, unused
             "load_package": mode,
             "package": "/tmp/colocboost",
             "r_version": "4.5.1",
-            "suite": "full",
-            "filter": None,
+            "suite": "full" if filter_value is None else "filtered",
+            "filter": filter_value,
         },
         "summary": summary,
         "cases": cases,
@@ -450,12 +460,29 @@ def valid_nosuggests_report(policy):
     )
 
 
-def run_adapter(tmp_path, document, environment_id):
+_AUTO_SIDECARS = object()
+
+
+def valid_mkl_sidecars():
+    return [
+        detailed_report(
+            "mkl",
+            "source",
+            [detailed_case(file=filename, title=f"{filename} passes")],
+            filter_value=filter_value,
+        )
+        for filename, filter_value in (
+            ("test_utils.R", "^utils$"),
+            ("test_Xref.R", "^Xref$"),
+        )
+    ]
+
+
+def run_adapter(tmp_path, document, environment_id, sidecars=_AUTO_SIDECARS):
     diagnostic = tmp_path / "diagnostic.json"
     output = tmp_path / "result.json"
     diagnostic.write_text(json.dumps(document) + "\n", encoding="utf-8")
-    completed = subprocess.run(
-        [
+    arguments = [
             sys.executable,
             "-B",
             os.fspath(UNIT_ADAPTER),
@@ -467,7 +494,15 @@ def run_adapter(tmp_path, document, environment_id):
             f"--source-sha={SOURCE_SHA}",
             f"--event-sha={EVENT_SHA}",
             f"--tarball-sha256={TARBALL_SHA256}",
-        ],
+        ]
+    if sidecars is _AUTO_SIDECARS:
+        sidecars = valid_mkl_sidecars() if environment_id == "mkl" else []
+    for index, sidecar in enumerate(sidecars):
+        sidecar_path = tmp_path / f"sidecar-{index}.json"
+        sidecar_path.write_text(json.dumps(sidecar) + "\n", encoding="utf-8")
+        arguments.append(f"--sidecar={sidecar_path}")
+    completed = subprocess.run(
+        arguments,
         cwd=ROOT,
         check=False,
         capture_output=True,
@@ -493,6 +528,83 @@ def test_unit_adapter_accepts_valid_source_report(tmp_path):
         "warning": 0,
         "skip": 0,
     }
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "missing",
+        "extra",
+        "duplicate",
+        "wrong-filter",
+        "wrong-file",
+        "wrong-mode",
+        "skip",
+        "zero-pass",
+        "violation",
+    ],
+)
+def test_mkl_unit_adapter_requires_exact_green_targeted_sidecars(tmp_path, mutation):
+    report = detailed_report("mkl", "source", [detailed_case()])
+    sidecars = valid_mkl_sidecars()
+    if mutation == "missing":
+        sidecars.pop()
+    elif mutation == "extra":
+        sidecars.append(
+            detailed_report(
+                "mkl",
+                "source",
+                [detailed_case(file="test_other.R")],
+                filter_value="^other$",
+            )
+        )
+    elif mutation == "duplicate":
+        sidecars[1] = copy.deepcopy(sidecars[0])
+    elif mutation == "wrong-filter":
+        sidecars[0]["environment"]["filter"] = "utils"
+    elif mutation == "wrong-file":
+        sidecars[0]["cases"][0]["file"] = "test_other.R"
+    elif mutation == "wrong-mode":
+        sidecars[0]["environment"]["load_package"] = "installed"
+    elif mutation == "skip":
+        sidecars[0] = detailed_report(
+            "mkl",
+            "source",
+            [detailed_case("skip", file="test_utils.R", reason="bad")],
+            filter_value="^utils$",
+        )
+    elif mutation == "zero-pass":
+        sidecars[0] = detailed_report(
+            "mkl", "source", [], filter_value="^utils$"
+        )
+    else:
+        sidecars[0]["violations"] = [
+            {
+                "type": "infrastructure-error",
+                "message": "sidecar runner failed",
+            }
+        ]
+
+    completed, result = run_adapter(tmp_path, report, "mkl", sidecars=sidecars)
+
+    assert completed.returncode != 0
+    assert result["result_kind"] == "infrastructure"
+    assert result["status"] == "fail"
+
+
+def test_non_mkl_lane_rejects_undeclared_sidecars(tmp_path):
+    report = detailed_report("atlas", "source", [detailed_case()])
+    sidecar = detailed_report(
+        "atlas",
+        "source",
+        [detailed_case(file="test_utils.R")],
+        filter_value="^utils$",
+    )
+
+    completed, result = run_adapter(tmp_path, report, "atlas", sidecars=[sidecar])
+
+    assert completed.returncode != 0
+    assert result["result_kind"] == "infrastructure"
 
 
 def test_unit_adapter_accepts_exact_installed_nosuggests_waivers(tmp_path, policy):

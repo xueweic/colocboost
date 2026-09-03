@@ -541,6 +541,45 @@ def test_direct_rows_require_identity_assertions(manifest):
         validate_manifest(mutated)
 
 
+def test_mkl_and_nosuggests_bind_exact_native_wrapper_interfaces(manifest):
+    expected = {
+        "MKL": {
+            "wrapper_path": "/usr/local/bin/r-check",
+            "system_r": "/opt/R/devel-mkl/bin/R",
+            "wrapper_input": "tarball-parent",
+        },
+        "noSuggests": {
+            "wrapper_path": "/usr/local/bin/r-check",
+            "system_r": "/opt/R/devel/bin/R",
+            "wrapper_input": "tarball-parent",
+        },
+    }
+    for name, contract in expected.items():
+        row = row_for(manifest, name)
+        assert {field: row[field] for field in contract} == contract
+
+
+@pytest.mark.parametrize(
+    ("cran_name", "field", "value"),
+    [
+        ("MKL", "wrapper_path", "/tmp/r-check"),
+        ("MKL", "system_r", "/opt/R/devel/bin/R"),
+        ("MKL", "wrapper_input", "tarball"),
+        ("noSuggests", "wrapper_path", "r-check"),
+        ("noSuggests", "system_r", "/opt/R/devel-mkl/bin/R"),
+        ("noSuggests", "wrapper_input", "tarball"),
+    ],
+)
+def test_special_native_wrapper_bindings_cannot_drift(
+    manifest, cran_name, field, value
+):
+    mutated = copy.deepcopy(manifest)
+    row_for(mutated, cran_name)[field] = value
+
+    with pytest.raises(ValueError, match="native wrapper binding"):
+        validate_manifest(mutated)
+
+
 def test_primary_rows_require_complete_identity_and_tarball_proof(manifest):
     mutated = copy.deepcopy(manifest)
     row_for(mutated, "r-devel-linux-x86_64-fedora-gcc")["proof"].remove("locale")

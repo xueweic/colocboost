@@ -18,9 +18,10 @@ from run_driver import capture_environment_evidence, run_driver  # noqa: E402
 SOURCE_SHA = "a" * 40
 EVENT_SHA = "b" * 40
 TARBALL_TOKEN = "{tarball}"
+TARBALL_PARENT_TOKEN = "{tarball-parent}"
 
 
-def make_executable(path, body):
+def make_executable(path, body="raise SystemExit(0)\n"):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(f"#!{sys.executable}\n{body}")
     path.chmod(path.stat().st_mode | stat.S_IXUSR)
@@ -44,6 +45,12 @@ def invoke(
     metadata,
     **kwargs,
 ):
+    if requested_driver == "native-wrapper" and "required_r_executable" not in kwargs:
+        system_r = make_executable(Path(tarball).parent / "system-r" / "R")
+        selected_environment = os.environ.copy()
+        selected_environment["PATH"] = os.fspath(system_r.parent)
+        kwargs["required_r_executable"] = system_r
+        kwargs.setdefault("environment", selected_environment)
     return run_driver(
         row,
         requested_driver=requested_driver,
@@ -82,6 +89,111 @@ def test_native_wrapper_preserves_absolute_path_and_argv_with_spaces(tmp_path):
         str(tarball.absolute()),
         "literal;not-shell",
     ]
+
+
+def test_native_wrapper_binds_verified_single_tarball_parent_and_system_r(tmp_path):
+    tarball, metadata = make_artifact(tmp_path)
+    output = tmp_path / "captured-parent.json"
+    wrapper = make_executable(
+        tmp_path / "bin" / "wrapper",
+        "import json, pathlib, sys\n"
+        "pathlib.Path(sys.argv[1]).write_text(json.dumps(sys.argv[2:]))\n",
+    )
+    system_r = make_executable(tmp_path / "bin" / "R")
+    environment = os.environ.copy()
+    environment["PATH"] = os.fspath(system_r.parent)
+    evidence = tmp_path / "evidence.json"
+
+    exit_code = run_driver(
+        {
+            "id": "mkl",
+            "driver": "native-wrapper",
+            "wrapper_path": os.fspath(wrapper),
+            "system_r": os.fspath(system_r),
+            "wrapper_input": "tarball-parent",
+        },
+        requested_driver="native-wrapper",
+        executable=wrapper,
+        argv=[os.fspath(output), TARBALL_PARENT_TOKEN],
+        tarball=tarball,
+        metadata=metadata,
+        expected_source_sha=SOURCE_SHA,
+        expected_event_sha=EVENT_SHA,
+        required_r_executable=system_r,
+        evidence_path=evidence,
+        environment=environment,
+    )
+
+    assert exit_code == 0
+    assert json.loads(output.read_text()) == [os.fspath(tarball.parent)]
+    proof = json.loads(evidence.read_text())
+    assert proof["required_r_executable"]["path"] == os.fspath(system_r)
+    assert proof["path_r_resolution"] == os.fspath(system_r)
+
+
+@pytest.mark.parametrize("extra_kind", ["regular", "symlink", "fifo"])
+def test_tarball_parent_rejects_every_ambiguous_or_nonregular_tarball(tmp_path, extra_kind):
+    tarball, metadata = make_artifact(tmp_path)
+    wrapper = make_executable(tmp_path / "bin" / "wrapper")
+    system_r = make_executable(tmp_path / "bin" / "R")
+    extra = tmp_path / "extra.tar.gz"
+    if extra_kind == "regular":
+        extra.write_bytes(b"extra")
+    elif extra_kind == "symlink":
+        extra.symlink_to(tarball)
+    else:
+        os.mkfifo(extra)
+    environment = os.environ.copy()
+    environment["PATH"] = os.fspath(system_r.parent)
+
+    with pytest.raises(ValueError, match="exactly one regular non-symlink"):
+        run_driver(
+            {
+                "id": "mkl",
+                "driver": "native-wrapper",
+                "wrapper_path": os.fspath(wrapper),
+                "system_r": os.fspath(system_r),
+                "wrapper_input": "tarball-parent",
+            },
+            requested_driver="native-wrapper",
+            executable=wrapper,
+            argv=[TARBALL_PARENT_TOKEN],
+            tarball=tarball,
+            metadata=metadata,
+            expected_source_sha=SOURCE_SHA,
+            expected_event_sha=EVENT_SHA,
+            required_r_executable=system_r,
+            environment=environment,
+        )
+
+
+def test_native_wrapper_rejects_path_r_that_is_not_the_required_system_r(tmp_path):
+    tarball, metadata = make_artifact(tmp_path)
+    wrapper = make_executable(tmp_path / "wrapper-bin" / "wrapper")
+    required_r = make_executable(tmp_path / "system" / "R")
+    shadow_r = make_executable(tmp_path / "pixi" / "R")
+    environment = os.environ.copy()
+    environment["PATH"] = os.fspath(shadow_r.parent)
+
+    with pytest.raises(ValueError, match="PATH.*required system R"):
+        run_driver(
+            {
+                "id": "mkl",
+                "driver": "native-wrapper",
+                "wrapper_path": os.fspath(wrapper),
+                "system_r": os.fspath(required_r),
+                "wrapper_input": "tarball-parent",
+            },
+            requested_driver="native-wrapper",
+            executable=wrapper,
+            argv=[TARBALL_PARENT_TOKEN],
+            tarball=tarball,
+            metadata=metadata,
+            expected_source_sha=SOURCE_SHA,
+            expected_event_sha=EVENT_SHA,
+            required_r_executable=required_r,
+            environment=environment,
+        )
 
 
 @pytest.mark.parametrize("kind", ["missing", "relative", "non-executable", "directory"])
@@ -460,6 +572,11 @@ def test_driver_cli_validates_manifest_row_and_propagates_exit(tmp_path):
         "pathlib.Path(sys.argv[1]).write_text(json.dumps(sys.argv[2:]))\n"
         "raise SystemExit(19)\n",
     )
+    system_r = make_executable(tmp_path / "system R" / "bin" / "R")
+    environment = os.environ.copy()
+    environment["PATH"] = os.pathsep.join(
+        [os.fspath(system_r.parent), environment.get("PATH", "")]
+    )
     command_argv = [str(output), "arg with spaces", TARBALL_TOKEN]
 
     completed = subprocess.run(
@@ -469,7 +586,7 @@ def test_driver_cli_validates_manifest_row_and_propagates_exit(tmp_path):
             "--manifest",
             str(CI_DIR / "check-matrix.yml"),
             "--environment-id",
-            "mkl",
+            "atlas",
             "--driver",
             "native-wrapper",
             "--executable",
@@ -484,12 +601,15 @@ def test_driver_cli_validates_manifest_row_and_propagates_exit(tmp_path):
             EVENT_SHA,
             "--evidence",
             str(evidence),
+            "--required-r-executable",
+            str(system_r),
             "--",
             *command_argv,
         ],
         check=False,
         capture_output=True,
         text=True,
+        env=environment,
     )
 
     assert completed.returncode == 19, completed.stderr

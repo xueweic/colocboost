@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from collections import Counter
 from collections.abc import Mapping
@@ -435,6 +436,56 @@ def validate_lane_report(
         raise ValueError("installed unit lane skip cases do not match current policy")
 
 
+def _sidecar_filter(test_file: str) -> str:
+    if not re.fullmatch(r"test_[A-Za-z0-9_-]+\.R", test_file):
+        raise ValueError(f"invalid required sidecar test filename: {test_file!r}")
+    return f"^{re.escape(test_file[5:-2])}$"
+
+
+def validate_sidecar_reports(
+    sidecars: list[Mapping[str, Any]], lane: Mapping[str, Any]
+) -> None:
+    """Require one exact green filtered source report per declared sidecar."""
+
+    required_files = lane["required_sidecar_tests"]
+    if len(sidecars) != len(required_files):
+        raise ValueError("unit sidecars do not match required_sidecar_tests count")
+    expected_by_filter = {
+        _sidecar_filter(test_file): test_file for test_file in required_files
+    }
+    observed_filters = []
+    for index, report in enumerate(sidecars):
+        environment = report["environment"]
+        filter_value = environment["filter"]
+        if report["context"] != lane["runner_context"]:
+            raise ValueError(f"unit sidecar {index} context does not match lane")
+        if environment["load_package"] != "source":
+            raise ValueError(f"unit sidecar {index} must use source mode")
+        if environment["suite"] != "filtered" or filter_value not in expected_by_filter:
+            raise ValueError(f"unit sidecar {index} does not target a required test")
+        expected_file = expected_by_filter[filter_value]
+        if any(case["file"] != expected_file for case in report["cases"]):
+            raise ValueError(f"unit sidecar {index} contains a case from another test file")
+        summary = report["summary"]
+        if (
+            report["status"] != "pass"
+            or report["violations"]
+            or report["matched_allowances"]
+            or report["unused_allowances"]
+            or summary["pass"] < 1
+            or any(
+                summary[field] != 0
+                for field in STRICT_SUMMARY_FIELDS | {"skip"}
+            )
+        ):
+            raise ValueError(f"unit sidecar {index} is not strictly green")
+        observed_filters.append(filter_value)
+    if len(observed_filters) != len(set(observed_filters)):
+        raise ValueError("unit sidecars contain a duplicate target")
+    if set(observed_filters) != set(expected_by_filter):
+        raise ValueError("unit sidecars do not cover required_sidecar_tests")
+
+
 def _identity(arguments, result_kind: str) -> dict[str, Any]:
     return {
         "result_kind": result_kind,
@@ -473,6 +524,7 @@ def _parse_args(argv: list[str]):
     parser.add_argument("--source-sha", required=True)
     parser.add_argument("--event-sha", required=True)
     parser.add_argument("--tarball-sha256", required=True)
+    parser.add_argument("--sidecar", action="append", default=[])
     return parser.parse_args(argv)
 
 
@@ -503,6 +555,11 @@ def main(argv: list[str]) -> int:
             raise ValueError("environment-id does not identify one declared unit lane")
         report = validate_diagnostic(_load_json(Path(arguments.diagnostic)))
         validate_lane_report(report, lanes[0], policy)
+        sidecars = [
+            validate_diagnostic(_load_json(Path(path)))
+            for path in arguments.sidecar
+        ]
+        validate_sidecar_reports(sidecars, lanes[0])
     except (OSError, TypeError, ValueError) as error:
         try:
             _emit_infrastructure(arguments, str(error))
