@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/xueweic/colocboost/.github/ci/result.schema.json",
+  "title": "ColocBoost CRAN preflight environment result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "result_kind",
+    "environment_id",
+    "source_sha",
+    "event_sha",
+    "tarball_sha256",
+    "status"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "result_kind": {
+      "enum": [
+        "unit",
+        "package-check",
+        "applicability",
+        "infrastructure"
+      ]
+    },
+    "environment_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "event_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "tarball_sha256": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "status": {
+      "enum": [
+        "provisional",
+        "pass",
+        "fail",
+        "not-applicable",
+        "missing",
+        "cancelled",
+        "uncovered"
+      ]
+    },
+    "tests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pass", "fail", "error", "warning", "skip"],
+      "properties": {
+        "pass": {"type": "integer", "minimum": 0},
+        "fail": {"type": "integer", "minimum": 0},
+        "error": {"type": "integer", "minimum": 0},
+        "warning": {"type": "integer", "minimum": 0},
+        "skip": {"type": "integer", "minimum": 0}
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["errors", "warnings", "notes", "log_path"],
+      "properties": {
+        "errors": {"type": "integer", "minimum": 0},
+        "warnings": {"type": "integer", "minimum": 0},
+        "notes": {"type": "integer", "minimum": 0},
+        "log_path": {"type": "string", "minLength": 1}
+      }
+    },
+    "predicate": {"type": "string", "minLength": 1},
+    "evidence": {"type": "string", "minLength": 1},
+    "classification": {"type": "string", "minLength": 1},
+    "message": {"type": "string", "minLength": 1}
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"status": {"not": {"const": "provisional"}}},
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "tarball_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "result_kind": {"const": "unit"},
+          "status": {"not": {"const": "provisional"}}
+        },
+        "required": ["result_kind", "status"]
+      },
+      "then": {"required": ["tests"]}
+    },
+    {
+      "if": {
+        "properties": {
+          "result_kind": {"const": "package-check"},
+          "status": {"not": {"const": "provisional"}}
+        },
+        "required": ["result_kind", "status"]
+      },
+      "then": {"required": ["check"]}
+    },
+    {
+      "if": {
+        "properties": {
+          "result_kind": {"const": "applicability"},
+          "status": {"not": {"const": "provisional"}}
+        },
+        "required": ["result_kind", "status"]
+      },
+      "then": {"required": ["predicate", "evidence"]}
+    },
+    {
+      "if": {
+        "properties": {
+          "result_kind": {"const": "infrastructure"},
+          "status": {"not": {"const": "provisional"}}
+        },
+        "required": ["result_kind", "status"]
+      },
+      "then": {"required": ["classification", "message"]}
+    }
+  ]
+}

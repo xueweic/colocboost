@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "result_kind": "infrastructure",
+  "environment_id": "mkl-container-startup",
+  "source_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "event_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "tarball_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "status": "fail",
+  "classification": "runner-container-infrastructure",
+  "message": "The pinned container could not start."
+}

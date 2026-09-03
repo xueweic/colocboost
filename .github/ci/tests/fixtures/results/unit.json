@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "result_kind": "unit",
+  "environment_id": "linux-r-release-openblas",
+  "source_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "event_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "tarball_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "status": "pass",
+  "tests": {
+    "pass": 42,
+    "fail": 0,
+    "error": 0,
+    "warning": 0,
+    "skip": 0
+  }
+}

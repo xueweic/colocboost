@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "result_kind": "applicability",
+  "environment_id": "additional-blas-applicability",
+  "source_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "event_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "tarball_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "status": "not-applicable",
+  "predicate": "no-package-owned-native-code",
+  "evidence": "No src directory, LinkingTo field, compilation marker, or native call was found."
+}

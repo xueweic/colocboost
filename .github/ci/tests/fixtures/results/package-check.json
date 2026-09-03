@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "result_kind": "package-check",
+  "environment_id": "r-devel-linux-x86_64-fedora-gcc",
+  "source_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "event_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "tarball_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "status": "pass",
+  "check": {
+    "errors": 0,
+    "warnings": 0,
+    "notes": 0,
+    "log_path": "artifacts/r-devel-linux-x86_64-fedora-gcc/00check.log"
+  }
+}
