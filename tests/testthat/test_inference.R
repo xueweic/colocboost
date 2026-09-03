@@ -416,16 +416,16 @@ test_that("get_ambiguous_colocalization identifies ambiguous colocalizations cor
   expect_true("ambiguous_cos" %in% names(result))
   
   # If ambiguous colocalizations were found, test their structure
-  if (length(result$ambigous_cos) > 0) {
+  if (length(result$ambiguous_cos) > 0) {
     # There should be fields for the ambiguous UCOs details
-    expect_true("ambiguous_cos" %in% names(result$ambigous_ucos[[1]]))
-    expect_true("ambiguous_cos_overlap" %in% names(result$ambigous_ucos[[1]]))
-    expect_true("ambiguous_cos_union" %in% names(result$ambigous_ucos[[1]]))
-    expect_true("ambiguous_cos_outcomes" %in% names(result$ambigous_ucos[[1]]))
-    expect_true("ambigous_cos_weight" %in% names(result$ambigous_ucos[[1]]))
-    expect_true("ambigous_cos_purity" %in% names(result$ambigous_ucos[[1]]))
-    expect_true("recalibrated_cos_vcp" %in% names(result$ambigous_ucos[[1]]))
-    expect_true("recalibrated_cos" %in% names(result$ambigous_ucos[[1]]))
+    expect_true("ambiguous_cos" %in% names(result$ambiguous_cos[[1]]))
+    expect_true("ambiguous_cos_overlap" %in% names(result$ambiguous_cos[[1]]))
+    expect_true("ambiguous_cos_union" %in% names(result$ambiguous_cos[[1]]))
+    expect_true("ambiguous_cos_outcomes" %in% names(result$ambiguous_cos[[1]]))
+    expect_true("ambigous_cos_weight" %in% names(result$ambiguous_cos[[1]]))
+    expect_true("ambigous_cos_purity" %in% names(result$ambiguous_cos[[1]]))
+    expect_true("recalibrated_cos_vcp" %in% names(result$ambiguous_cos[[1]]))
+    expect_true("recalibrated_cos" %in% names(result$ambiguous_cos[[1]]))
   }
   
   # Test with custom correlation thresholds
@@ -458,7 +458,7 @@ test_that("get_ambiguous_colocalization identifies ambiguous colocalizations cor
   expect_equal(result, cb_res)
   
   # There should be no ambiguous_cos field added
-  expect_false("ambigous_cos" %in% names(result))
+  expect_false("ambiguous_cos" %in% names(result))
 
 })
 
