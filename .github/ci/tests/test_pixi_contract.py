@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -299,27 +300,6 @@ def run_pixi_dry(task, *arguments):
     )
 
 
-def run_pixi(task, *arguments):
-    pixi = shutil.which("pixi") or "/Users/xueweic/.pixi/bin/pixi"
-    if not Path(pixi).is_file():
-        pytest.skip("Pixi is not installed")
-    return subprocess.run(
-        [
-            pixi,
-            "run",
-            "--locked",
-            "--manifest-path",
-            os.fspath(PIXI_MANIFEST),
-            task,
-            *arguments,
-        ],
-        cwd=ROOT,
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-
-
 def test_ci_prepare_preserves_practical_shell_metacharacters_in_paths(tmp_path):
     directory = tmp_path / "paths with spaces;dollar$HOME&ampersand'apostrophe"
     directory.mkdir()
@@ -327,14 +307,31 @@ def test_ci_prepare_preserves_practical_shell_metacharacters_in_paths(tmp_path):
     metadata = directory / "metadata $HOME;literal&'quote.json"
     tarball.write_bytes(b"task-6 path quoting fixture")
 
-    completed = run_pixi(
+    rendered = run_pixi_dry(
         "ci-prepare",
         os.fspath(tarball),
         os.fspath(metadata),
         "a" * 40,
         "b" * 40,
     )
+    assert rendered.returncode == 0, rendered.stdout + rendered.stderr
+    task_line = next(
+        line
+        for line in (rendered.stdout + rendered.stderr).splitlines()
+        if ".github/ci/artifact_contract.py create" in line
+    )
+    command = task_line.partition(": ")[2]
+    argv = shlex.split(command, posix=True)
+    assert argv[0] == "python"
+    argv[0] = sys.executable
 
+    completed = subprocess.run(
+        argv,
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
     assert completed.returncode == 0, completed.stdout + completed.stderr
     document = json.loads(metadata.read_text(encoding="utf-8"))
     assert document["filename"] == tarball.name
