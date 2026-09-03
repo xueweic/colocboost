@@ -25,6 +25,12 @@ _DETAIL_FIELDS = {
     "applicability": ("predicate", "evidence"),
     "infrastructure": ("classification", "message"),
 }
+_ALL_DETAIL_FIELDS = frozenset(
+    field for fields in _DETAIL_FIELDS.values() for field in fields
+)
+_FROZEN_IDENTITY_FIELDS = frozenset(
+    {"schema_version", "result_kind", "environment_id", "source_sha", "event_sha"}
+)
 
 
 def _require_string(document: Mapping[str, Any], field: str) -> None:
@@ -82,6 +88,15 @@ def validate_result(document: Mapping[str, Any]) -> Mapping[str, Any]:
     result_kind = document["result_kind"]
     if result_kind not in _RESULT_KINDS:
         raise ValueError(f"result_kind is invalid: {result_kind!r}")
+
+    foreign_details = (set(document) & _ALL_DETAIL_FIELDS) - set(
+        _DETAIL_FIELDS[result_kind]
+    )
+    if foreign_details:
+        foreign_field = sorted(foreign_details)[0]
+        raise ValueError(
+            f"{result_kind} result contains foreign detail {foreign_field}"
+        )
 
     status = document["status"]
     if status not in _STATUSES:
@@ -172,6 +187,17 @@ def finalize(
         raise ValueError("final status cannot be provisional")
     if not isinstance(details, Mapping):
         raise ValueError("details must be an object")
+
+    frozen_details = set(details) & _FROZEN_IDENTITY_FIELDS
+    if frozen_details:
+        frozen_field = sorted(frozen_details)[0]
+        raise ValueError(f"details cannot change frozen identity field {frozen_field}")
+
+    allowed_details = {"tarball_sha256", *_DETAIL_FIELDS[current["result_kind"]]}
+    unexpected_details = set(details) - allowed_details
+    if unexpected_details:
+        unexpected_field = sorted(unexpected_details)[0]
+        raise ValueError(f"details contains forbidden field {unexpected_field}")
 
     document = dict(current)
     document.update(details)

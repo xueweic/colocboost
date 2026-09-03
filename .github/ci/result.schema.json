@@ -87,6 +87,58 @@
     "classification": {"type": "string", "minLength": 1},
     "message": {"type": "string", "minLength": 1}
   },
+  "oneOf": [
+    {
+      "properties": {"result_kind": {"const": "unit"}},
+      "required": ["result_kind"],
+      "not": {
+        "anyOf": [
+          {"required": ["check"]},
+          {"required": ["predicate"]},
+          {"required": ["evidence"]},
+          {"required": ["classification"]},
+          {"required": ["message"]}
+        ]
+      }
+    },
+    {
+      "properties": {"result_kind": {"const": "package-check"}},
+      "required": ["result_kind"],
+      "not": {
+        "anyOf": [
+          {"required": ["tests"]},
+          {"required": ["predicate"]},
+          {"required": ["evidence"]},
+          {"required": ["classification"]},
+          {"required": ["message"]}
+        ]
+      }
+    },
+    {
+      "properties": {"result_kind": {"const": "applicability"}},
+      "required": ["result_kind"],
+      "not": {
+        "anyOf": [
+          {"required": ["tests"]},
+          {"required": ["check"]},
+          {"required": ["classification"]},
+          {"required": ["message"]}
+        ]
+      }
+    },
+    {
+      "properties": {"result_kind": {"const": "infrastructure"}},
+      "required": ["result_kind"],
+      "not": {
+        "anyOf": [
+          {"required": ["tests"]},
+          {"required": ["check"]},
+          {"required": ["predicate"]},
+          {"required": ["evidence"]}
+        ]
+      }
+    }
+  ],
   "allOf": [
     {
       "if": {
