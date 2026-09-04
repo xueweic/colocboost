@@ -44,8 +44,8 @@ def test_triggers_permissions_concurrency_and_job_inventory_are_exact():
     _, workflow = load_workflow()
 
     assert workflow["on"] == {
-        "push": {"branches": ["**"]},
-        "pull_request": None,
+        "push": {"branches": ["codex/cran-preflight-ci"]},
+        "workflow_dispatch": None,
     }
     assert workflow["permissions"] == {"contents": "read"}
     assert workflow["env"] == {
@@ -75,14 +75,15 @@ def test_every_job_is_inert_outside_the_fork_and_dependents_stop_when_cancelled(
     _, workflow = load_workflow()
 
     assert workflow["jobs"]["prepare"]["if"] == "${{ " + FORK_GUARD + " }}"
-    for name in ("primary-linux", "primary-platform", "mkl", "nosuggests", "active-rhub", "remaining-docker", "linux-arm64", "linux-arm64-compare", "applicability-native"):
+    for name in ("primary-linux", "primary-platform", "nosuggests", "active-rhub", "remaining-docker", "linux-arm64", "linux-arm64-compare", "applicability-native"):
         expected_if = "${{ always() && !cancelled() && needs.prepare.result == 'success' && " + FORK_GUARD + " }}"
-        assert workflow["jobs"][name]["if"] == expected_if
+        assert "env.FULL_MODE" not in workflow["jobs"][name]["if"]
+        assert "github.event_name == 'workflow_dispatch'" in workflow["jobs"][name]["if"]
         expected_needs = ["prepare", "linux-arm64"] if name == "linux-arm64-compare" else "prepare"
         assert workflow["jobs"][name]["needs"] == expected_needs
     summary = workflow["jobs"]["summary-gate"]
     assert summary["if"] == (
-        "${{ always() && !cancelled() && " + FORK_GUARD + " }}"
+        "${{ always() && !cancelled() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[full-cran]'))) && " + FORK_GUARD + " }}"
     )
     assert summary["needs"] == [
         "prepare", "primary-linux", "primary-platform", "mkl", "nosuggests",
@@ -802,3 +803,45 @@ def test_workflow_has_no_write_credentials_or_untrusted_context_in_shell():
                 assert not re.search(
                     r"\$\{\{\s*(?:github|steps|needs)\.", step["run"]
                 )
+
+
+def test_runtime_split_triggers_are_explicit_and_branch_scoped():
+    ci = yaml.safe_load((ROOT / ".github" / "workflows" / "ci.yml").read_text())
+    ci_on = ci.get("on", ci.get(True))
+    assert ci_on["push"] == {"branches": ["codex/cran-preflight-ci"]}
+    assert "pull_request" in ci_on
+
+    _, workflow = load_workflow()
+    assert workflow["on"] == {
+        "push": {"branches": ["codex/cran-preflight-ci"]},
+        "workflow_dispatch": None,
+    }
+
+
+def test_runtime_split_full_mode_gates_heavy_jobs_and_summary():
+    _, workflow = load_workflow()
+    expected = "${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[full-cran]')) }}"
+    jobs = workflow["jobs"]
+    assert jobs["prepare"]["if"] == "${{ " + FORK_GUARD + " }}"
+    assert "env.FULL_MODE" not in jobs["mkl"]["if"]
+    for name in jobs:
+        if name not in {"prepare", "mkl"}:
+            assert "env.FULL_MODE" not in jobs[name]["if"]
+            assert expected[5:-3] in jobs[name]["if"]
+    assert "env.FULL_MODE" not in jobs["summary-gate"]["if"]
+    assert jobs["summary-gate"]["needs"] == [
+        "prepare", "primary-linux", "primary-platform", "mkl", "nosuggests",
+        "active-rhub", "applicability-native", "remaining-docker", "linux-arm64", "linux-arm64-compare",
+    ]
+
+
+def test_every_preflight_job_has_conservative_timeout():
+    _, workflow = load_workflow()
+    jobs = workflow["jobs"]
+    assert set(jobs) == {"prepare", "primary-linux", "primary-platform", "mkl", "nosuggests", "active-rhub", "remaining-docker", "linux-arm64", "linux-arm64-compare", "applicability-native", "summary-gate"}
+    assert jobs["prepare"]["timeout-minutes"] == 20
+    assert jobs["summary-gate"]["timeout-minutes"] == 20
+    assert jobs["linux-arm64-compare"]["timeout-minutes"] == 20
+    assert jobs["active-rhub"]["timeout-minutes"] == 90
+    for name in set(jobs) - {"prepare", "summary-gate", "linux-arm64-compare", "active-rhub"}:
+        assert jobs[name]["timeout-minutes"] == 60

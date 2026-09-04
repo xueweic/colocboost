@@ -130,8 +130,10 @@ status <- tryCatch({
   required_here <- unique(c(
     setdiff(hard, "R"), setdiff(suggests, "MASS"), tooling
   ))
-  pak::pkg_install(paste0("deps::", tarball), dependencies = TRUE, lib = library)
-  pak::pkg_install(required_here, lib = library)
+  dependency_types <- c("Depends", "Imports", "LinkingTo")
+  explicit_refs <- if (identical(cli[["environment-id"]], "m1mac")) paste0(required_here, "?source") else required_here
+  pak::pkg_install(explicit_refs, dependencies = dependency_types, lib = library)
+  pak::pkg_install(paste0("deps::", tarball), dependencies = dependency_types, lib = library)
 
   installed <- sort(rownames(installed.packages(lib.loc = library)))
   availability_names <- unique(c(setdiff(hard, "R"), suggests, tooling))

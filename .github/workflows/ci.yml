@@ -1,6 +1,8 @@
 name: Continuous Integration
 
 on:
+  push:
+    branches: [codex/cran-preflight-ci]
   pull_request:
     paths-ignore:
       - .github/*

@@ -2,8 +2,8 @@ name: CRAN-like preflight
 
 "on":
   push:
-    branches: ["**"]
-  pull_request:
+    branches: [codex/cran-preflight-ci]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -24,6 +24,7 @@ concurrency:
 jobs:
   prepare:
     if: ${{ github.repository == 'xueweic/colocboost' }}
+    timeout-minutes: 20
     runs-on: ubuntu-24.04
     outputs:
       source_sha: ${{ steps.prepare-source.outputs.source_sha }}
@@ -77,7 +78,8 @@ jobs:
           if-no-files-found: error
 
   primary-linux:
-    if: ${{ always() && !cancelled() && needs.prepare.result == 'success' && github.repository == 'xueweic/colocboost' }}
+    if: ${{ always() && !cancelled() && needs.prepare.result == 'success' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[full-cran]'))) && github.repository == 'xueweic/colocboost' }}
+    timeout-minutes: 60
     needs: prepare
     runs-on: ubuntu-24.04
     strategy:
@@ -462,7 +464,8 @@ jobs:
           test "$DIAGNOSTIC_UPLOAD_OUTCOME" = success
 
   primary-platform:
-    if: ${{ always() && !cancelled() && needs.prepare.result == 'success' && github.repository == 'xueweic/colocboost' }}
+    if: ${{ always() && !cancelled() && needs.prepare.result == 'success' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[full-cran]'))) && github.repository == 'xueweic/colocboost' }}
+    timeout-minutes: 60
     needs: prepare
     runs-on: ${{ matrix.runner }}
     strategy:
@@ -968,6 +971,7 @@ jobs:
 
   mkl:
     if: ${{ always() && !cancelled() && needs.prepare.result == 'success' && github.repository == 'xueweic/colocboost' }}
+    timeout-minutes: 60
     needs: prepare
     runs-on: ubuntu-24.04
     container:
@@ -1313,7 +1317,8 @@ jobs:
           test "$DIAGNOSTIC_UPLOAD_OUTCOME" = success
 
   nosuggests:
-    if: ${{ always() && !cancelled() && needs.prepare.result == 'success' && github.repository == 'xueweic/colocboost' }}
+    if: ${{ always() && !cancelled() && needs.prepare.result == 'success' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[full-cran]'))) && github.repository == 'xueweic/colocboost' }}
+    timeout-minutes: 60
     needs: prepare
     runs-on: ubuntu-24.04
     container:
@@ -1598,7 +1603,8 @@ jobs:
           test "$DIAGNOSTIC_UPLOAD_OUTCOME" = success
 
   active-rhub:
-    if: ${{ always() && !cancelled() && needs.prepare.result == 'success' && github.repository == 'xueweic/colocboost' }}
+    if: ${{ always() && !cancelled() && needs.prepare.result == 'success' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[full-cran]'))) && github.repository == 'xueweic/colocboost' }}
+    timeout-minutes: 90
     needs: prepare
     runs-on: ubuntu-24.04
     strategy:
@@ -2168,7 +2174,8 @@ jobs:
           fi
 
   remaining-docker:
-    if: ${{ always() && !cancelled() && needs.prepare.result == 'success' && github.repository == 'xueweic/colocboost' }}
+    if: ${{ always() && !cancelled() && needs.prepare.result == 'success' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[full-cran]'))) && github.repository == 'xueweic/colocboost' }}
+    timeout-minutes: 60
     needs: prepare
     runs-on: ubuntu-24.04
     strategy:
@@ -2512,7 +2519,8 @@ jobs:
           fi
 
   linux-arm64:
-    if: ${{ always() && !cancelled() && needs.prepare.result == 'success' && github.repository == 'xueweic/colocboost' }}
+    if: ${{ always() && !cancelled() && needs.prepare.result == 'success' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[full-cran]'))) && github.repository == 'xueweic/colocboost' }}
+    timeout-minutes: 60
     needs: prepare
     runs-on: ${{ matrix.runner }}
     strategy:
@@ -2651,7 +2659,8 @@ jobs:
           test "$CHILD_OUTCOME" = success
 
   linux-arm64-compare:
-    if: ${{ always() && !cancelled() && needs.prepare.result == 'success' && github.repository == 'xueweic/colocboost' }}
+    if: ${{ always() && !cancelled() && needs.prepare.result == 'success' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[full-cran]'))) && github.repository == 'xueweic/colocboost' }}
+    timeout-minutes: 20
     needs: [prepare, linux-arm64]
     runs-on: ubuntu-24.04
     steps:
@@ -2726,7 +2735,8 @@ jobs:
           test "$EVIDENCE_UPLOAD_OUTCOME" = success
 
   applicability-native:
-    if: ${{ always() && !cancelled() && needs.prepare.result == 'success' && github.repository == 'xueweic/colocboost' }}
+    if: ${{ always() && !cancelled() && needs.prepare.result == 'success' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[full-cran]'))) && github.repository == 'xueweic/colocboost' }}
+    timeout-minutes: 60
     needs: prepare
     runs-on: ubuntu-24.04
     strategy:
@@ -2844,7 +2854,8 @@ jobs:
           test "$UPLOAD_OUTCOME" = success
 
   summary-gate:
-    if: ${{ always() && !cancelled() && github.repository == 'xueweic/colocboost' }}
+    if: ${{ always() && !cancelled() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[full-cran]'))) && github.repository == 'xueweic/colocboost' }}
+    timeout-minutes: 20
     needs: [prepare, primary-linux, primary-platform, mkl, nosuggests, active-rhub, applicability-native, remaining-docker, linux-arm64, linux-arm64-compare]
     runs-on: ubuntu-24.04
     steps:

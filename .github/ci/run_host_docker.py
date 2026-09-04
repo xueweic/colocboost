@@ -200,7 +200,7 @@ def run_prepare(
         "options(repos=c(CRAN='https://cloud.r-project.org')); "
         f"wanted <- c({package_vector}); "
         "install.packages(wanted, lib='/library', "
-        "dependencies=c('Depends','Imports','LinkingTo','Suggests')); "
+        "dependencies=c('Depends','Imports','LinkingTo')); "
         "missing <- setdiff(wanted, rownames(installed.packages(lib.loc='/library'))); "
         "if (length(missing)) stop('dependency installation incomplete: ', paste(missing, collapse=',')); "
         "status <- system2(command=Sys.getenv('CB_R_BINARY'), args=c('CMD','INSTALL','--library=/library', "
@@ -221,14 +221,18 @@ def run_prepare(
             "R_ENVIRON_USER": "/dev/null",
         },
     )
-    completed = subprocess.run(command, check=False, shell=False)
+    try:
+        completed = subprocess.run(command, check=False, shell=False, timeout=2700)
+        exit_code = completed.returncode
+    except subprocess.TimeoutExpired:
+        exit_code = 124
     proof = {"schema_version": 1, "kind": "dependency-prep", "image": image,
              "environment_id": environment_id, "r_binary": r_binary,
              "source_sha": source_sha, "event_sha": event_sha, "tarball_sha256": verified["sha256"],
              "library": "/library", "packages": list(DEPENDENCY_PACKAGES), "network": "default",
-             "exit_code": completed.returncode}
+             "exit_code": exit_code}
     _atomic_json(Path(evidence), proof)
-    return completed.returncode
+    return exit_code
 
 
 def run_check(

@@ -7,7 +7,7 @@ import pytest
 CI_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(CI_DIR))
 
-from run_host_docker import _check_counts, docker_argv, validate_proxy_dockerfile  # noqa: E402
+from run_host_docker import DEPENDENCY_PACKAGES, _check_counts, docker_argv, run_prepare, validate_proxy_dockerfile  # noqa: E402
 from verify_backend_runtime import validate as validate_backend_runtime  # noqa: E402
 
 
@@ -75,3 +75,41 @@ def test_musl_runtime_proof_is_pinned_and_structured(tmp_path):
     proof.write_text(json.dumps(document))
     with pytest.raises(ValueError, match="pinned image contract"):
         validate_backend_runtime(proof, "musl")
+
+
+def test_dependency_prep_has_explicit_direct_packages_and_hard_edge_recursion():
+    source = (CI_DIR / "run_host_docker.py").read_text(encoding="utf-8")
+    assert DEPENDENCY_PACKAGES == ("Rfast", "matrixStats", "testthat", "knitr", "rmarkdown", "ashr", "MASS", "susieR")
+    assert "dependencies=c('Depends','Imports','LinkingTo')" in source
+    assert "'Suggests'" not in source
+
+
+def test_dependency_prep_embeds_explicit_packages_and_hard_edges(tmp_path, monkeypatch):
+    source = tmp_path / "source"; source.mkdir()
+    tarball = tmp_path / "pkg.tar.gz"; tarball.write_bytes(b"x")
+    library = tmp_path / "library"; evidence = tmp_path / "evidence.json"
+    monkeypatch.setattr("run_host_docker.verify_tarball", lambda *a, **k: {"filename": "pkg.tar.gz", "sha256": "c" * 64})
+    seen = {}
+    class Completed: returncode = 0
+    def fake_run(command, **kwargs):
+        seen["command"] = command
+        return Completed()
+    monkeypatch.setattr("run_host_docker.subprocess.run", fake_run)
+    run_prepare(image="local/colocboost-blis-proxy", r_binary="R", tarball=tarball, metadata=tmp_path / "meta", source_sha="a", event_sha="b", library=library, work_dir=tmp_path / "work", evidence=evidence, environment_id="x")
+    command = seen["command"][-1]
+    assert "dependencies=c('Depends','Imports','LinkingTo')" in command
+    for package in DEPENDENCY_PACKAGES:
+        assert repr(package) in command
+
+
+def test_dependency_prep_subprocess_timeout_maps_to_124(tmp_path, monkeypatch):
+    import subprocess
+    tarball = tmp_path / "pkg.tar.gz"; tarball.write_bytes(b"x")
+    library = tmp_path / "library"; evidence = tmp_path / "evidence.json"
+    monkeypatch.setattr("run_host_docker.verify_tarball", lambda *a, **k: {"filename": "pkg.tar.gz", "sha256": "c" * 64})
+    def fake_run(*args, **kwargs):
+        assert kwargs["timeout"] == 2700
+        raise subprocess.TimeoutExpired(args[0], kwargs["timeout"])
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    assert run_prepare(image="local/colocboost-blis-proxy", r_binary="R", tarball=tarball, metadata=tmp_path / "meta", source_sha="a", event_sha="b", library=library, work_dir=tmp_path / "work", evidence=evidence, environment_id="x") == 124
+    assert json.loads(evidence.read_text())["exit_code"] == 124

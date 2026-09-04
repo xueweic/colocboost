@@ -29,6 +29,21 @@ def test_full_dependency_prep_preserves_single_vignette_builder_as_json_array():
     assert "vignette_builders = I(builders)" in source
 
 
+def test_full_dependency_helper_uses_hard_edges_but_explicit_suggests():
+    source = (CI_DIR / "prepare-full-dependencies.R").read_text(encoding="utf-8")
+    source = "\n".join(line.split("#", 1)[0] for line in source.splitlines())
+    assert 'dependency_types <- c("Depends", "Imports", "LinkingTo")' in source
+    assert "dependencies = dependency_types" in source
+    assert "indirect = character()" not in source
+    assert "type = install_type" not in source
+    assert "required_here <- unique(c(" in source
+
+
+def test_m1mac_requests_source_packages_without_affecting_other_lanes():
+    source = (CI_DIR / "prepare-full-dependencies.R").read_text(encoding="utf-8")
+    assert 'paste0(required_here, "?source")' in source
+
+
 def valid_document(environment_id="r-devel-linux-x86-64-debian-clang", purpose="unit"):
     selected_r = {
         "r-release-linux-x86-64": "/opt/R/release/bin/R",
