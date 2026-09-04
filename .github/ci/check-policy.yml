@@ -49,7 +49,7 @@ r_cmd_check:
 numerical_backends:
   mkl:
     required_library_patterns:
-      - '(?i)(?:^|/)libmkl_intel_lp64(?:\.so(?:\.\d+)*)?(?:$|\s)'
+      - '(?i)(?:^|/)libmkl_gf_lp64(?:\.so(?:\.\d+)*)?(?:$|\s)'
       - '(?i)(?:^|/)libmkl_core(?:\.so(?:\.\d+)*)?(?:$|\s)'
       - '(?i)(?:^|/)libmkl_sequential(?:\.so(?:\.\d+)*)?(?:$|\s)'
     forbidden_library_patterns:

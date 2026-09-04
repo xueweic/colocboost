@@ -668,7 +668,7 @@ EXPECTED_WAIVERS = {
 }
 EXPECTED_MKL_POLICY = {
     "required_library_patterns": [
-        r"(?i)(?:^|/)libmkl_intel_lp64(?:\.so(?:\.\d+)*)?(?:$|\s)",
+        r"(?i)(?:^|/)libmkl_gf_lp64(?:\.so(?:\.\d+)*)?(?:$|\s)",
         r"(?i)(?:^|/)libmkl_core(?:\.so(?:\.\d+)*)?(?:$|\s)",
         r"(?i)(?:^|/)libmkl_sequential(?:\.so(?:\.\d+)*)?(?:$|\s)",
     ],

@@ -117,9 +117,9 @@ test_that("dependency prep rejects wrong install mode and reused libraries", {
 
 make_maps <- function(directory, extra = character(), omit = character()) {
   required <- c(
-    "/opt/intel/lib/libmkl_intel_lp64.so",
-    "/opt/intel/lib/libmkl_core.so.2",
-    "/opt/intel/lib/libmkl_sequential.so"
+    "/opt/intel/oneapi/mkl/latest/lib/intel64/libmkl_gf_lp64.so",
+    "/opt/intel/oneapi/mkl/latest/lib/intel64/libmkl_core.so.2",
+    "/opt/intel/oneapi/mkl/latest/lib/intel64/libmkl_sequential.so"
   )
   required <- setdiff(required, omit)
   path <- file.path(directory, "maps")
@@ -158,6 +158,34 @@ test_that("MKL verifier accepts exact serial required mappings in fixture mode",
   expect_true(isTRUE(evidence$blas_operation$completed))
 })
 
+test_that("pinned R-hub GCC MKL mapping requires GNU Fortran LP64 plus core and sequential", {
+  directory <- tempfile("mkl-gcc-policy-")
+  dir.create(directory)
+  verified <- run_verify(directory, make_maps(directory))
+  expect_identical(verified$result$status, 0L, info = verified$result$stderr)
+
+  missing_cases <- list(
+    gf_lp64 = list(
+      omit = "/opt/intel/oneapi/mkl/latest/lib/intel64/libmkl_gf_lp64.so",
+      extra = "/opt/intel/oneapi/mkl/latest/lib/intel64/libmkl_intel_lp64.so"
+    ),
+    core = list(
+      omit = "/opt/intel/oneapi/mkl/latest/lib/intel64/libmkl_core.so.2"
+    ),
+    sequential = list(
+      omit = "/opt/intel/oneapi/mkl/latest/lib/intel64/libmkl_sequential.so"
+    )
+  )
+  for (name in names(missing_cases)) {
+    missing <- run_verify(directory, make_maps(
+      directory,
+      extra = if (is.null(missing_cases[[name]]$extra)) character() else missing_cases[[name]]$extra,
+      omit = missing_cases[[name]]$omit
+    ))
+    expect_failure(expect_identical(missing$result$status, 0L), info = name)
+  }
+})
+
 test_that("MKL verifier rejects missing, threaded, and alternative BLAS mappings", {
   forbidden <- c(
     "/opt/intel/lib/libmkl_intel_thread.so",
@@ -175,7 +203,7 @@ test_that("MKL verifier rejects missing, threaded, and alternative BLAS mappings
   dir.create(directory)
   missing <- run_verify(
     directory,
-    make_maps(directory, omit = "/opt/intel/lib/libmkl_core.so.2")
+    make_maps(directory, omit = "/opt/intel/oneapi/mkl/latest/lib/intel64/libmkl_core.so.2")
   )
   expect_failure(expect_identical(missing$result$status, 0L))
 
