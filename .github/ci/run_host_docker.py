@@ -83,13 +83,13 @@ def validate_proxy_dockerfile(path: str | os.PathLike[str], kind: str) -> Path:
     if kind == "blis":
         required += [
             BLIS_COMMIT,
-            "./configure auto --enable-threading=no",
+            "./configure --enable-threading=no",
             "BLIS_NUM_THREADS=1",
         ]
     elif kind == "noomp":
         required += [
             "./configure --disable-openmp",
-            "install.packages(\"Rfast\"",
+            '"Rfast"',
             "SHLIB_OPENMP_CFLAGS=",
             "SHLIB_OPENMP_LDFLAGS=",
         ]

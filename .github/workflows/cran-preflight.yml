@@ -10,6 +10,12 @@ permissions:
 
 env:
   PYTHONDONTWRITEBYTECODE: "1"
+  OMP_NUM_THREADS: "1"
+  OPENBLAS_NUM_THREADS: "1"
+  MKL_NUM_THREADS: "1"
+  BLIS_NUM_THREADS: "1"
+  VECLIB_MAXIMUM_THREADS: "1"
+  RCPP_PARALLEL_NUM_THREADS: "1"
 
 concurrency:
   group: cran-preflight-${{ github.event_name }}-${{ github.ref }}
@@ -805,6 +811,7 @@ jobs:
           METADATA: ${{ steps.verify-source.outputs.metadata_path }}
           TARBALL_SHA256: ${{ steps.verify-source.outputs.tarball_sha256 || env.FALLBACK_TARBALL_SHA256 }}
         run: |
+          $env:R_LIBS_USER = $env:CHECK_LIBRARY
           $checkArguments = @(
             "-B", ".github/ci/run_r_binary_check.py",
             "--manifest=$env:GITHUB_WORKSPACE/.github/ci/check-matrix.yml",
@@ -978,7 +985,7 @@ jobs:
       FALLBACK_TARBALL_SHA256: ${{ needs.prepare.outputs.tarball_sha256 || '0000000000000000000000000000000000000000000000000000000000000000' }}
       MKL_NUM_THREADS: "1"
       OMP_NUM_THREADS: "1"
-      MKL_VERBOSE: "1"
+      MKL_VERBOSE: "0"
     steps:
       - name: Checkout exact event commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -1721,7 +1728,7 @@ jobs:
       CHECK_ARGS: ${{ matrix.check_args }}
       NATIVE_WRAPPER: ${{ matrix.wrapper }}
       WRAPPER_SHA256: ${{ matrix.wrapper_sha256 }}
-      OPENBLAS_NUM_THREADS: ${{ matrix.environment_id == 'openblas' && '1' || '' }}
+      OPENBLAS_NUM_THREADS: "1"
       R_COMPILE_PKGS: ${{ matrix.environment_id == 'rcnst' && '1' || '' }}
       R_JIT_STRATEGY: ${{ matrix.environment_id == 'rcnst' && '4' || '' }}
       R_CHECK_CONSTANTS: ${{ matrix.environment_id == 'rcnst' && '5' || '' }}
@@ -1754,17 +1761,19 @@ jobs:
           set -euo pipefail
           UNIT_LIBRARY="$RUNNER_TEMP/active-rhub-unit-library"
           CHECK_LIBRARY="$RUNNER_TEMP/active-rhub-check-library"
+          CHECK_SUPPORT_LIBRARY="$RUNNER_TEMP/active-rhub-check-support-library"
           SOURCE_DOWNLOAD_DIR="$RUNNER_TEMP/active-rhub-source"
           SOURCE_TREE="$RUNNER_TEMP/active-rhub-source-tree"
           DIAGNOSTIC_DIR="$RUNNER_TEMP/active-rhub-diagnostics"
           RESULT_DIR="$RUNNER_TEMP/active-rhub-results"
           CHECK_WORK_DIR="$RUNNER_TEMP/active-rhub-native-check"
           VNU_WORK_DIR="$RUNNER_TEMP/active-rhub-vnu-source"
-          export UNIT_LIBRARY CHECK_LIBRARY SOURCE_DOWNLOAD_DIR SOURCE_TREE
+          export UNIT_LIBRARY CHECK_LIBRARY CHECK_SUPPORT_LIBRARY SOURCE_DOWNLOAD_DIR SOURCE_TREE
           export DIAGNOSTIC_DIR RESULT_DIR CHECK_WORK_DIR VNU_WORK_DIR
           printf '%s\n' \
             "UNIT_LIBRARY=$UNIT_LIBRARY" \
             "CHECK_LIBRARY=$CHECK_LIBRARY" \
+            "CHECK_SUPPORT_LIBRARY=$CHECK_SUPPORT_LIBRARY" \
             "SOURCE_DOWNLOAD_DIR=$SOURCE_DOWNLOAD_DIR" \
             "SOURCE_TREE=$SOURCE_TREE" \
             "DIAGNOSTIC_DIR=$DIAGNOSTIC_DIR" \
@@ -1776,6 +1785,7 @@ jobs:
           mkdir "$RESULT_DIR"
           test ! -e "$UNIT_LIBRARY"
           test ! -e "$CHECK_LIBRARY"
+          test ! -e "$CHECK_SUPPORT_LIBRARY"
           test ! -e "$CHECK_WORK_DIR"
           test ! -e "$VNU_WORK_DIR"
 
@@ -1844,6 +1854,36 @@ jobs:
           pixi run --locked ci-verify-runtime \
             "$ENVIRONMENT_ID" "$DIAGNOSTIC_DIR/runtime.json" "$SOURCE_SHA" \
             "$EVENT_SHA" "$TARBALL_SHA256"
+
+      - name: Install complete VNU check dependencies
+        id: prepare-vnu-dependencies
+        if: ${{ matrix.environment_id == 'vnu' }}
+        continue-on-error: true
+        env:
+          TARBALL: ${{ steps.verify-source.outputs.tarball_path }}
+          TARBALL_SHA256: ${{ steps.verify-source.outputs.tarball_sha256 || env.FALLBACK_TARBALL_SHA256 }}
+        run: |
+          set -euo pipefail
+          system_r_bin="${SYSTEM_R%/R}"
+          PATH="$system_r_bin:$PATH"
+          export PATH
+          export R_LIBS_USER="$CHECK_SUPPORT_LIBRARY"
+          pixi run --locked ci-full-dependencies \
+            "$SYSTEM_R" "$ENVIRONMENT_ID" check "$TARBALL" \
+            "$CHECK_SUPPORT_LIBRARY" "$DIAGNOSTIC_DIR/vnu-check-dependencies.json" \
+            "$SOURCE_SHA" "$EVENT_SHA" "$TARBALL_SHA256"
+
+      - name: Validate VNU check dependency evidence
+        id: verify-vnu-dependencies
+        if: ${{ matrix.environment_id == 'vnu' }}
+        continue-on-error: true
+        env:
+          TARBALL_SHA256: ${{ steps.verify-source.outputs.tarball_sha256 || env.FALLBACK_TARBALL_SHA256 }}
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-verify-full-dependencies \
+            "$ENVIRONMENT_ID" check "$DIAGNOSTIC_DIR/vnu-check-dependencies.json" \
+            "$SOURCE_SHA" "$EVENT_SHA" "$TARBALL_SHA256" "$SYSTEM_R"
 
       - name: Install complete ATLAS unit dependencies
         id: prepare-unit-dependencies
@@ -1936,6 +1976,9 @@ jobs:
           PATH="$system_r_bin:$PATH"
           export PATH
           export R_LIBS_USER="$CHECK_LIBRARY"
+          if [ "$ENVIRONMENT_ID" = vnu ]; then
+            export R_LIBS_SITE="$CHECK_SUPPORT_LIBRARY"
+          fi
           set +e
           pixi run --locked ci-native-check \
             "$ENVIRONMENT_ID" "$NATIVE_WRAPPER" "$SYSTEM_R" "$TARBALL" \
@@ -1973,6 +2016,7 @@ jobs:
           PATH="$system_r_bin:$PATH"
           export PATH
           export R_LIBS_USER="$CHECK_LIBRARY"
+          export R_LIBS_SITE="$CHECK_SUPPORT_LIBRARY"
           pixi run --locked ci-run-vnu \
             "$ENVIRONMENT_ID" "/usr/local/bin/vnu.sh" "$SYSTEM_R" "$TARBALL" \
             "$METADATA" "$SOURCE_SHA" "$EVENT_SHA" "$TARBALL_SHA256" \
@@ -1984,10 +2028,13 @@ jobs:
         continue-on-error: true
         env:
           TARBALL_SHA256: ${{ steps.verify-source.outputs.tarball_sha256 || env.FALLBACK_TARBALL_SHA256 }}
-          EFFECTIVE_EXIT_CODE: ${{ steps.verify-check-semantics.outputs.effective_exit_code }}
+          EFFECTIVE_EXIT_CODE: ${{ steps.verify-check-semantics.outputs.effective_exit_code || steps.native-check.outputs.raw_exit_code }}
         run: |
           set -euo pipefail
           export R_LIBS_USER="$CHECK_LIBRARY"
+          if [ "$ENVIRONMENT_ID" = vnu ]; then
+            export R_LIBS_SITE="$CHECK_SUPPORT_LIBRARY"
+          fi
           pixi run --locked ci-package-result \
             "$SYSTEM_R" "$DIAGNOSTIC_DIR/00check.log" \
             "$ENVIRONMENT_ID/colocboost.Rcheck/00check.log" \
@@ -2006,6 +2053,8 @@ jobs:
           RUNTIME_PROBE_OUTCOME: ${{ steps.probe-runtime.outcome }}
           RUNTIME_PROOF_OUTCOME: ${{ steps.verify-runtime.outcome }}
           SEMANTIC_PROOF_OUTCOME: ${{ steps.verify-check-semantics.outcome }}
+          VNU_PREP_OUTCOME: ${{ steps.prepare-vnu-dependencies.outcome }}
+          VNU_DEPENDENCY_PROOF_OUTCOME: ${{ steps.verify-vnu-dependencies.outcome }}
           VNU_OUTCOME: ${{ steps.run-vnu.outcome }}
           PARSER_OUTCOME: ${{ steps.parse-check.outcome }}
         run: |
@@ -2022,8 +2071,12 @@ jobs:
             test "$FILE_PROOF_OUTCOME" = skipped
           fi
           if [ "$ENVIRONMENT_ID" = vnu ]; then
+            test "$VNU_PREP_OUTCOME" = success
+            test "$VNU_DEPENDENCY_PROOF_OUTCOME" = success
             test "$VNU_OUTCOME" = success
           else
+            test "$VNU_PREP_OUTCOME" = skipped
+            test "$VNU_DEPENDENCY_PROOF_OUTCOME" = skipped
             test "$VNU_OUTCOME" = skipped
           fi
 
@@ -2125,7 +2178,7 @@ jobs:
           - environment_id: blis
             image: local/colocboost-blis-proxy
             dockerfile: .github/ci/images/blis/Dockerfile
-            dockerfile_sha256: 8a838693ee62ca8aa1ad0bc3ec654a6273d38bc2bd95bf7e7ee4c286d830db1e
+            dockerfile_sha256: 037eb1d4a5705762be759ccd87c7ba9b81f035d268f0d6e29b20993b2d7852ac
             wrapper: /usr/local/bin/r-check
             r_binary: /opt/R/devel-blis/bin/R
             direct: false

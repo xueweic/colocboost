@@ -92,6 +92,32 @@ def test_native_wrapper_preserves_absolute_path_and_argv_with_spaces(tmp_path):
     ]
 
 
+def test_native_shell_wrapper_may_be_nonexecutable_when_hash_bound(tmp_path):
+    tarball, metadata = make_artifact(tmp_path)
+    marker = tmp_path / "called"
+    wrapper = tmp_path / "bin" / "r-check"
+    wrapper.parent.mkdir(parents=True)
+    wrapper.write_text(f"#!/bin/sh\nprintf called > '{marker}'\n")
+    system_r = make_executable(wrapper.parent / "R")
+    environment = os.environ.copy()
+    environment["PATH"] = os.fspath(system_r.parent)
+    row = {
+        "id": "gcc16",
+        "driver": "native-wrapper",
+        "wrapper_path": os.fspath(wrapper),
+        "wrapper_sha256": hashlib.sha256(wrapper.read_bytes()).hexdigest(),
+        "system_r": os.fspath(system_r),
+        "wrapper_input": "tarball-parent",
+    }
+    assert run_driver(
+        row, requested_driver="native-wrapper", executable=wrapper,
+        argv=[TARBALL_PARENT_TOKEN], tarball=tarball, metadata=metadata,
+        expected_source_sha=SOURCE_SHA, expected_event_sha=EVENT_SHA,
+        required_r_executable=system_r, environment=environment,
+    ) == 0
+    assert marker.read_text() == "called"
+
+
 def test_native_wrapper_binds_verified_single_tarball_parent_and_system_r(tmp_path):
     tarball, metadata = make_artifact(tmp_path)
     output = tmp_path / "captured-parent.json"

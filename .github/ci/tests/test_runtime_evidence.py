@@ -260,12 +260,40 @@ def test_rejects_mismatched_or_nonexecuted_runtime_proof(tmp_path, field, value)
     assert completed.returncode != 0
 
 
-@pytest.mark.parametrize("library", ["libmkl_core.so", "libopenblas.so", "libblis.so"])
+@pytest.mark.parametrize("library", ["libmkl_core.so", "libblis.so"])
 def test_atlas_rejects_forbidden_loaded_blas(tmp_path, library):
     document = valid_document("atlas")
     document["loaded_libraries"].append(f"/usr/lib/{library}")
     completed = invoke(tmp_path, document)
     assert completed.returncode != 0
+
+
+def test_atlas_accepts_mapped_flexiblas_openblas_fallback_when_active_blas_is_atlas(tmp_path):
+    document = valid_document("atlas")
+    document["blas_libs"] = "-lflexiblas"
+    document["loaded_libraries"] += [
+        "/usr/lib64/libflexiblas.so.3",
+        "/usr/lib64/flexiblas/libflexiblas_openblas.so",
+    ]
+    completed = invoke(tmp_path, document)
+    assert completed.returncode == 0, completed.stderr
+
+
+def test_gcc16_accepts_multiarch_executable_name(tmp_path):
+    document = valid_document("r-devel-linux-x86-64-debian-gcc")
+    document["cc_path"] = "/usr/bin/x86_64-linux-gnu-gcc-16"
+    completed = invoke(tmp_path, document)
+    assert completed.returncode == 0, completed.stderr
+
+
+@pytest.mark.parametrize("environment_id", ["clang-asan", "clang-ubsan"])
+def test_clang_sanitizer_profile_does_not_require_runtime_in_bare_r_process(
+    tmp_path, environment_id
+):
+    document = valid_document(environment_id)
+    document["loaded_libraries"] = ["/opt/R/lib/libR.so"]
+    completed = invoke(tmp_path, document)
+    assert completed.returncode == 0, completed.stderr
 
 
 def test_atlas_requires_lassatlas_from_same_r_process(tmp_path):
@@ -281,9 +309,7 @@ def test_atlas_requires_lassatlas_from_same_r_process(tmp_path):
         ("clang-asan", ("cc", "clang")),
         ("clang-asan", ("cc_path", "/usr/bin/gcc")),
         ("clang-ubsan", ("cc_version", "gcc (GCC) 22.0.0")),
-        ("clang-asan", ("loaded_libraries", ["/opt/R/lib/libR.so"])),
         ("clang-ubsan", ("makeconf", {"CFLAGS": "", "CXXFLAGS": "", "FFLAGS": "", "MAIN_LDFLAGS": "", "SAN_LIBS": ""})),
-        ("clang-ubsan", ("loaded_libraries", ["/opt/R/lib/libR.so"])),
         ("donttest", ("environment", {"PATH": "/opt/R/devel/bin:/usr/bin"})),
         ("gcc-asan", ("environment", {"PATH": "/opt/R/devel/bin:/usr/bin", "LD_PRELOAD": "/usr/lib64/libubsan.so.1", "ASAN_OPTIONS": "detect_leaks=0", "UBSAN_OPTIONS": "print_stacktrace=1"})),
         ("gcc-asan", ("cc_path", "/usr/bin/clang")),

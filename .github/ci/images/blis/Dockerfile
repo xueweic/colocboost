@@ -6,7 +6,7 @@ RUN dnf -y install git subversion make gcc gcc-gfortran gcc-c++ tar xz curl whic
  && git clone --depth 1 --branch 2.0 https://github.com/flame/blis.git /opt/blis \
  && cd /opt/blis && git fetch --depth 1 origin e8566eb3e773fb54d11b33e371d13f22d2941e50 \
  && git checkout --detach e8566eb3e773fb54d11b33e371d13f22d2941e50 \
- && ./configure auto --enable-threading=no --prefix=/opt/blis-install \
+ && ./configure --enable-threading=no --prefix=/opt/blis-install auto \
  && make -j1 && make install \
  && svn export -r 90483 https://svn.r-project.org/R/trunk /opt/R-src \
  && cd /opt/R-src && ./configure --with-blas='-L/opt/blis-install/lib -lblis' --prefix=/opt/R/devel-blis \

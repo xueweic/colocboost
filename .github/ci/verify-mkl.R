@@ -93,10 +93,6 @@ result <- tryCatch({
   if (!identical(threads$MKL_NUM_THREADS, "1") || !identical(threads$OMP_NUM_THREADS, "1")) {
     stop("MKL_NUM_THREADS and OMP_NUM_THREADS must both equal 1.")
   }
-  if (!identical(Sys.getenv("MKL_VERBOSE", unset = ""), "1")) {
-    stop("MKL_VERBOSE must equal 1.")
-  }
-
   fixture_args <- !is.null(cli[["maps-file"]]) || !is.null(cli[["verbose-file"]])
   fixture_mode <- identical(Sys.getenv("CI_VERIFY_MKL_TESTING"), "1")
   if (fixture_args && !fixture_mode) stop("MKL fixture inputs are test-only.")

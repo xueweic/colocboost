@@ -48,7 +48,15 @@ def test_triggers_permissions_concurrency_and_job_inventory_are_exact():
         "pull_request": None,
     }
     assert workflow["permissions"] == {"contents": "read"}
-    assert workflow["env"] == {"PYTHONDONTWRITEBYTECODE": "1"}
+    assert workflow["env"] == {
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "MKL_NUM_THREADS": "1",
+        "BLIS_NUM_THREADS": "1",
+        "VECLIB_MAXIMUM_THREADS": "1",
+        "RCPP_PARALLEL_NUM_THREADS": "1",
+    }
     assert workflow["concurrency"] == {
         "group": "cran-preflight-${{ github.event_name }}-${{ github.ref }}",
         "cancel-in-progress": True,
@@ -434,6 +442,15 @@ def test_active_rhub_matrix_is_exact_and_immutable():
     assert job["defaults"] == {"run": {"shell": "bash"}}
 
 
+def test_mkl_verbose_is_scoped_to_the_small_identity_probe():
+    _, workflow = load_workflow()
+    job = workflow["jobs"]["mkl"]
+    assert job["env"]["MKL_VERBOSE"] == "0"
+    assert 'env = c("MKL_VERBOSE=1"' in (
+        ROOT / ".github" / "ci" / "verify-mkl.R"
+    ).read_text(encoding="utf-8")
+
+
 def test_active_rhub_orders_identity_raw_check_semantics_parse_and_special_dispatch():
     _, workflow = load_workflow()
     job = workflow["jobs"]["active-rhub"]
@@ -457,7 +474,7 @@ def test_active_rhub_orders_identity_raw_check_semantics_parse_and_special_dispa
     assert "ci-special-check" in semantics["run"]
     parser = step_with_id(job, "parse-check")
     assert parser["env"]["EFFECTIVE_EXIT_CODE"] == (
-        "${{ steps.verify-check-semantics.outputs.effective_exit_code }}"
+        "${{ steps.verify-check-semantics.outputs.effective_exit_code || steps.native-check.outputs.raw_exit_code }}"
     )
     assert '"$EFFECTIVE_EXIT_CODE"' in parser["run"]
     special_file = step_with_id(job, "verify-special-file")
@@ -467,6 +484,12 @@ def test_active_rhub_orders_identity_raw_check_semantics_parse_and_special_dispa
     assert vnu["if"] == "${{ matrix.environment_id == 'vnu' }}"
     assert "ci-run-vnu" in vnu["run"]
     assert "/usr/local/bin/vnu.sh" in vnu["run"]
+    assert "CHECK_SUPPORT_LIBRARY" in step_with_id(job, "initialize")["run"]
+    vnu_prep = step_with_id(job, "prepare-vnu-dependencies")
+    assert vnu_prep["if"] == "${{ matrix.environment_id == 'vnu' }}"
+    assert "ci-full-dependencies" in vnu_prep["run"]
+    assert 'export R_LIBS_SITE="$CHECK_SUPPORT_LIBRARY"' in native["run"]
+    assert 'export R_LIBS_SITE="$CHECK_SUPPORT_LIBRARY"' in vnu["run"]
 
 
 def test_active_atlas_alone_emits_independent_full_source_unit_result():

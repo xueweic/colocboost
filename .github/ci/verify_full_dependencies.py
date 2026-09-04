@@ -29,7 +29,7 @@ SUGGESTS = ["testthat", "knitr", "rmarkdown", "ashr", "MASS", "susieR"]
 VIGNETTE_BUILDERS = ["knitr"]
 TOOLING = {
     "unit": ["jsonlite", "yaml"],
-    "check": ["jsonlite", "yaml"],
+    "check": ["jsonlite", "yaml", "V8"],
 }
 
 

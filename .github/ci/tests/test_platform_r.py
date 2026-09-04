@@ -86,7 +86,8 @@ def test_verifies_manifest_setup_r_selection_and_actual_identity(tmp_path, monke
     )
 
     assert calls[0][0][0] == os.fspath(r_binary)
-    assert 'system2(cc_path, "--version"' in calls[0][0][-1]
+    assert "compiler_version <- function(path)" in calls[0][0][-1]
+    assert "tryCatch" in calls[0][0][-1]
     assert calls[0][1]["shell"] is False
     assert proof["status"] == "pass"
     assert proof["expected_r_kind"] == "devel"

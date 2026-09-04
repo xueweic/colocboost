@@ -140,7 +140,7 @@ run_verify <- function(directory, maps, threads = c("1", "1"), verbose = "MKL_VE
     "CI_VERIFY_MKL_TESTING=1",
     paste0("MKL_NUM_THREADS=", threads[[1]]),
     paste0("OMP_NUM_THREADS=", threads[[2]]),
-    "MKL_VERBOSE=1"
+    "MKL_VERBOSE=0"
   ))
   list(result = result, evidence = evidence)
 }

@@ -40,6 +40,7 @@ def valid_document(environment_id="r-devel-linux-x86-64-debian-clang", purpose="
         if environment_id == "r-release-macos-arm64"
         else selected_r
     )
+    tooling = ["jsonlite", "yaml"] + (["V8"] if purpose == "check" else [])
     return {
         "schema_version": 1,
         "kind": "full-dependency-proof",
@@ -61,16 +62,16 @@ def valid_document(environment_id="r-devel-linux-x86-64-debian-clang", purpose="
             "testthat", "knitr", "rmarkdown", "ashr", "MASS", "susieR"
         ],
         "vignette_builders": ["knitr"],
-        "tooling": ["jsonlite", "yaml"],
+        "tooling": tooling,
         "installed_packages": [
             "Rfast", "matrixStats", "testthat", "knitr", "rmarkdown", "ashr",
-            "susieR", "jsonlite", "yaml"
+            "susieR", *tooling
         ],
         "availability": {
             name: True
             for name in [
                 "Rfast", "matrixStats", "testthat", "knitr", "rmarkdown",
-                "ashr", "MASS", "susieR", "jsonlite", "yaml"
+                "ashr", "MASS", "susieR", *tooling
             ]
         },
         "package_origins": {
@@ -81,7 +82,7 @@ def valid_document(environment_id="r-devel-linux-x86-64-debian-clang", purpose="
             )
             for name in [
                 "Rfast", "matrixStats", "testthat", "knitr", "rmarkdown",
-                "ashr", "MASS", "susieR", "jsonlite", "yaml"
+                "ashr", "MASS", "susieR", *tooling
             ]
         },
         "plan_only": False,

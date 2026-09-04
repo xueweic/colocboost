@@ -267,7 +267,7 @@ SPECIAL_NATIVE_BINDINGS = {
     },
     "blis": {
         "dockerfile": ".github/ci/images/blis/Dockerfile",
-        "dockerfile_sha256": "8a838693ee62ca8aa1ad0bc3ec654a6273d38bc2bd95bf7e7ee4c286d830db1e",
+        "dockerfile_sha256": "037eb1d4a5705762be759ccd87c7ba9b81f035d268f0d6e29b20993b2d7852ac",
         "base_image": "docker.io/library/fedora@sha256:be9d65e2344d805cc11114319c685ecaa96b6d9b4350a0a6460cdb931babbd19",
         "r_source_url": "https://svn.r-project.org/R/trunk",
         "r_source_revision": 90483,
@@ -292,7 +292,7 @@ SPECIAL_NATIVE_BINDINGS = {
     "rcnst": {
         "wrapper_path": "/usr/local/bin/r-check", "wrapper_sha256": "a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090",
         "system_r": "/opt/R/devel/bin/R", "wrapper_input": "tarball-parent",
-        "check_args": ["--no-manual", "--no-build-vignettes"], "runtime_profile": "rcnst", "check_profile": "standard", "documentation_policy": "forbidden", "expected_r_kind": "devel", "expected_os": "linux", "expected_architecture": "x86_64", "expected_distribution": "ubuntu", "expected_distribution_version": "24.04",
+        "check_args": ["--no-manual", "--no-build-vignettes"], "runtime_profile": "rcnst", "check_profile": "standard", "documentation_policy": "forbidden", "expected_r_kind": "devel", "expected_os": "linux", "expected_architecture": "x86_64", "expected_distribution": "ubuntu", "expected_distribution_version": "22.04",
     },
     "musl": {
         "wrapper_path": "/R/bin/R",

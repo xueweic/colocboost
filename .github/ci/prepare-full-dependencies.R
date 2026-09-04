@@ -117,7 +117,7 @@ status <- tryCatch({
   ))
   suggests <- split_dependencies(field("Suggests"))
   builders <- split_dependencies(field("VignetteBuilder"))
-  tooling <- c("jsonlite", "yaml")
+  tooling <- c("jsonlite", "yaml", if (identical(cli$purpose, "check")) "V8")
 
   old_paths <- .libPaths()
   on.exit(.libPaths(old_paths), add = TRUE)

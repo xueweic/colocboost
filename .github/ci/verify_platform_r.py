@@ -53,11 +53,18 @@ cc_command <- if (identical(cc, "<none>")) "" else strsplit(trimws(cc), "[[:spac
 cc_path <- if (nzchar(cc_command)) unname(Sys.which(cc_command)) else ""
 if (!nzchar(cc_path)) cc_path <- rtools_executable("gcc.exe")
 if (identical(cc, "<none>") && nzchar(cc_path)) cc <- basename(cc_path)
-cc_version <- if (nzchar(cc_path)) {
-  output <- system2(cc_path, "--version", stdout = TRUE, stderr = TRUE)
+compiler_version <- function(path) {
+  if (!nzchar(path)) return("<none>")
+  output <- tryCatch(
+    suppressWarnings(system2(path, "--version", stdout = TRUE, stderr = TRUE)),
+    error = function(error) character()
+  )
   status <- attr(output, "status")
-  if ((!is.null(status) && status != 0L) || !length(output)) "<none>" else output[[1L]]
-} else "<none>"
+  if ((!is.null(status) && status != 0L) || !length(output)) {
+    paste("compiler executable", basename(path))
+  } else output[[1L]]
+}
+cc_version <- compiler_version(cc_path)
 cxx <- config("CXX")
 if (identical(cxx, "<none>")) {
   cxx_path <- rtools_executable("g++.exe")

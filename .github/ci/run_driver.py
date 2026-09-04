@@ -44,8 +44,8 @@ _EVIDENCE_ENVIRONMENT_FIELDS = (
 )
 
 
-def _require_executable(
-    value: str | os.PathLike[str], *, label: str = "executable"
+def _require_regular_file(
+    value: str | os.PathLike[str], *, label: str = "file"
 ) -> Path:
     path = Path(value)
     if not path.is_absolute():
@@ -53,9 +53,16 @@ def _require_executable(
     try:
         status = path.lstat()
     except OSError as error:
-        raise ValueError(f"{label} must be an existing regular executable file: {path}") from error
+        raise ValueError(f"{label} must be an existing regular file: {path}") from error
     if stat.S_ISLNK(status.st_mode) or not stat.S_ISREG(status.st_mode):
-        raise ValueError(f"{label} must be a regular non-symlink executable file: {path}")
+        raise ValueError(f"{label} must be a regular non-symlink file: {path}")
+    return path
+
+
+def _require_executable(
+    value: str | os.PathLike[str], *, label: str = "executable"
+) -> Path:
+    path = _require_regular_file(value, label=label)
     if not os.access(path, os.X_OK):
         raise ValueError(f"{label} must be executable: {path}")
     return path
@@ -85,10 +92,15 @@ def capture_environment_evidence(
     executable: str | os.PathLike[str],
     *,
     environment: Mapping[str, str] | None = None,
+    require_executable: bool = True,
 ) -> dict[str, Any]:
     """Capture a fixed allowlist of execution identity fields."""
 
-    executable_path = _require_executable(executable)
+    executable_path = (
+        _require_executable(executable)
+        if require_executable
+        else _require_regular_file(executable, label="executable")
+    )
     selected_environment = os.environ if environment is None else environment
     status = executable_path.stat()
     return {
@@ -244,6 +256,11 @@ def _build_command(
     if driver == "native-wrapper":
         if r_entrypoint is not None:
             raise ValueError("r_entrypoint is forbidden for native-wrapper")
+        if not os.access(executable, os.X_OK):
+            if executable.open("rb").readline().rstrip(b"\r\n") != b"#!/bin/sh":
+                raise ValueError("non-executable native wrapper must use #!/bin/sh")
+            shell = _require_executable("/bin/sh", label="native wrapper shell")
+            return [str(shell), str(executable), *arguments], shell
         return [str(executable), *arguments], executable
 
     if executable.name not in {"R", "R.exe"}:
@@ -288,7 +305,17 @@ def run_driver(
             f"caller requested {requested_driver!r}"
         )
 
-    executable_path = _require_executable(executable)
+    executable_path = (
+        _require_regular_file(executable, label="native wrapper")
+        if manifest_driver == "native-wrapper"
+        else _require_executable(executable)
+    )
+    if (
+        manifest_driver == "native-wrapper"
+        and not os.access(executable_path, os.X_OK)
+        and manifest_row.get("wrapper_sha256") is None
+    ):
+        raise ValueError("non-executable native wrapper must be sha256-bound")
     selected_environment = os.environ if environment is None else environment
     required_system_r = None
     path_r = None
@@ -347,6 +374,7 @@ def run_driver(
     evidence = capture_environment_evidence(
         executable_path,
         environment=os.environ if process_environment is None else process_environment,
+        require_executable=manifest_driver != "native-wrapper",
     )
     if invoked_executable != executable_path:
         invoked_evidence = capture_environment_evidence(

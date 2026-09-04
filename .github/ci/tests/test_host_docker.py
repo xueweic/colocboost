@@ -41,6 +41,11 @@ def test_proxy_identity_drift_fails_closed(tmp_path):
         validate_proxy_dockerfile(dockerfile, "blis")
 
 
+def test_committed_proxy_dockerfiles_validate():
+    validate_proxy_dockerfile(CI_DIR / "images" / "blis" / "Dockerfile", "blis")
+    validate_proxy_dockerfile(CI_DIR / "images" / "noomp" / "Dockerfile", "noomp")
+
+
 def test_external_tag_and_root_readonly_identity_are_rejected(tmp_path):
     with pytest.raises(ValueError, match="immutable digest"):
         docker_argv("ghcr.io/example/rcheck:latest", mounts=[(tmp_path, "/work", False)], command=["R"])
