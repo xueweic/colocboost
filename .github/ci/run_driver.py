@@ -20,6 +20,7 @@ from validate_manifest import load_manifest, validate_manifest
 
 
 _DRIVERS = frozenset({"r-binary", "native-wrapper"})
+SYSTEM_SHELL_PATH = Path("/bin/sh")
 _TARBALL_TOKEN = "{tarball}"
 _TARBALL_PARENT_TOKEN = "{tarball-parent}"
 _EVIDENCE_ENVIRONMENT_FIELDS = (
@@ -66,6 +67,14 @@ def _require_executable(
     if not os.access(path, os.X_OK):
         raise ValueError(f"{label} must be executable: {path}")
     return path
+
+
+def _trusted_system_shell() -> Path:
+    """Validate the fixed system shell, following its platform symlink."""
+    shell = SYSTEM_SHELL_PATH
+    if shell.is_symlink():
+        shell = shell.resolve(strict=True)
+    return _require_executable(shell, label="native wrapper shell")
 
 
 def _sha256(path: Path) -> str:
@@ -259,7 +268,7 @@ def _build_command(
         if not os.access(executable, os.X_OK):
             if executable.open("rb").readline().rstrip(b"\r\n") != b"#!/bin/sh":
                 raise ValueError("non-executable native wrapper must use #!/bin/sh")
-            shell = _require_executable("/bin/sh", label="native wrapper shell")
+            shell = _trusted_system_shell()
             return [str(shell), str(executable), *arguments], shell
         return [str(executable), *arguments], executable
 

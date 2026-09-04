@@ -13,6 +13,7 @@ CI_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(CI_DIR))
 
 from artifact_contract import create_metadata  # noqa: E402
+import run_driver as driver  # noqa: E402
 from run_driver import capture_environment_evidence, run_driver  # noqa: E402
 
 
@@ -116,6 +117,19 @@ def test_native_shell_wrapper_may_be_nonexecutable_when_hash_bound(tmp_path):
         required_r_executable=system_r, environment=environment,
     ) == 0
     assert marker.read_text() == "called"
+
+
+def test_native_shell_wrapper_resolves_trusted_system_shell_symlink(tmp_path, monkeypatch):
+    target = make_executable(tmp_path / "bin" / "dash")
+    shell = tmp_path / "bin" / "sh"
+    shell.symlink_to(target)
+    wrapper = tmp_path / "bin" / "wrapper"
+    wrapper.write_text("#!/bin/sh\n")
+    monkeypatch.setattr(driver, "SYSTEM_SHELL_PATH", shell)
+
+    command, invoked = driver._build_command("native-wrapper", wrapper, [], None)
+    assert command == [os.fspath(target), os.fspath(wrapper)]
+    assert invoked == target
 
 
 def test_native_wrapper_binds_verified_single_tarball_parent_and_system_r(tmp_path):

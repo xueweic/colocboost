@@ -76,9 +76,8 @@ def test_every_job_is_inert_outside_the_fork_and_dependents_stop_when_cancelled(
 
     assert workflow["jobs"]["prepare"]["if"] == "${{ " + FORK_GUARD + " }}"
     for name in ("primary-linux", "primary-platform", "mkl", "nosuggests", "active-rhub", "remaining-docker", "linux-arm64", "linux-arm64-compare", "applicability-native"):
-        assert workflow["jobs"][name]["if"] == (
-            "${{ always() && !cancelled() && " + FORK_GUARD + " }}"
-        )
+        expected_if = "${{ always() && !cancelled() && needs.prepare.result == 'success' && " + FORK_GUARD + " }}"
+        assert workflow["jobs"][name]["if"] == expected_if
         expected_needs = ["prepare", "linux-arm64"] if name == "linux-arm64-compare" else "prepare"
         assert workflow["jobs"][name]["needs"] == expected_needs
     summary = workflow["jobs"]["summary-gate"]

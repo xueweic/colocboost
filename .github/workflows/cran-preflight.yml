@@ -77,7 +77,7 @@ jobs:
           if-no-files-found: error
 
   primary-linux:
-    if: ${{ always() && !cancelled() && github.repository == 'xueweic/colocboost' }}
+    if: ${{ always() && !cancelled() && needs.prepare.result == 'success' && github.repository == 'xueweic/colocboost' }}
     needs: prepare
     runs-on: ubuntu-24.04
     strategy:
@@ -462,7 +462,7 @@ jobs:
           test "$DIAGNOSTIC_UPLOAD_OUTCOME" = success
 
   primary-platform:
-    if: ${{ always() && !cancelled() && github.repository == 'xueweic/colocboost' }}
+    if: ${{ always() && !cancelled() && needs.prepare.result == 'success' && github.repository == 'xueweic/colocboost' }}
     needs: prepare
     runs-on: ${{ matrix.runner }}
     strategy:
@@ -967,7 +967,7 @@ jobs:
           }
 
   mkl:
-    if: ${{ always() && !cancelled() && github.repository == 'xueweic/colocboost' }}
+    if: ${{ always() && !cancelled() && needs.prepare.result == 'success' && github.repository == 'xueweic/colocboost' }}
     needs: prepare
     runs-on: ubuntu-24.04
     container:
@@ -1313,7 +1313,7 @@ jobs:
           test "$DIAGNOSTIC_UPLOAD_OUTCOME" = success
 
   nosuggests:
-    if: ${{ always() && !cancelled() && github.repository == 'xueweic/colocboost' }}
+    if: ${{ always() && !cancelled() && needs.prepare.result == 'success' && github.repository == 'xueweic/colocboost' }}
     needs: prepare
     runs-on: ubuntu-24.04
     container:
@@ -1598,7 +1598,7 @@ jobs:
           test "$DIAGNOSTIC_UPLOAD_OUTCOME" = success
 
   active-rhub:
-    if: ${{ always() && !cancelled() && github.repository == 'xueweic/colocboost' }}
+    if: ${{ always() && !cancelled() && needs.prepare.result == 'success' && github.repository == 'xueweic/colocboost' }}
     needs: prepare
     runs-on: ubuntu-24.04
     strategy:
@@ -2168,7 +2168,7 @@ jobs:
           fi
 
   remaining-docker:
-    if: ${{ always() && !cancelled() && github.repository == 'xueweic/colocboost' }}
+    if: ${{ always() && !cancelled() && needs.prepare.result == 'success' && github.repository == 'xueweic/colocboost' }}
     needs: prepare
     runs-on: ubuntu-24.04
     strategy:
@@ -2512,7 +2512,7 @@ jobs:
           fi
 
   linux-arm64:
-    if: ${{ always() && !cancelled() && github.repository == 'xueweic/colocboost' }}
+    if: ${{ always() && !cancelled() && needs.prepare.result == 'success' && github.repository == 'xueweic/colocboost' }}
     needs: prepare
     runs-on: ${{ matrix.runner }}
     strategy:
@@ -2651,7 +2651,7 @@ jobs:
           test "$CHILD_OUTCOME" = success
 
   linux-arm64-compare:
-    if: ${{ always() && !cancelled() && github.repository == 'xueweic/colocboost' }}
+    if: ${{ always() && !cancelled() && needs.prepare.result == 'success' && github.repository == 'xueweic/colocboost' }}
     needs: [prepare, linux-arm64]
     runs-on: ubuntu-24.04
     steps:
@@ -2726,7 +2726,7 @@ jobs:
           test "$EVIDENCE_UPLOAD_OUTCOME" = success
 
   applicability-native:
-    if: ${{ always() && !cancelled() && github.repository == 'xueweic/colocboost' }}
+    if: ${{ always() && !cancelled() && needs.prepare.result == 'success' && github.repository == 'xueweic/colocboost' }}
     needs: prepare
     runs-on: ubuntu-24.04
     strategy:
