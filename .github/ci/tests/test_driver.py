@@ -627,7 +627,7 @@ def test_evidence_is_written_before_driver_runs(tmp_path):
     )
 
 
-def test_driver_cli_validates_manifest_row_and_propagates_exit(tmp_path):
+def test_driver_cli_enforces_manifest_wrapper_identity(tmp_path):
     tarball, metadata = make_artifact(tmp_path)
     output = tmp_path / "cli argv.json"
     evidence = tmp_path / "cli evidence.json"
@@ -651,7 +651,7 @@ def test_driver_cli_validates_manifest_row_and_propagates_exit(tmp_path):
             "--manifest",
             str(CI_DIR / "check-matrix.yml"),
             "--environment-id",
-            "openblas",
+            "noomp",
             "--driver",
             "native-wrapper",
             "--executable",
@@ -677,12 +677,10 @@ def test_driver_cli_validates_manifest_row_and_propagates_exit(tmp_path):
         env=environment,
     )
 
-    assert completed.returncode == 19, completed.stderr
-    assert json.loads(output.read_text()) == [
-        "arg with spaces",
-        str(tarball.absolute()),
-    ]
-    assert json.loads(evidence.read_text())["executable"]["path"] == str(wrapper)
+    assert completed.returncode == 2
+    assert "does not match manifest wrapper_path" in completed.stderr
+    assert not output.exists()
+    assert not evidence.exists()
 
 
 def test_driver_cli_rejects_unknown_environment_without_invocation(tmp_path):

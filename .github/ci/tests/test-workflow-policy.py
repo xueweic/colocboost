@@ -55,7 +55,8 @@ def test_triggers_permissions_concurrency_and_job_inventory_are_exact():
     }
     assert set(workflow["jobs"]) == {
         "prepare", "primary-linux", "primary-platform", "mkl", "nosuggests",
-        "active-rhub", "summary-gate",
+        "active-rhub", "remaining-docker", "linux-arm64", "linux-arm64-compare",
+        "applicability-native", "summary-gate",
     }
     assert workflow["jobs"]["primary-linux"]["strategy"]["fail-fast"] is False
     assert workflow["jobs"]["primary-platform"]["strategy"]["fail-fast"] is False
@@ -66,18 +67,19 @@ def test_every_job_is_inert_outside_the_fork_and_dependents_stop_when_cancelled(
     _, workflow = load_workflow()
 
     assert workflow["jobs"]["prepare"]["if"] == "${{ " + FORK_GUARD + " }}"
-    for name in ("primary-linux", "primary-platform", "mkl", "nosuggests", "active-rhub"):
+    for name in ("primary-linux", "primary-platform", "mkl", "nosuggests", "active-rhub", "remaining-docker", "linux-arm64", "linux-arm64-compare", "applicability-native"):
         assert workflow["jobs"][name]["if"] == (
             "${{ always() && !cancelled() && " + FORK_GUARD + " }}"
         )
-        assert workflow["jobs"][name]["needs"] == "prepare"
+        expected_needs = ["prepare", "linux-arm64"] if name == "linux-arm64-compare" else "prepare"
+        assert workflow["jobs"][name]["needs"] == expected_needs
     summary = workflow["jobs"]["summary-gate"]
     assert summary["if"] == (
         "${{ always() && !cancelled() && " + FORK_GUARD + " }}"
     )
     assert summary["needs"] == [
         "prepare", "primary-linux", "primary-platform", "mkl", "nosuggests",
-        "active-rhub",
+        "active-rhub", "applicability-native", "remaining-docker", "linux-arm64", "linux-arm64-compare",
     ]
 
 
@@ -166,43 +168,48 @@ def test_primary_platform_matrix_is_exact_and_binds_setup_r_identity():
     expected = {
         "r-devel-windows-x86-64": (
             "windows-2022", "devel", "C:/R/bin/R.exe", "devel", "windows",
-            "x86_64",
+            "x86_64", True,
         ),
         "r-release-windows-x86-64": (
             "windows-2022", "release", "C:/R/bin/R.exe", "release", "windows",
-            "x86_64",
+            "x86_64", True,
         ),
         "r-oldrel-windows-x86-64": (
             "windows-2022", "oldrel-1", "C:/R/bin/R.exe", "release", "windows",
-            "x86_64",
+            "x86_64", True,
         ),
         "r-release-macos-arm64": (
             "macos-15", "release",
             "/Library/Frameworks/R.framework/Resources/bin/R", "release",
-            "macos", "aarch64",
+            "macos", "aarch64", True,
         ),
         "r-oldrel-macos-arm64": (
             "macos-15", "oldrel-1",
             "/Library/Frameworks/R.framework/Resources/bin/R", "release",
-            "macos", "aarch64",
+            "macos", "aarch64", True,
         ),
         "r-release-macos-x86-64": (
             "macos-15-intel", "release",
             "/Library/Frameworks/R.framework/Resources/bin/R", "release",
-            "macos", "x86_64",
+            "macos", "x86_64", True,
         ),
         "r-oldrel-macos-x86-64": (
             "macos-15-intel", "oldrel-1",
             "/Library/Frameworks/R.framework/Resources/bin/R", "release",
-            "macos", "x86_64",
+            "macos", "x86_64", True,
+        ),
+        "m1mac": (
+            "macos-15", "devel",
+            "/Library/Frameworks/R.framework/Resources/bin/R", "devel",
+            "macos", "aarch64", False,
         ),
     }
-    assert len(rows) == len(expected)
+    assert len(rows) == len(expected) == 8
     for row in rows:
         assert (
             row["runner"], row["setup_r_selector"], row["system_r"],
             row["expected_r_kind"], row["expected_os"],
-            row["expected_architecture"],
+            row["expected_architecture"], row["unit_enabled"],
         ) == expected[row["environment_id"]]
         assert row["check_args"] == "--as-cran --no-manual --no-build-vignettes"
     assert job["runs-on"] == "${{ matrix.runner }}"
@@ -257,24 +264,43 @@ def test_primary_platform_children_are_cross_platform_and_fail_closed():
     assert "UNIT_OUTCOME" not in package_gate["env"]
     assert "ADAPTER_OUTCOME" not in package_gate["env"]
     for step_id in (
-        "finalize-unit", "finalize-check", "upload-unit", "upload-check",
-        "upload-diagnostics", "producer-gate",
+        "prepare-unit-dependencies", "verify-unit-dependencies", "unit-full",
+        "adapt-unit", "unit-result-gate",
     ):
+        assert step_with_id(job, step_id)["if"] == "${{ matrix.unit_enabled }}"
+    assert step_with_id(job, "finalize-unit")["if"] == (
+        "${{ always() && matrix.unit_enabled }}"
+    )
+    assert step_with_id(job, "upload-unit")["if"] == (
+        "${{ always() && matrix.unit_enabled }}"
+    )
+    for step_id in ("finalize-check", "upload-check", "upload-diagnostics", "producer-gate"):
         assert step_with_id(job, step_id)["if"] == "${{ always() }}"
+    for step_id in (
+        "prepare-check-dependencies", "verify-check-dependencies",
+        "r-binary-check", "package-result-gate",
+    ):
+        assert "if" not in step_with_id(job, step_id)
     diagnostics = step_with_id(job, "upload-diagnostics")
     assert diagnostics["with"]["include-hidden-files"] is True
     assert diagnostics["with"]["if-no-files-found"] == "error"
     assert "*.Rcheck" in diagnostics["with"]["path"]
+    producer_gate = step_with_id(job, "producer-gate")
+    assert producer_gate["env"]["UNIT_ENABLED"] == "${{ matrix.unit_enabled }}"
+    assert 'if ($env:UNIT_ENABLED -eq "true")' in producer_gate["run"]
+    assert 'elseif ($env:UNIT_ENABLED -eq "false")' in producer_gate["run"]
+    assert "else {\n  exit 1" in producer_gate["run"]
 
 
-def test_task10_active_phase_produces_exactly_40_terminal_keys():
+def test_task11_final_six_producers_produce_exactly_60_terminal_keys():
     _, workflow = load_workflow()
     keys = set()
     for job_name in ("primary-linux", "primary-platform"):
         rows = workflow["jobs"][job_name]["strategy"]["matrix"]["include"]
         for row in rows:
             keys.add(("package-check", row["environment_id"]))
-            keys.add(("unit", row["environment_id"]))
+            if row.get("unit_enabled", True):
+                keys.add(("unit", row["environment_id"]))
     for environment_id in ("mkl", "nosuggests"):
         keys.add(("package-check", environment_id))
         keys.add(("unit", environment_id))
@@ -283,10 +309,19 @@ def test_task10_active_phase_produces_exactly_40_terminal_keys():
         keys.add(("package-check", row["environment_id"]))
         if row["unit_enabled"]:
             keys.add(("unit", row["environment_id"]))
-    assert len(keys) == 40
-    assert sum(kind == "package-check" for kind, _ in keys) == 24
-    assert sum(kind == "unit" for kind, _ in keys) == 16
-    assert all(kind != "applicability" for kind, _ in keys)
+    for row in workflow["jobs"]["applicability-native"]["strategy"]["matrix"]["include"]:
+        keys.add(("applicability", row["environment_id"]))
+    for row in workflow["jobs"]["remaining-docker"]["strategy"]["matrix"]["include"]:
+        keys.add(("package-check", row["environment_id"]))
+        if row["unit_enabled"]:
+            keys.add(("unit", row["environment_id"]))
+    keys.add(("package-check", "linux-arm64"))
+    assert len(keys) == 60
+    assert sum(kind == "package-check" for kind, _ in keys) == 32
+    assert sum(kind == "unit" for kind, _ in keys) == 18
+    assert sum(kind == "applicability" for kind, _ in keys) == 10
+    assert ("package-check", "m1mac") in keys
+    assert ("unit", "m1mac") not in keys
 
 
 def test_all_actions_are_immutable_allowlisted_and_checkout_is_safe():
@@ -357,6 +392,8 @@ def test_active_rhub_matrix_is_exact_and_immutable():
     clang = "9732ef12761fd6ecd4631dd6ce0861fbbbd68fb33f6e7643745ec36de456b4f9"
     expected = {
         "atlas": ("ghcr.io/r-hub/containers/atlas@sha256:7597f7d0b6b2f009ae7bb425391523d8f4388223238db50d7dfb1572add63a88", "/opt/R/devel/bin/R", generic, "atlas", "--no-manual --no-build-vignettes", True, ""),
+        "openblas": ("ghcr.io/r-hub/containers/gcc16@sha256:1127418efe3938f0e72fc29c55596a8cdde03293928b60aeb0ac44b6586960d2", "/opt/R/devel-gcc16/bin/R", generic, "openblas", "--no-manual --no-build-vignettes", True, ""),
+        "rcnst": ("ghcr.io/r-hub/containers/ubuntu-clang@sha256:b66e5f86ce6f8fa3e6afd497fabfdb3aeac79c74ee3525e8a8814de79aa2bc82", "/opt/R/devel/bin/R", generic, "rcnst", "--no-manual --no-build-vignettes", False, ""),
         "clang-asan": ("ghcr.io/r-hub/containers/clang-asan@sha256:dfab3d2274151577eb705d2be9acd3391798ba4b56d384ca9df84544e5b6be96", "/opt/R/devel-asan/bin/R", clang, "clang-asan", "--extra-arch --no-stop-on-test-error --no-manual --no-build-vignettes", False, ""),
         "clang-ubsan": ("ghcr.io/r-hub/containers/clang-ubsan@sha256:a58b00b52e9c4b210c3474eac4c28dc18bf70c912d75bb45e466410452a694e6", "/opt/R/devel-asan/bin/R", clang, "clang-ubsan", "--extra-arch --no-stop-on-test-error --no-manual --no-build-vignettes", False, ""),
         "donttest": ("ghcr.io/r-hub/containers/donttest@sha256:fd1942c8b8627d7e1d80582a023b2792acfa158a6edfeeeba3edd27a52c57967", "/opt/R/devel/bin/R", generic, "donttest", "--no-manual --no-build-vignettes", False, ""),
@@ -366,8 +403,8 @@ def test_active_rhub_matrix_is_exact_and_immutable():
         "valgrind": ("ghcr.io/r-hub/containers/valgrind@sha256:98dfda5016513c269e33c8155ea57745d977dad4b1a703b28db82fcb1237ef9c", "/opt/R/devel-valgrind/bin/R", "79261a338b0a381a157cf2025ef40f389b3906fb4711d14b7a72314f5316cbc8", "valgrind", "--use-valgrind --extra-arch --no-stop-on-test-error --no-manual --no-build-vignettes", False, "valgrind-suppression"),
         "vnu": ("ghcr.io/r-hub/containers/vnu@sha256:03f45d5944fc092627cae2e944f16f037fed9795f8768c90d9511799098a7884", "/opt/R/release/bin/R", "0de8ba373ec3bbe81b84122857d071dda4eee72e035d3180464607837c0bb089", "vnu", "--no-manual --no-build-vignettes", False, "vnu-dispatcher"),
     }
-    assert len(rows) == 9
-    assert len({row["environment_id"] for row in rows}) == 9
+    assert len(rows) == 11
+    assert len({row["environment_id"] for row in rows}) == 11
     assert {row["environment_id"] for row in rows} == set(expected)
     for row in rows:
         assert (
@@ -692,6 +729,10 @@ def test_summary_publication_and_explicit_outcome_gate_run_after_failures():
         "MKL_RESULT": "${{ needs.mkl.result }}",
         "NOSUGGESTS_RESULT": "${{ needs.nosuggests.result }}",
         "ACTIVE_RHUB_RESULT": "${{ needs.active-rhub.result }}",
+        "APPLICABILITY_RESULT": "${{ needs.applicability-native.result }}",
+        "REMAINING_DOCKER_RESULT": "${{ needs.remaining-docker.result }}",
+        "LINUX_ARM64_RESULT": "${{ needs.linux-arm64.result }}",
+        "LINUX_ARM64_COMPARE_RESULT": "${{ needs.linux-arm64-compare.result }}",
         "SOURCE_DOWNLOAD_OUTCOME": "${{ steps.download-source.outcome }}",
         "RESULT_DOWNLOAD_OUTCOME": "${{ steps.download-results.outcome }}",
         "SOURCE_VERIFY_OUTCOME": "${{ steps.verify-source.outcome }}",

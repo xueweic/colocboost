@@ -31,7 +31,8 @@ ENVIRONMENT_FIELDS = {
     "LD_LIBRARY_PATH", "DYLD_LIBRARY_PATH", "CC", "CXX", "FC", "F77",
     "LANG", "LC_ALL", "LC_CTYPE", "ASAN_OPTIONS", "UBSAN_OPTIONS",
     "LD_PRELOAD", "VALGRIND_OPTS", "CHECK_ARGS",
-    "_R_CHECK_DONTTEST_EXAMPLES_",
+    "_R_CHECK_DONTTEST_EXAMPLES_", "OPENBLAS_NUM_THREADS", "BLIS_NUM_THREADS",
+    "R_COMPILE_PKGS", "R_JIT_STRATEGY", "R_CHECK_CONSTANTS",
 }
 MAKECONF_FIELDS = {"CFLAGS", "CXXFLAGS", "FFLAGS", "MAIN_LDFLAGS", "SAN_LIBS"}
 
@@ -295,8 +296,16 @@ def validate_runtime_evidence(
     elif profile == "valgrind":
         if environment["VALGRIND_OPTS"] != "--track-origins=yes --leak-check=full":
             raise ValueError("Valgrind runtime options do not match the active image")
+    elif profile == "openblas":
+        if "libopenblas" not in lowered or re.search(r"lib(?:mkl|blis|atlas)", lowered):
+            raise ValueError("OpenBLAS runtime identity is missing or fallback was mapped")
+        if environment["OPENBLAS_NUM_THREADS"] != "1":
+            raise ValueError("OpenBLAS must run single-threaded")
+    elif profile == "rcnst":
+        if (environment["R_COMPILE_PKGS"], environment["R_JIT_STRATEGY"], environment["R_CHECK_CONSTANTS"]) != ("1", "4", "5"):
+            raise ValueError("rcnst constants environment is not exact")
 
-    if profile in {"atlas", "clang-asan", "clang-ubsan", "donttest", "gcc-asan", "gcc-ubsan", "nold", "valgrind", "vnu"}:
+    if profile in {"atlas", "clang-asan", "clang-ubsan", "donttest", "gcc-asan", "gcc-ubsan", "nold", "valgrind", "vnu", "openblas", "rcnst"}:
         if environment["CHECK_ARGS"] != " ".join(row["check_args"]):
             raise ValueError("runtime CHECK_ARGS do not match the manifest")
     return document

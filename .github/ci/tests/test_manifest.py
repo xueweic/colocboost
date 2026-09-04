@@ -148,8 +148,8 @@ GOLDEN_ROWS = {
     "0len": ("additional", "0len", "not-applicable", "r-binary", "runner", "ubuntu-24.04"),
     "rchk": ("additional", "rchk", "not-applicable", "r-binary", "runner", "ubuntu-24.04"),
     "rcnst": ("additional", "rcnst", "proxy", "native-wrapper", "image", "ghcr.io/r-hub/containers/ubuntu-clang@sha256:b66e5f86ce6f8fa3e6afd497fabfdb3aeac79c74ee3525e8a8814de79aa2bc82"),
-    "rlibro": ("additional", "rlibro", "proxy", "native-wrapper", "image", "local/colocboost-rlibro-proxy"),
-    "musl": ("additional", "musl", "direct", "native-wrapper", "image", "cran-linked-public-musl-reproduction"),
+    "rlibro": ("additional", "rlibro", "proxy", "native-wrapper", "image", "ghcr.io/r-hub/containers/ubuntu-clang@sha256:b66e5f86ce6f8fa3e6afd497fabfdb3aeac79c74ee3525e8a8814de79aa2bc82"),
+    "musl": ("additional", "musl", "direct", "native-wrapper", "image", "ghcr.io/bastistician/rcheck-musl@sha256:8b33a511897c8025a84072efdb97dc0a58292428700bf90e6628a438134c453d"),
     "linux-arm64": ("additional", "linux-arm64", "direct", "r-binary", "runner", ("ubuntu-24.04", "ubuntu-24.04-arm")),
     "vnu": ("additional", "vnu", "direct", "native-wrapper", "image", "ghcr.io/r-hub/containers/vnu@sha256:03f45d5944fc092627cae2e944f16f037fed9795f8768c90d9511799098a7884"),
 }
@@ -184,7 +184,7 @@ GOLDEN_PROOFS = {
     "r-oldrel-macos-x86_64": proof_set("source-tarball-sha256 r-executable r-version r-oldrel operating-system macos-version compiler apple-and-gnu-compilers architecture x86-64 locale"),
     "r-oldrel-windows-x86_64": proof_set("source-tarball-sha256 r-executable r-version r-oldrel operating-system windows-server-2022 compiler rtools-gcc architecture locale"),
     "ATLAS": proof_set("source-tarball-sha256 container-system-r r-executable extsoftversion-blas la-library process-mappings loaded-atlas"),
-    "BLIS": proof_set("source-tarball-sha256 r-executable r-devel-revision operating-system compiler architecture loaded-blis blis-version single-thread"),
+    "BLIS": proof_set("source-tarball-sha256 r-executable r-devel-revision operating-system compiler architecture loaded-blis blis-version single-thread structured-runtime-proof"),
     "BLAS": proof_set("source-tarball-sha256 no-package-owned-native-source no-linkingto no-compilation-marker no-direct-native-call"),
     "C23": proof_set("source-tarball-sha256 no-package-c-source obsolete-special-area"),
     "Intel": proof_set("source-tarball-sha256 no-package-owned-native-source obsolete-special-area"),
@@ -201,20 +201,20 @@ GOLDEN_PROOFS = {
     "gcc": proof_set("source-tarball-sha256 no-package-owned-compiled-source"),
     "gcc15": proof_set("source-tarball-sha256 no-package-owned-native-source obsolete-special-area"),
     "noLD": proof_set("source-tarball-sha256 container-system-r r-executable opt-r-devel-nold long-double-disabled"),
-    "noOMP": proof_set("source-tarball-sha256 r-executable r-devel-revision no-openmp-compile-flags no-openmp-link-flags no-loaded-openmp-runtime dependency-openmp-audit"),
+    "noOMP": proof_set("source-tarball-sha256 r-executable r-devel-revision no-openmp-compile-flags no-openmp-link-flags no-loaded-openmp-runtime dependency-openmp-audit structured-runtime-proof"),
     "noRemap": proof_set("source-tarball-sha256 no-package-cpp-source obsolete-special-area"),
     "noSuggests": proof_set("source-tarball-sha256 container-system-r r-executable depends-only-policy allowed-test-frameworks allowed-vignette-builders ashr-absent susier-absent nonzero-installed-test-count"),
     "valgrind": proof_set("source-tarball-sha256 container-system-r r-executable opt-r-devel-valgrind use-valgrind valgrind-runtime suppression-and-error-scan"),
     "0len": proof_set("source-tarball-sha256 no-direct-native-interface removed-official-experimental-support"),
     "rchk": proof_set("source-tarball-sha256 no-package-c-cpp-object compiled-dependencies-visible-limitation"),
     "rcnst": proof_set("source-tarball-sha256 container-system-r r-executable r-devel-revision r-compile-pkgs-1 r-jit-strategy-4 r-check-constants-5 constant-corruption-diagnostics"),
-    "rlibro": proof_set("source-tarball-sha256 r-executable nonroot-uid readonly-bind-mount write-failure installed-library-path package-check-executed"),
+    "rlibro": proof_set("source-tarball-sha256 container-system-r r-executable nonroot-uid readonly-bind-mount write-failure installed-library-path package-check-executed"),
     "musl": proof_set("source-tarball-sha256 r-executable r-version musl-libc alpine-version locale architecture"),
     "linux-arm64": proof_set("source-tarball-sha256 r-executable native-amd64 native-arm64 identical-rcheckserver-image identical-tarball-and-configuration architecture-only-comparison"),
     "vnu": proof_set("source-tarball-sha256 container-system-r r-executable vnu-special-dispatch nu-validator-executed zero-bad-entries validator-output"),
 }
 
-PREDICATE_PREFIX = ("python", ".github/ci/evaluate_native_features.py", "--tarball", "{tarball}", "--rule")
+PREDICATE_PREFIX = ("python", ".github/ci/check_applicability.py", "--tarball", "{tarball}", "--rule")
 GOLDEN_PREDICATES = {
     "BLAS": ("built-source-tarball", PREDICATE_PREFIX + ("no-native-source-linkingto-compilation-or-direct-call",)),
     "C23": ("built-source-tarball", PREDICATE_PREFIX + ("no-c-source",)),

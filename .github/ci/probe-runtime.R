@@ -177,7 +177,8 @@ status <- tryCatch({
     "LD_LIBRARY_PATH", "DYLD_LIBRARY_PATH", "CC", "CXX", "FC", "F77",
     "LANG", "LC_ALL", "LC_CTYPE", "ASAN_OPTIONS", "UBSAN_OPTIONS",
     "LD_PRELOAD", "VALGRIND_OPTS", "CHECK_ARGS",
-    "_R_CHECK_DONTTEST_EXAMPLES_"
+    "_R_CHECK_DONTTEST_EXAMPLES_", "OPENBLAS_NUM_THREADS", "BLIS_NUM_THREADS",
+    "R_COMPILE_PKGS", "R_JIT_STRATEGY", "R_CHECK_CONSTANTS"
   )
   environment <- as.list(Sys.getenv(environment_names, unset = NA_character_))
   names(environment) <- environment_names

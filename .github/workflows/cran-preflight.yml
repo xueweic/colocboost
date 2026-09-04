@@ -465,6 +465,7 @@ jobs:
             setup_r_selector: devel
             system_r: C:/R/bin/R.exe
             check_args: --as-cran --no-manual --no-build-vignettes
+            unit_enabled: true
             expected_r_kind: devel
             expected_os: windows
             expected_architecture: x86_64
@@ -473,6 +474,7 @@ jobs:
             setup_r_selector: release
             system_r: C:/R/bin/R.exe
             check_args: --as-cran --no-manual --no-build-vignettes
+            unit_enabled: true
             expected_r_kind: release
             expected_os: windows
             expected_architecture: x86_64
@@ -481,6 +483,7 @@ jobs:
             setup_r_selector: oldrel-1
             system_r: C:/R/bin/R.exe
             check_args: --as-cran --no-manual --no-build-vignettes
+            unit_enabled: true
             expected_r_kind: release
             expected_os: windows
             expected_architecture: x86_64
@@ -489,6 +492,7 @@ jobs:
             setup_r_selector: release
             system_r: /Library/Frameworks/R.framework/Resources/bin/R
             check_args: --as-cran --no-manual --no-build-vignettes
+            unit_enabled: true
             expected_r_kind: release
             expected_os: macos
             expected_architecture: aarch64
@@ -497,6 +501,7 @@ jobs:
             setup_r_selector: oldrel-1
             system_r: /Library/Frameworks/R.framework/Resources/bin/R
             check_args: --as-cran --no-manual --no-build-vignettes
+            unit_enabled: true
             expected_r_kind: release
             expected_os: macos
             expected_architecture: aarch64
@@ -505,6 +510,7 @@ jobs:
             setup_r_selector: release
             system_r: /Library/Frameworks/R.framework/Resources/bin/R
             check_args: --as-cran --no-manual --no-build-vignettes
+            unit_enabled: true
             expected_r_kind: release
             expected_os: macos
             expected_architecture: x86_64
@@ -513,9 +519,19 @@ jobs:
             setup_r_selector: oldrel-1
             system_r: /Library/Frameworks/R.framework/Resources/bin/R
             check_args: --as-cran --no-manual --no-build-vignettes
+            unit_enabled: true
             expected_r_kind: release
             expected_os: macos
             expected_architecture: x86_64
+          - environment_id: m1mac
+            runner: macos-15
+            setup_r_selector: devel
+            system_r: /Library/Frameworks/R.framework/Resources/bin/R
+            check_args: --as-cran --no-manual --no-build-vignettes
+            unit_enabled: false
+            expected_r_kind: devel
+            expected_os: macos
+            expected_architecture: aarch64
     defaults:
       run:
         shell: pwsh
@@ -636,6 +652,7 @@ jobs:
 
       - name: Install full source-unit dependencies with selected R
         id: prepare-unit-dependencies
+        if: ${{ matrix.unit_enabled }}
         continue-on-error: true
         env:
           TARBALL: ${{ steps.verify-source.outputs.tarball_path }}
@@ -656,6 +673,7 @@ jobs:
 
       - name: Validate source-unit dependency evidence
         id: verify-unit-dependencies
+        if: ${{ matrix.unit_enabled }}
         continue-on-error: true
         env:
           TARBALL_SHA256: ${{ steps.verify-source.outputs.tarball_sha256 || env.FALLBACK_TARBALL_SHA256 }}
@@ -674,6 +692,7 @@ jobs:
 
       - name: Run complete source unit suite
         id: unit-full
+        if: ${{ matrix.unit_enabled }}
         continue-on-error: true
         env:
           PACKAGE_PATH: ${{ steps.extract-source.outputs.package_path }}
@@ -691,6 +710,7 @@ jobs:
 
       - name: Adapt complete source unit result
         id: adapt-unit
+        if: ${{ matrix.unit_enabled }}
         continue-on-error: true
         env:
           TARBALL_SHA256: ${{ steps.verify-source.outputs.tarball_sha256 || env.FALLBACK_TARBALL_SHA256 }}
@@ -710,6 +730,7 @@ jobs:
 
       - name: Gate source-unit prerequisites
         id: unit-result-gate
+        if: ${{ matrix.unit_enabled }}
         continue-on-error: true
         env:
           INITIALIZE_OUTCOME: ${{ steps.initialize.outcome }}
@@ -834,7 +855,7 @@ jobs:
 
       - name: Finalize platform source unit result
         id: finalize-unit
-        if: ${{ always() }}
+        if: ${{ always() && matrix.unit_enabled }}
         continue-on-error: true
         env:
           TARBALL_SHA256: ${{ steps.verify-source.outputs.tarball_sha256 || env.FALLBACK_TARBALL_SHA256 }}
@@ -873,7 +894,7 @@ jobs:
 
       - name: Upload platform source unit result
         id: upload-unit
-        if: ${{ always() }}
+        if: ${{ always() && matrix.unit_enabled }}
         continue-on-error: true
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
@@ -908,15 +929,27 @@ jobs:
         id: producer-gate
         if: ${{ always() }}
         env:
+          UNIT_ENABLED: ${{ matrix.unit_enabled }}
           UNIT_FINALIZER_OUTCOME: ${{ steps.finalize-unit.outcome }}
           CHECK_FINALIZER_OUTCOME: ${{ steps.finalize-check.outcome }}
           UNIT_UPLOAD_OUTCOME: ${{ steps.upload-unit.outcome }}
           CHECK_UPLOAD_OUTCOME: ${{ steps.upload-check.outcome }}
           DIAGNOSTIC_UPLOAD_OUTCOME: ${{ steps.upload-diagnostics.outcome }}
         run: |
+          $ErrorActionPreference = "Stop"
+          if ($env:UNIT_ENABLED -eq "true") {
+            if ($env:UNIT_FINALIZER_OUTCOME -ne "success" -or $env:UNIT_UPLOAD_OUTCOME -ne "success") {
+              exit 1
+            }
+          } elseif ($env:UNIT_ENABLED -eq "false") {
+            if ($env:UNIT_FINALIZER_OUTCOME -ne "skipped" -or $env:UNIT_UPLOAD_OUTCOME -ne "skipped") {
+              exit 1
+            }
+          } else {
+            exit 1
+          }
           foreach ($outcome in @(
-            $env:UNIT_FINALIZER_OUTCOME, $env:CHECK_FINALIZER_OUTCOME,
-            $env:UNIT_UPLOAD_OUTCOME, $env:CHECK_UPLOAD_OUTCOME,
+            $env:CHECK_FINALIZER_OUTCOME, $env:CHECK_UPLOAD_OUTCOME,
             $env:DIAGNOSTIC_UPLOAD_OUTCOME
           )) {
             if ($outcome -ne "success") { exit 1 }
@@ -1571,6 +1604,26 @@ jobs:
             unit_enabled: true
             file_purpose: ""
             file_path: ""
+          - environment_id: openblas
+            image: ghcr.io/r-hub/containers/gcc16@sha256:1127418efe3938f0e72fc29c55596a8cdde03293928b60aeb0ac44b6586960d2
+            system_r: /opt/R/devel-gcc16/bin/R
+            runtime_profile: openblas
+            check_args: --no-manual --no-build-vignettes
+            wrapper: /usr/local/bin/r-check
+            wrapper_sha256: a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090
+            unit_enabled: true
+            file_purpose: ""
+            file_path: ""
+          - environment_id: rcnst
+            image: ghcr.io/r-hub/containers/ubuntu-clang@sha256:b66e5f86ce6f8fa3e6afd497fabfdb3aeac79c74ee3525e8a8814de79aa2bc82
+            system_r: /opt/R/devel/bin/R
+            runtime_profile: rcnst
+            check_args: --no-manual --no-build-vignettes
+            wrapper: /usr/local/bin/r-check
+            wrapper_sha256: a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090
+            unit_enabled: false
+            file_purpose: ""
+            file_path: ""
           - environment_id: clang-asan
             image: ghcr.io/r-hub/containers/clang-asan@sha256:dfab3d2274151577eb705d2be9acd3391798ba4b56d384ca9df84544e5b6be96
             system_r: /opt/R/devel-asan/bin/R
@@ -1664,6 +1717,10 @@ jobs:
       CHECK_ARGS: ${{ matrix.check_args }}
       NATIVE_WRAPPER: ${{ matrix.wrapper }}
       WRAPPER_SHA256: ${{ matrix.wrapper_sha256 }}
+      OPENBLAS_NUM_THREADS: ${{ matrix.environment_id == 'openblas' && '1' || '' }}
+      R_COMPILE_PKGS: ${{ matrix.environment_id == 'rcnst' && '1' || '' }}
+      R_JIT_STRATEGY: ${{ matrix.environment_id == 'rcnst' && '4' || '' }}
+      R_CHECK_CONSTANTS: ${{ matrix.environment_id == 'rcnst' && '5' || '' }}
       FILE_PURPOSE: ${{ matrix.file_purpose }}
       FILE_PATH: ${{ matrix.file_path }}
       SOURCE_SHA: ${{ needs.prepare.outputs.source_sha || github.sha }}
@@ -2053,9 +2110,685 @@ jobs:
             test "$UNIT_UPLOAD_OUTCOME" = skipped
           fi
 
+  remaining-docker:
+    if: ${{ always() && !cancelled() && github.repository == 'xueweic/colocboost' }}
+    needs: prepare
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - environment_id: blis
+            image: local/colocboost-blis-proxy
+            dockerfile: .github/ci/images/blis/Dockerfile
+            dockerfile_sha256: 8a838693ee62ca8aa1ad0bc3ec654a6273d38bc2bd95bf7e7ee4c286d830db1e
+            wrapper: /usr/local/bin/r-check
+            r_binary: /opt/R/devel-blis/bin/R
+            direct: false
+            prepare: false
+            user: 0:0
+            unit_enabled: true
+          - environment_id: noomp
+            image: local/colocboost-noomp-proxy
+            dockerfile: .github/ci/images/noomp/Dockerfile
+            dockerfile_sha256: d1d3dc7f60ccbe1f73cf49c40cf74a06422106a97395c15c35e29bbda20ac87f
+            wrapper: /usr/local/bin/r-check
+            r_binary: /opt/R/devel-noomp/bin/R
+            direct: false
+            prepare: false
+            user: 0:0
+            unit_enabled: false
+          - environment_id: rlibro
+            image: ghcr.io/r-hub/containers/ubuntu-clang@sha256:b66e5f86ce6f8fa3e6afd497fabfdb3aeac79c74ee3525e8a8814de79aa2bc82
+            dockerfile: ""
+            wrapper: ""
+            r_binary: /opt/R/devel/bin/R
+            direct: true
+            prepare: true
+            user: "1000:1000"
+            unit_enabled: false
+          - environment_id: musl
+            image: ghcr.io/bastistician/rcheck-musl@sha256:8b33a511897c8025a84072efdb97dc0a58292428700bf90e6628a438134c453d
+            dockerfile: ""
+            wrapper: ""
+            r_binary: /R/bin/R
+            direct: true
+            prepare: true
+            user: 0:0
+            unit_enabled: false
+    steps:
+      - name: Checkout exact event commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up locked Pixi
+        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e
+        with:
+          pixi-version: v0.67.2
+          locked: true
+          cache: true
+          cache-write: ${{ github.event_name == 'push' }}
+          activate-environment: false
+      - name: Initialize producer paths
+        id: initialize
+        env:
+          SOURCE_DIR: ${{ runner.temp }}/remaining-source
+          SOURCE_TREE: ${{ runner.temp }}/remaining-${{ matrix.environment_id }}-source-tree
+          WORK_DIR: ${{ runner.temp }}/remaining-${{ matrix.environment_id }}-work
+          LIBRARY_DIR: ${{ runner.temp }}/remaining-${{ matrix.environment_id }}-library
+          RESULT_DIR: ${{ runner.temp }}/remaining-results/${{ matrix.environment_id }}
+          DIAGNOSTIC_DIR: ${{ runner.temp }}/remaining-diagnostics/${{ matrix.environment_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$SOURCE_DIR" "$SOURCE_TREE" "$WORK_DIR" "$LIBRARY_DIR" "$RESULT_DIR" "$DIAGNOSTIC_DIR"
+      - name: Download source contract
+        id: download-source
+        continue-on-error: true
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          name: cran-preflight-source
+          path: ${{ runner.temp }}/remaining-source
+      - name: Verify source contract
+        id: verify-source
+        continue-on-error: true
+        env:
+          SOURCE_SHA: ${{ needs.prepare.outputs.source_sha }}
+          EVENT_SHA: ${{ needs.prepare.outputs.event_sha }}
+          SOURCE_DIR: ${{ runner.temp }}/remaining-source
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-verify-source "$SOURCE_DIR" "$SOURCE_SHA" "$EVENT_SHA" "$GITHUB_OUTPUT"
+      - name: Extract verified source tree
+        id: extract-source
+        continue-on-error: true
+        env:
+          SOURCE_DIR: ${{ runner.temp }}/remaining-source
+          SOURCE_TREE: ${{ runner.temp }}/remaining-${{ matrix.environment_id }}-source-tree
+          SOURCE_SHA: ${{ needs.prepare.outputs.source_sha }}
+          EVENT_SHA: ${{ needs.prepare.outputs.event_sha }}
+        run: |
+          set -euo pipefail
+          tarball="$(find "$SOURCE_DIR" -maxdepth 1 -type f -name '*.tar.gz' -print -quit)"
+          pixi run --locked ci-extract-source "$tarball" "$SOURCE_DIR/source-metadata.json" \
+            "$SOURCE_SHA" "$EVENT_SHA" "$SOURCE_TREE" "$GITHUB_OUTPUT"
+      - name: Build pinned acceptance image
+        id: build-image
+        if: ${{ matrix.dockerfile != '' }}
+        continue-on-error: true
+        env:
+          IMAGE: ${{ matrix.image }}
+          DOCKERFILE: ${{ matrix.dockerfile }}
+          DOCKERFILE_SHA256: ${{ matrix.dockerfile_sha256 }}
+          ENVIRONMENT_ID: ${{ matrix.environment_id }}
+          DIAGNOSTIC_DIR: ${{ runner.temp }}/remaining-diagnostics/${{ matrix.environment_id }}
+        run: |
+          set -euo pipefail
+          pixi run --locked python -B -c 'import hashlib, os, sys; sys.path.insert(0, ".github/ci"); from run_host_docker import validate_proxy_dockerfile; p=validate_proxy_dockerfile(os.environ["DOCKERFILE"], os.environ["ENVIRONMENT_ID"]); assert hashlib.sha256(p.read_bytes()).hexdigest() == os.environ["DOCKERFILE_SHA256"]'
+          docker build --pull=false --file "$DOCKERFILE" --tag "$IMAGE" "$GITHUB_WORKSPACE"
+          docker image inspect "$IMAGE" --format '{{.Id}}' > "$DIAGNOSTIC_DIR/built-image-id"
+      - name: Prepare fresh network-enabled dependency library
+        id: prepare-dependencies
+        if: ${{ matrix.prepare }}
+        continue-on-error: true
+        env:
+          IMAGE: ${{ matrix.image }}
+          R_BINARY: ${{ matrix.r_binary }}
+          SOURCE_DIR: ${{ runner.temp }}/remaining-source
+          LIBRARY_DIR: ${{ runner.temp }}/remaining-${{ matrix.environment_id }}-library
+          WORK_DIR: ${{ runner.temp }}/remaining-${{ matrix.environment_id }}-work
+          EVIDENCE: ${{ runner.temp }}/remaining-diagnostics/${{ matrix.environment_id }}/dependency-prep.json
+          SOURCE_SHA: ${{ needs.prepare.outputs.source_sha }}
+          EVENT_SHA: ${{ needs.prepare.outputs.event_sha }}
+          ENVIRONMENT_ID: ${{ matrix.environment_id }}
+        run: |
+          set -euo pipefail
+          tarball="$(find "$SOURCE_DIR" -maxdepth 1 -type f -name '*.tar.gz' -print -quit)"
+          metadata="$SOURCE_DIR/source-metadata.json"
+          test -n "$tarball" -a -f "$metadata"
+          pixi run --locked python -B .github/ci/run_host_docker.py --prepare \
+            --image "$IMAGE" --r-binary "$R_BINARY" --tarball "$tarball" --metadata "$metadata" \
+            --source-sha "$SOURCE_SHA" --event-sha "$EVENT_SHA" --environment-id "$ENVIRONMENT_ID" \
+            --work-dir "$WORK_DIR" --library "$LIBRARY_DIR" --evidence "$EVIDENCE"
+      - name: Prove BLIS or noOMP runtime identity
+        id: runtime-proof
+        continue-on-error: true
+        env:
+          IMAGE: ${{ matrix.image }}
+          ENVIRONMENT_ID: ${{ matrix.environment_id }}
+          DIAGNOSTIC: ${{ runner.temp }}/remaining-diagnostics/${{ matrix.environment_id }}/runtime-proof.json
+          R_BINARY: ${{ matrix.r_binary }}
+        run: |
+          set -euo pipefail
+          if [ "$ENVIRONMENT_ID" = blis ]; then
+            docker run --rm --network none --user 0:0 \
+              --mount "type=bind,src=$(dirname "$DIAGNOSTIC"),dst=/evidence" \
+              --env BLIS_NUM_THREADS=1 --env OPENBLAS_NUM_THREADS=1 \
+              "$IMAGE" "$R_BINARY" --vanilla -s -e \
+              'm <- matrix(1:4, 2, 2); invisible(m %*% m); maps <- readLines("/proc/self/maps"); stopifnot(any(grepl("libblis", maps, ignore.case=TRUE))); stopifnot(!any(grepl("openblas|mkl|atlas", maps, ignore.case=TRUE))); stopifnot(Sys.getenv("BLIS_NUM_THREADS") == "1"); writeLines("{\"kind\":\"backend-runtime\",\"backend\":\"blis\",\"r_home\":\"/opt/R/devel-blis/lib/R\",\"matrix_operation\":true,\"same_process_maps\":true,\"loaded_blis\":true,\"loaded_openblas\":false,\"loaded_mkl\":false,\"loaded_atlas\":false,\"serial\":true}", "/evidence/runtime-proof.json")'
+          elif [ "$ENVIRONMENT_ID" = noomp ]; then
+            docker run --rm --network none --user 0:0 \
+              --mount "type=bind,src=$(dirname "$DIAGNOSTIC"),dst=/evidence" \
+              "$IMAGE" "$R_BINARY" --vanilla -s -e \
+              'mc <- file.path(R.home(), "etc", "Makeconf"); lines <- readLines(mc); flags <- grep("^SHLIB_OPENMP_(CFLAGS|CXXFLAGS|FFLAGS)\\s*=", lines, value=TRUE); stopifnot(length(flags) == 3L, all(grepl("=\\s*$", flags))); stopifnot(!any(grepl("libgomp|libomp", readLines("/proc/self/maps"), ignore.case=TRUE))); suppressPackageStartupMessages(library(Rfast)); stopifnot(is.matrix(Rfast::Crossprod(matrix(1:4,2)))); so <- list.files(.libPaths(), pattern="\\.so$", recursive=TRUE, full.names=TRUE); ldd <- unlist(lapply(so, function(x) system2("ldd", x, stdout=TRUE, stderr=TRUE))); stopifnot(!any(grepl("libgomp|libomp", ldd, ignore.case=TRUE))); writeLines("{\"kind\":\"backend-runtime\",\"backend\":\"noomp\",\"r_home\":\"/opt/R/devel-noomp/lib/R\",\"makeconf\":\"etc/Makeconf\",\"shlib_openmp_flags\":{\"C\":\"\",\"CXX\":\"\",\"FFLAGS\":\"\"},\"rfast_crossprod\":true,\"hard_dependency_elf\":[\"ldd-scan\"],\"forbidden_elf_libraries\":[],\"forbidden_maps\":[],\"same_process_maps\":true}", "/evidence/runtime-proof.json")'
+          elif [ "$ENVIRONMENT_ID" = musl ]; then
+            docker run --rm --network none --user 0:0 \
+              --mount "type=bind,src=$(dirname "$DIAGNOSTIC"),dst=/evidence" \
+              --env LC_ALL=C.UTF-8 --env LANG=C.UTF-8 --env TZ=Europe/Berlin \
+              "$IMAGE" "$R_BINARY" --vanilla --slave -e \
+              'alpine <- trimws(readLines("/etc/alpine-release", n=1L)); libc <- system2("ldd", "--version", stdout=TRUE, stderr=TRUE); machine <- Sys.info()[["machine"]]; locale <- Sys.getlocale("LC_CTYPE"); stopifnot(alpine == "3.24.1", any(grepl("musl", libc, ignore.case=TRUE)), machine %in% c("x86_64", "amd64"), grepl("C.UTF-8", locale, fixed=TRUE), startsWith(normalizePath(R.home()), "/R")); proof <- sprintf("{\"kind\":\"backend-runtime\",\"backend\":\"musl\",\"r_binary\":\"/R/bin/R\",\"r_home\":\"%s\",\"r_version\":\"%s\",\"alpine_version\":\"3.24.1\",\"musl\":true,\"architecture\":\"x86_64\",\"locale\":\"C.UTF-8\"}", R.home(), R.version.string); writeLines(proof, "/evidence/runtime-proof.json")'
+          else
+            printf '%s\n' '{"kind":"runtime-proof","environment_id":"'"$ENVIRONMENT_ID"'","identity":"pinned-image"}' > "$DIAGNOSTIC"
+          fi
+          if [ "$ENVIRONMENT_ID" = blis ] || [ "$ENVIRONMENT_ID" = noomp ] || [ "$ENVIRONMENT_ID" = musl ]; then
+            pixi run --locked python -B .github/ci/verify_backend_runtime.py "$DIAGNOSTIC" "$ENVIRONMENT_ID"
+          fi
+      - name: Run pinned host-Docker package producer
+        id: package-check
+        continue-on-error: true
+        env:
+          IMAGE: ${{ matrix.image }}
+          WRAPPER: ${{ matrix.wrapper }}
+          R_BINARY: ${{ matrix.r_binary }}
+          DIRECT: ${{ matrix.direct }}
+          SOURCE_DIR: ${{ runner.temp }}/remaining-source
+          SOURCE_SHA: ${{ needs.prepare.outputs.source_sha }}
+          EVENT_SHA: ${{ needs.prepare.outputs.event_sha }}
+          ENVIRONMENT_ID: ${{ matrix.environment_id }}
+          WORK_DIR: ${{ runner.temp }}/remaining-${{ matrix.environment_id }}-work
+          RESULT: ${{ runner.temp }}/remaining-results/${{ matrix.environment_id }}/result.json
+          EVIDENCE: ${{ runner.temp }}/remaining-diagnostics/${{ matrix.environment_id }}/docker.json
+          DIAGNOSTIC_DIR: ${{ runner.temp }}/remaining-diagnostics/${{ matrix.environment_id }}
+          USER_ID: ${{ matrix.user }}
+          READONLY_LIBRARY: ${{ runner.temp }}/remaining-rlibro-library
+        run: |
+          set -euo pipefail
+          tarball="$(find "$SOURCE_DIR" -maxdepth 1 -type f -name '*.tar.gz' -print -quit)"
+          metadata="$SOURCE_DIR/source-metadata.json"
+          test -n "$tarball" -a -f "$metadata"
+          if [ "$ENVIRONMENT_ID" = rlibro ]; then
+            USER_ID="$(id -u):$(id -g)"
+            test "${USER_ID%%:*}" -ne 0
+          fi
+          readonly_arg=""
+          library_arg=""
+          if [ "$ENVIRONMENT_ID" = rlibro ]; then readonly_arg="$READONLY_LIBRARY"; fi
+          if [ "$ENVIRONMENT_ID" = musl ]; then library_arg="$RUNNER_TEMP/remaining-musl-library"; fi
+          args=(python -B .github/ci/run_host_docker.py --image "$IMAGE" --tarball "$tarball" \
+            --metadata "$metadata" --source-sha "$SOURCE_SHA" --event-sha "$EVENT_SHA" \
+            --environment-id "$ENVIRONMENT_ID" --work-dir "$WORK_DIR" --result "$RESULT" \
+            --evidence "$EVIDENCE" --user "$USER_ID")
+          if [ "$DIRECT" = true ]; then args+=(--direct --r-binary "$R_BINARY"); else args+=(--wrapper "$WRAPPER"); fi
+          if [ -n "$readonly_arg" ]; then args+=(--readonly-library "$readonly_arg"); fi
+          if [ -n "$library_arg" ]; then args+=(--check-library "$library_arg"); fi
+          if [ -f "$DIAGNOSTIC_DIR/runtime-proof.json" ]; then args+=(--runtime-proof "$DIAGNOSTIC_DIR/runtime-proof.json"); fi
+          pixi run --locked "${args[@]}"
+      - name: Run complete BLIS source unit suite
+        id: unit-full
+        if: ${{ matrix.unit_enabled }}
+        continue-on-error: true
+        env:
+          IMAGE: ${{ matrix.image }}
+          PACKAGE_PATH: ${{ steps.extract-source.outputs.package_path }}
+          UNIT_OUTPUT: ${{ runner.temp }}/remaining-diagnostics/${{ matrix.environment_id }}/unit.json
+          RUNTIME_PROOF: ${{ runner.temp }}/remaining-diagnostics/${{ matrix.environment_id }}/runtime-proof.json
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-host-unit \
+            "$IMAGE" "$PACKAGE_PATH" "$UNIT_OUTPUT" blis .github/ci/check-policy.yml 0:0 "" "$RUNTIME_PROOF"
+      - name: Adapt BLIS unit result
+        id: adapt-unit
+        if: ${{ matrix.unit_enabled }}
+        continue-on-error: true
+        env:
+          DIAGNOSTIC: ${{ runner.temp }}/remaining-diagnostics/${{ matrix.environment_id }}/unit.json
+          RESULT: ${{ runner.temp }}/remaining-results/${{ matrix.environment_id }}/unit.json
+          ENVIRONMENT_ID: ${{ matrix.environment_id }}
+          SOURCE_SHA: ${{ needs.prepare.outputs.source_sha }}
+          EVENT_SHA: ${{ needs.prepare.outputs.event_sha }}
+          TARBALL_SHA256: ${{ needs.prepare.outputs.tarball_sha256 }}
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-unit-result "$DIAGNOSTIC" "$RESULT" "$ENVIRONMENT_ID" "$SOURCE_SHA" "$EVENT_SHA" "$TARBALL_SHA256"
+      - name: Gate complete package producer contract
+        id: package-producer-gate
+        if: ${{ always() }}
+        continue-on-error: true
+        env:
+          INITIALIZE_OUTCOME: ${{ steps.initialize.outcome }}
+          DOWNLOAD_OUTCOME: ${{ steps.download-source.outcome }}
+          VERIFY_OUTCOME: ${{ steps.verify-source.outcome }}
+          EXTRACT_OUTCOME: ${{ steps.extract-source.outcome }}
+          BUILD_OUTCOME: ${{ steps.build-image.outcome }}
+          PREP_OUTCOME: ${{ steps.prepare-dependencies.outcome }}
+          PACKAGE_OUTCOME: ${{ steps.package-check.outcome }}
+          RUNTIME_OUTCOME: ${{ steps.runtime-proof.outcome }}
+          NEED_BUILD: ${{ matrix.dockerfile != '' }}
+          NEED_PREP: ${{ matrix.prepare }}
+          DIAGNOSTIC_DIR: ${{ runner.temp }}/remaining-diagnostics/${{ matrix.environment_id }}
+        run: |
+          set -eu
+          for value in "$INITIALIZE_OUTCOME" "$DOWNLOAD_OUTCOME" "$VERIFY_OUTCOME" "$EXTRACT_OUTCOME" "$PACKAGE_OUTCOME" "$RUNTIME_OUTCOME"; do test "$value" = success; done
+          if [ "$NEED_BUILD" = true ]; then test "$BUILD_OUTCOME" = success; else test "$BUILD_OUTCOME" = skipped; fi
+          if [ "$NEED_PREP" = true ]; then test "$PREP_OUTCOME" = success; else test "$PREP_OUTCOME" = skipped; fi
+          test -s "$DIAGNOSTIC_DIR/runtime-proof.json"
+      - name: Finalize package result
+        id: finalize-check
+        if: ${{ always() }}
+        continue-on-error: true
+        env:
+          RESULT: ${{ runner.temp }}/remaining-results/${{ matrix.environment_id }}/result.json
+          SOURCE_SHA: ${{ needs.prepare.outputs.source_sha }}
+          EVENT_SHA: ${{ needs.prepare.outputs.event_sha }}
+          TARBALL_SHA256: ${{ needs.prepare.outputs.tarball_sha256 }}
+          ENVIRONMENT_ID: ${{ matrix.environment_id }}
+          JOB_STATUS: ${{ job.status }}
+          PRODUCER_OUTCOME: ${{ steps.package-producer-gate.outcome }}
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-finalize-result "$RESULT" package-check "$ENVIRONMENT_ID" "$SOURCE_SHA" "$EVENT_SHA" "$TARBALL_SHA256" "$JOB_STATUS" "$PRODUCER_OUTCOME"
+      - name: Finalize BLIS unit result
+        id: finalize-unit
+        if: ${{ always() && matrix.unit_enabled }}
+        continue-on-error: true
+        env:
+          RESULT: ${{ runner.temp }}/remaining-results/${{ matrix.environment_id }}/unit.json
+          SOURCE_SHA: ${{ needs.prepare.outputs.source_sha }}
+          EVENT_SHA: ${{ needs.prepare.outputs.event_sha }}
+          TARBALL_SHA256: ${{ needs.prepare.outputs.tarball_sha256 }}
+          ENVIRONMENT_ID: ${{ matrix.environment_id }}
+          JOB_STATUS: ${{ job.status }}
+          PRODUCER_OUTCOME: ${{ steps.adapt-unit.outcome }}
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-finalize-result "$RESULT" unit "$ENVIRONMENT_ID" "$SOURCE_SHA" "$EVENT_SHA" "$TARBALL_SHA256" "$JOB_STATUS" "$PRODUCER_OUTCOME"
+      - name: Upload package result
+        id: upload-check
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: cran-preflight-result-package-check-${{ matrix.environment_id }}
+          path: ${{ runner.temp }}/remaining-results/${{ matrix.environment_id }}/result.json
+          if-no-files-found: error
+      - name: Upload BLIS unit result
+        id: upload-unit
+        if: ${{ always() && matrix.unit_enabled }}
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: cran-preflight-result-unit-${{ matrix.environment_id }}
+          path: ${{ runner.temp }}/remaining-results/${{ matrix.environment_id }}/unit.json
+          if-no-files-found: error
+      - name: Upload Docker diagnostics
+        id: upload-diagnostics
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: cran-preflight-diagnostics-${{ matrix.environment_id }}
+          path: ${{ runner.temp }}/remaining-diagnostics/${{ matrix.environment_id }}
+          if-no-files-found: error
+          include-hidden-files: true
+      - name: Enforce remaining producer outcomes
+        id: producer-gate
+        if: ${{ always() }}
+        env:
+          CHECK_FINALIZER_OUTCOME: ${{ steps.finalize-check.outcome }}
+          CHECK_UPLOAD_OUTCOME: ${{ steps.upload-check.outcome }}
+          DIAGNOSTIC_UPLOAD_OUTCOME: ${{ steps.upload-diagnostics.outcome }}
+          UNIT_ENABLED: ${{ matrix.unit_enabled }}
+          UNIT_FINALIZER_OUTCOME: ${{ steps.finalize-unit.outcome }}
+          UNIT_UPLOAD_OUTCOME: ${{ steps.upload-unit.outcome }}
+        run: |
+          set -eu
+          test "$CHECK_FINALIZER_OUTCOME" = success
+          test "$CHECK_UPLOAD_OUTCOME" = success
+          test "$DIAGNOSTIC_UPLOAD_OUTCOME" = success
+          if [ "$UNIT_ENABLED" = true ]; then
+            test "$UNIT_FINALIZER_OUTCOME" = success
+            test "$UNIT_UPLOAD_OUTCOME" = success
+          else
+            test "$UNIT_FINALIZER_OUTCOME" = skipped
+            test "$UNIT_UPLOAD_OUTCOME" = skipped
+          fi
+
+  linux-arm64:
+    if: ${{ always() && !cancelled() && github.repository == 'xueweic/colocboost' }}
+    needs: prepare
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: amd64
+            runner: ubuntu-24.04
+            image: ghcr.io/r-devel/rcheckserver/ubuntu@sha256:ef57b4fbbcc76a173e53622143d59f8d4a97978481237e81153af23b03c66e9c
+            platform: linux/amd64
+            index: ghcr.io/r-devel/rcheckserver/ubuntu@sha256:74f3781764e90b6c4bf8e300c788b0f853e867289585f020dd3b842180c08bf6
+            system_r: /usr/bin/R
+          - architecture: arm64
+            runner: ubuntu-24.04-arm
+            image: ghcr.io/r-devel/rcheckserver/ubuntu@sha256:bcfe37df999b716bd41ffc139d242c251c06b79d82f3632b4e8c65b6eb13f050
+            platform: linux/arm64
+            index: ghcr.io/r-devel/rcheckserver/ubuntu@sha256:74f3781764e90b6c4bf8e300c788b0f853e867289585f020dd3b842180c08bf6
+            system_r: /usr/bin/R
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e
+        with:
+          pixi-version: v0.67.2
+          locked: true
+          cache: true
+          cache-write: ${{ github.event_name == 'push' }}
+          activate-environment: false
+      - name: Initialize ARM raw evidence path
+        env:
+          ARM_DIR: ${{ runner.temp }}/linux-arm64/${{ matrix.architecture }}
+          LIBRARY: ${{ runner.temp }}/linux-arm64/${{ matrix.architecture }}/library
+        run: mkdir -p "$ARM_DIR" "$LIBRARY"
+      - name: Download shared source
+        id: download-source
+        continue-on-error: true
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          name: cran-preflight-source
+          path: ${{ runner.temp }}/linux-arm64-source
+      - name: Verify source contract before preparation
+        id: verify-source
+        continue-on-error: true
+        env:
+          SOURCE_DIR: ${{ runner.temp }}/linux-arm64-source
+          SOURCE_SHA: ${{ needs.prepare.outputs.source_sha }}
+          EVENT_SHA: ${{ needs.prepare.outputs.event_sha }}
+        run: pixi run --locked ci-verify-source "$SOURCE_DIR" "$SOURCE_SHA" "$EVENT_SHA" "$GITHUB_OUTPUT"
+      - name: Prepare fresh ARM dependency library
+        id: prepare-dependencies
+        continue-on-error: true
+        env:
+          IMAGE: ${{ matrix.image }}
+          PLATFORM: ${{ matrix.platform }}
+          INDEX: ${{ matrix.index }}
+          SYSTEM_R: ${{ matrix.system_r }}
+          ARM_DIR: ${{ runner.temp }}/linux-arm64/${{ matrix.architecture }}
+          LIBRARY: ${{ runner.temp }}/linux-arm64/${{ matrix.architecture }}/library
+          SOURCE_DIR: ${{ runner.temp }}/linux-arm64-source
+          SOURCE_SHA: ${{ needs.prepare.outputs.source_sha }}
+          EVENT_SHA: ${{ needs.prepare.outputs.event_sha }}
+        run: |
+          set -euo pipefail
+          tarball="$(find "$SOURCE_DIR" -maxdepth 1 -type f -name '*.tar.gz' -print -quit)"
+          pixi run --locked python -B .github/ci/run_host_docker.py --prepare \
+            --image "$IMAGE" --r-binary /usr/bin/R --tarball "$tarball" \
+            --metadata "$SOURCE_DIR/source-metadata.json" --source-sha "$SOURCE_SHA" --event-sha "$EVENT_SHA" \
+            --environment-id linux-arm64 --work-dir "$ARM_DIR" --library "$LIBRARY" \
+            --evidence "$ARM_DIR/dependency-prep.json" --platform "$PLATFORM"
+      - name: Run native rcheckserver child
+        id: child-check
+        continue-on-error: true
+        env:
+          IMAGE: ${{ matrix.image }}
+          ARCHITECTURE: ${{ matrix.architecture }}
+          PLATFORM: ${{ matrix.platform }}
+          INDEX: ${{ matrix.index }}
+          SYSTEM_R: ${{ matrix.system_r }}
+          ARM_DIR: ${{ runner.temp }}/linux-arm64/${{ matrix.architecture }}
+          LIBRARY: ${{ runner.temp }}/linux-arm64/${{ matrix.architecture }}/library
+          SOURCE_DIR: ${{ runner.temp }}/linux-arm64-source
+          SOURCE_SHA: ${{ needs.prepare.outputs.source_sha }}
+          EVENT_SHA: ${{ needs.prepare.outputs.event_sha }}
+        run: |
+          set -euo pipefail
+          tarball="$(find "$SOURCE_DIR" -maxdepth 1 -type f -name '*.tar.gz' -print -quit)"
+          metadata="$SOURCE_DIR/source-metadata.json"
+          test -n "$tarball" -a -f "$metadata"
+          cp "$tarball" "$ARM_DIR/source.tar.gz"
+          sha256sum "$ARM_DIR/source.tar.gz" > "$ARM_DIR/tarball.sha256"
+          docker run --rm --network none --user 0:0 --platform "$PLATFORM" \
+            --env CB_IMAGE="$IMAGE" --env CB_INDEX="$INDEX" \
+            --mount "type=bind,src=$ARM_DIR,dst=/evidence" "$IMAGE" "$SYSTEM_R" --vanilla --slave -e \
+            'cat(sprintf("{\"uname_m\":\"%s\",\"r_platform\":\"%s\",\"r_home\":\"%s\",\"image\":\"%s\",\"index\":\"%s\"}", Sys.info()[["machine"]], R.version$platform, R.home(), Sys.getenv("CB_IMAGE"), Sys.getenv("CB_INDEX")))' \
+            > "$ARM_DIR/native.json"
+          set +e
+          docker run --rm --network none --user 0:0 --platform "$PLATFORM" \
+            --env R_LIBS_USER=/library --env R_PROFILE_USER=/dev/null --env R_ENVIRON_USER=/dev/null \
+            --env _R_CHECK_FORCE_SUGGESTS_=true \
+            --workdir /evidence \
+            --mount "type=bind,src=$ARM_DIR,dst=/evidence" --mount "type=bind,src=$LIBRARY,dst=/library,readonly" \
+            "$IMAGE" "$SYSTEM_R" CMD check --as-cran --no-manual --no-build-vignettes /evidence/source.tar.gz \
+            > "$ARM_DIR/check.stdout" 2> "$ARM_DIR/check.stderr"
+          check_code=$?
+          set -e
+          check_status=fail
+          mapfile -t check_logs < <(find "$ARM_DIR" -maxdepth 2 -type f -path '*.Rcheck/00check.log' -print)
+          if [ "$check_code" -eq 0 ] && [ "${#check_logs[@]}" -eq 1 ] && \
+             python -B -c 'import pathlib, sys; text=pathlib.Path(sys.argv[1]).read_text(encoding="utf-8", errors="replace"); raise SystemExit(0 if text.endswith("* DONE\nStatus: OK\n") else 1)' "${check_logs[0]}"; then
+            check_status=pass
+          fi
+          printf '%s\n' '{"environment_id":"linux-arm64","architecture":"'"$ARCHITECTURE"'","image":"'"$IMAGE"'","index":"'"$INDEX"'","system_r":"'"$SYSTEM_R"'","source_sha":"'"$SOURCE_SHA"'","event_sha":"'"$EVENT_SHA"'","tarball_sha256":"'"$(cut -d' ' -f1 "$ARM_DIR/tarball.sha256")"'","status":"'"$check_status"'","check_status":"'"$check_status"'","check_exit_code":'"$check_code"',"check_args":["--as-cran","--no-manual","--no-build-vignettes"],"configuration":{"args":["--as-cran","--no-manual","--no-build-vignettes"],"r":"/usr/bin/R"},"tarball":"shared-source","native":{"clean":true}}' > "$ARM_DIR/raw.json"
+          python -B -c 'import json, os; p=os.path.join(os.environ["ARM_DIR"],"raw.json"); d=json.load(open(p)); n=json.load(open(os.path.join(os.environ["ARM_DIR"],"native.json"))); d["native"].update(n); open(p+".tmp","w").write(json.dumps(d,sort_keys=True,indent=2)+"\n"); os.replace(p+".tmp",p)'
+          test "$check_status" = pass
+      - name: Upload ARM raw evidence only
+        id: upload-raw
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: cran-preflight-linux-arm64-raw-${{ matrix.architecture }}
+          path: ${{ runner.temp }}/linux-arm64/${{ matrix.architecture }}
+          if-no-files-found: error
+          include-hidden-files: true
+      - name: Enforce ARM child upload
+        if: ${{ always() }}
+        env:
+          CHILD_OUTCOME: ${{ steps.child-check.outcome }}
+          UPLOAD_OUTCOME: ${{ steps.upload-raw.outcome }}
+        run: |
+          set -eu
+          test "$UPLOAD_OUTCOME" = success
+          test "$CHILD_OUTCOME" = success
+
+  linux-arm64-compare:
+    if: ${{ always() && !cancelled() && github.repository == 'xueweic/colocboost' }}
+    needs: [prepare, linux-arm64]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e
+        with:
+          pixi-version: v0.67.2
+          locked: true
+          cache: true
+          cache-write: ${{ github.event_name == 'push' }}
+          activate-environment: false
+      - name: Download both ARM raw evidence artifacts
+        id: download-raw
+        continue-on-error: true
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          pattern: cran-preflight-linux-arm64-raw-*
+          path: ${{ runner.temp }}/linux-arm64-raw
+          merge-multiple: false
+      - name: Compare architectures and produce the sole result
+        id: compare
+        continue-on-error: true
+        env:
+          ROOT: ${{ runner.temp }}/linux-arm64-raw
+          RESULT: ${{ runner.temp }}/linux-arm64-result/result.json
+          EVIDENCE: ${{ runner.temp }}/linux-arm64-result/comparison.json
+          SOURCE_SHA: ${{ needs.prepare.outputs.source_sha }}
+          EVENT_SHA: ${{ needs.prepare.outputs.event_sha }}
+          TARBALL_SHA256: ${{ needs.prepare.outputs.tarball_sha256 }}
+          EXPECTED_INDEX: ghcr.io/r-devel/rcheckserver/ubuntu@sha256:74f3781764e90b6c4bf8e300c788b0f853e867289585f020dd3b842180c08bf6
+        run: |
+          set -euo pipefail
+          mkdir -p "$(dirname "$RESULT")"
+          pixi run --locked python -B .github/ci/compare_arm_pair.py \
+            --amd64 "$ROOT/cran-preflight-linux-arm64-raw-amd64/raw.json" \
+            --arm64 "$ROOT/cran-preflight-linux-arm64-raw-arm64/raw.json" \
+            --result "$RESULT" --evidence "$EVIDENCE" --source-sha "$SOURCE_SHA" \
+            --event-sha "$EVENT_SHA" --tarball-sha256 "$TARBALL_SHA256" --expected-index "$EXPECTED_INDEX"
+      - name: Upload linux-arm64 final result
+        id: upload-result
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: cran-preflight-result-package-check-linux-arm64
+          path: ${{ runner.temp }}/linux-arm64-result/result.json
+          if-no-files-found: error
+      - name: Upload linux-arm64 comparison evidence
+        id: upload-evidence
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: cran-preflight-diagnostics-linux-arm64
+          path: ${{ runner.temp }}/linux-arm64-result/comparison.json
+          if-no-files-found: error
+      - name: Finalize linux-arm64 producer outcome
+        id: producer-gate
+        if: ${{ always() }}
+        env:
+          COMPARE_OUTCOME: ${{ steps.compare.outcome }}
+          RESULT_UPLOAD_OUTCOME: ${{ steps.upload-result.outcome }}
+          EVIDENCE_UPLOAD_OUTCOME: ${{ steps.upload-evidence.outcome }}
+        run: |
+          set -eu
+          test "$COMPARE_OUTCOME" = success
+          test "$RESULT_UPLOAD_OUTCOME" = success
+          test "$EVIDENCE_UPLOAD_OUTCOME" = success
+
+  applicability-native:
+    if: ${{ always() && !cancelled() && github.repository == 'xueweic/colocboost' }}
+    needs: prepare
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - environment_id: blas
+            rule: no-native-source-linkingto-compilation-or-direct-call
+          - environment_id: c23
+            rule: no-c-source
+          - environment_id: intel
+            rule: no-package-owned-native-source
+          - environment_id: lto
+            rule: no-native-object
+          - environment_id: strict
+            rule: no-native-compilation-target
+          - environment_id: gcc
+            rule: no-compiled-source
+          - environment_id: gcc15
+            rule: no-package-owned-native-source
+          - environment_id: noremap
+            rule: no-cpp-source
+          - environment_id: 0len
+            rule: no-direct-native-call
+          - environment_id: rchk
+            rule: no-c-cpp-object
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e
+        with:
+          pixi-version: v0.67.2
+          locked: true
+          cache: true
+          cache-write: ${{ github.event_name == 'push' }}
+          activate-environment: false
+      - name: Download and verify the source contract
+        id: source
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/applicability-source" "$RUNNER_TEMP/applicability-results"
+      - name: Download source artifact
+        id: download-source
+        continue-on-error: true
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          name: cran-preflight-source
+          path: ${{ runner.temp }}/applicability-source
+      - name: Verify source artifact
+        id: verify-source
+        continue-on-error: true
+        env:
+          SOURCE_SHA: ${{ needs.prepare.outputs.source_sha }}
+          EVENT_SHA: ${{ needs.prepare.outputs.event_sha }}
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-verify-source "$RUNNER_TEMP/applicability-source" "$SOURCE_SHA" "$EVENT_SHA" "$GITHUB_OUTPUT"
+      - name: Run verified applicability predicate
+        id: applicability
+        continue-on-error: true
+        env:
+          TARBALL: ${{ steps.verify-source.outputs.tarball_path }}
+          METADATA: ${{ steps.verify-source.outputs.metadata_path }}
+          SOURCE_SHA: ${{ needs.prepare.outputs.source_sha }}
+          EVENT_SHA: ${{ needs.prepare.outputs.event_sha }}
+          ENVIRONMENT_ID: ${{ matrix.environment_id }}
+          RESULT: ${{ runner.temp }}/applicability-results/result.json
+          RULE: ${{ matrix.rule }}
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-applicability "$TARBALL" "$METADATA" "$SOURCE_SHA" "$EVENT_SHA" "$ENVIRONMENT_ID" "$RESULT" "$RULE"
+      - name: Finalize applicability result
+        id: finalize
+        if: ${{ always() }}
+        continue-on-error: true
+        env:
+          RESULT: ${{ runner.temp }}/applicability-results/result.json
+          ENVIRONMENT_ID: ${{ matrix.environment_id }}
+          SOURCE_SHA: ${{ needs.prepare.outputs.source_sha }}
+          EVENT_SHA: ${{ needs.prepare.outputs.event_sha }}
+          TARBALL_SHA256: ${{ needs.prepare.outputs.tarball_sha256 }}
+          JOB_STATUS: ${{ job.status }}
+          PRODUCER_OUTCOME: ${{ steps.applicability.outcome }}
+        run: |
+          set -euo pipefail
+          pixi run --locked ci-finalize-result "$RESULT" applicability "$ENVIRONMENT_ID" "$SOURCE_SHA" "$EVENT_SHA" "$TARBALL_SHA256" "$JOB_STATUS" "$PRODUCER_OUTCOME"
+      - name: Upload applicability result
+        id: upload
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: cran-preflight-result-applicability-${{ matrix.environment_id }}
+          path: ${{ runner.temp }}/applicability-results/result.json
+          if-no-files-found: error
+      - name: Fail closed
+        if: ${{ always() }}
+        env:
+          SOURCE_OUTCOME: ${{ steps.source.outcome }}
+          DOWNLOAD_OUTCOME: ${{ steps.download-source.outcome }}
+          VERIFY_OUTCOME: ${{ steps.verify-source.outcome }}
+          APPLICABILITY_OUTCOME: ${{ steps.applicability.outcome }}
+          FINALIZE_OUTCOME: ${{ steps.finalize.outcome }}
+          UPLOAD_OUTCOME: ${{ steps.upload.outcome }}
+        run: |
+          test "$SOURCE_OUTCOME" = success
+          test "$DOWNLOAD_OUTCOME" = success
+          test "$VERIFY_OUTCOME" = success
+          test "$APPLICABILITY_OUTCOME" = success
+          test "$FINALIZE_OUTCOME" = success
+          test "$UPLOAD_OUTCOME" = success
+
   summary-gate:
     if: ${{ always() && !cancelled() && github.repository == 'xueweic/colocboost' }}
-    needs: [prepare, primary-linux, primary-platform, mkl, nosuggests, active-rhub]
+    needs: [prepare, primary-linux, primary-platform, mkl, nosuggests, active-rhub, applicability-native, remaining-docker, linux-arm64, linux-arm64-compare]
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout exact event commit
@@ -2158,6 +2891,10 @@ jobs:
           MKL_RESULT: ${{ needs.mkl.result }}
           NOSUGGESTS_RESULT: ${{ needs.nosuggests.result }}
           ACTIVE_RHUB_RESULT: ${{ needs.active-rhub.result }}
+          APPLICABILITY_RESULT: ${{ needs.applicability-native.result }}
+          REMAINING_DOCKER_RESULT: ${{ needs.remaining-docker.result }}
+          LINUX_ARM64_RESULT: ${{ needs.linux-arm64.result }}
+          LINUX_ARM64_COMPARE_RESULT: ${{ needs.linux-arm64-compare.result }}
           SOURCE_DOWNLOAD_OUTCOME: ${{ steps.download-source.outcome }}
           RESULT_DOWNLOAD_OUTCOME: ${{ steps.download-results.outcome }}
           SOURCE_VERIFY_OUTCOME: ${{ steps.verify-source.outcome }}
@@ -2170,6 +2907,10 @@ jobs:
           test "$MKL_RESULT" = success
           test "$NOSUGGESTS_RESULT" = success
           test "$ACTIVE_RHUB_RESULT" = success
+          test "$APPLICABILITY_RESULT" = success
+          test "$REMAINING_DOCKER_RESULT" = success
+          test "$LINUX_ARM64_RESULT" = success
+          test "$LINUX_ARM64_COMPARE_RESULT" = success
           test "$SOURCE_DOWNLOAD_OUTCOME" = success
           test "$RESULT_DOWNLOAD_OUTCOME" = success
           test "$SOURCE_VERIFY_OUTCOME" = success

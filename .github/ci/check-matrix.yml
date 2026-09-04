@@ -254,7 +254,17 @@ coverage:
     state: proxy
     driver: native-wrapper
     image: local/colocboost-blis-proxy
-    proof: [source-tarball-sha256, r-executable, r-devel-revision, operating-system, compiler, architecture, loaded-blis, blis-version, single-thread]
+    dockerfile: .github/ci/images/blis/Dockerfile
+    dockerfile_sha256: 8a838693ee62ca8aa1ad0bc3ec654a6273d38bc2bd95bf7e7ee4c286d830db1e
+    base_image: docker.io/library/fedora@sha256:be9d65e2344d805cc11114319c685ecaa96b6d9b4350a0a6460cdb931babbd19
+    r_source_url: https://svn.r-project.org/R/trunk
+    r_source_revision: 90483
+    blis_commit: e8566eb3e773fb54d11b33e371d13f22d2941e50
+    wrapper_path: /usr/local/bin/r-check
+    system_r: /opt/R/devel-blis/bin/R
+    wrapper_input: tarball-parent
+    check_args: [--no-manual, --no-build-vignettes]
+    proof: [source-tarball-sha256, r-executable, r-devel-revision, operating-system, compiler, architecture, loaded-blis, blis-version, single-thread, structured-runtime-proof]
     limitation: Purpose-built Fedora serial BLIS is an acceptance spike because the exact current CRAN recipe is not public; failed runtime identity changes this row to uncovered.
 
   - id: blas
@@ -266,7 +276,7 @@ coverage:
     proof: [source-tarball-sha256, no-package-owned-native-source, no-linkingto, no-compilation-marker, no-direct-native-call]
     predicate:
       input: built-source-tarball
-      command: [python, .github/ci/evaluate_native_features.py, --tarball, '{tarball}', --rule, no-native-source-linkingto-compilation-or-direct-call]
+      command: [python, .github/ci/check_applicability.py, --tarball, '{tarball}', --rule, no-native-source-linkingto-compilation-or-direct-call]
 
   - id: c23
     group: additional
@@ -277,7 +287,7 @@ coverage:
     proof: [source-tarball-sha256, no-package-c-source, obsolete-special-area]
     predicate:
       input: built-source-tarball
-      command: [python, .github/ci/evaluate_native_features.py, --tarball, '{tarball}', --rule, no-c-source]
+      command: [python, .github/ci/check_applicability.py, --tarball, '{tarball}', --rule, no-c-source]
 
   - id: intel
     group: additional
@@ -288,7 +298,7 @@ coverage:
     proof: [source-tarball-sha256, no-package-owned-native-source, obsolete-special-area]
     predicate:
       input: built-source-tarball
-      command: [python, .github/ci/evaluate_native_features.py, --tarball, '{tarball}', --rule, no-package-owned-native-source]
+      command: [python, .github/ci/check_applicability.py, --tarball, '{tarball}', --rule, no-package-owned-native-source]
 
   - id: lto
     group: additional
@@ -299,7 +309,7 @@ coverage:
     proof: [source-tarball-sha256, no-package-owned-native-object, no-compilation-target]
     predicate:
       input: built-source-tarball
-      command: [python, .github/ci/evaluate_native_features.py, --tarball, '{tarball}', --rule, no-native-object]
+      command: [python, .github/ci/check_applicability.py, --tarball, '{tarball}', --rule, no-native-object]
 
   - id: m1mac
     group: additional
@@ -307,6 +317,9 @@ coverage:
     state: proxy
     driver: r-binary
     runner: macos-15
+    system_r: /Library/Frameworks/R.framework/Resources/bin/R
+    setup_r_selector: devel
+    check_args: [--as-cran, --no-manual, --no-build-vignettes]
     proof: [source-tarball-sha256, r-executable, r-version, r-devel-revision, operating-system, macos-version, compiler, architecture, arm64]
     limitation: GitHub arm64 hardware, flags, and system libraries differ from the CRAN M1mac check.
 
@@ -328,6 +341,19 @@ coverage:
     state: proxy
     driver: native-wrapper
     image: ghcr.io/r-hub/containers/gcc16@sha256:1127418efe3938f0e72fc29c55596a8cdde03293928b60aeb0ac44b6586960d2
+    wrapper_path: /usr/local/bin/r-check
+    wrapper_sha256: a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090
+    system_r: /opt/R/devel-gcc16/bin/R
+    wrapper_input: tarball-parent
+    check_args: [--no-manual, --no-build-vignettes]
+    runtime_profile: openblas
+    check_profile: standard
+    documentation_policy: forbidden
+    expected_r_kind: devel
+    expected_os: linux
+    expected_architecture: x86_64
+    expected_distribution: fedora
+    expected_distribution_version: "44"
     proof: [source-tarball-sha256, container-system-r, r-executable, r-devel-revision, operating-system, compiler, loaded-openblas, single-thread]
     limitation: Proven Fedora OpenBLAS pthread mode proxies CRAN serial OpenBLAS; no dedicated active OpenBLAS image exists.
 
@@ -340,7 +366,7 @@ coverage:
     proof: [source-tarball-sha256, no-package-owned-compilation-target, strict-r-headers-not-applicable]
     predicate:
       input: built-source-tarball
-      command: [python, .github/ci/evaluate_native_features.py, --tarball, '{tarball}', --rule, no-native-compilation-target]
+      command: [python, .github/ci/check_applicability.py, --tarball, '{tarball}', --rule, no-native-compilation-target]
 
   - id: clang-asan
     group: additional
@@ -456,7 +482,7 @@ coverage:
     proof: [source-tarball-sha256, no-package-owned-compiled-source]
     predicate:
       input: built-source-tarball
-      command: [python, .github/ci/evaluate_native_features.py, --tarball, '{tarball}', --rule, no-compiled-source]
+      command: [python, .github/ci/check_applicability.py, --tarball, '{tarball}', --rule, no-compiled-source]
 
   - id: gcc15
     group: additional
@@ -467,7 +493,7 @@ coverage:
     proof: [source-tarball-sha256, no-package-owned-native-source, obsolete-special-area]
     predicate:
       input: built-source-tarball
-      command: [python, .github/ci/evaluate_native_features.py, --tarball, '{tarball}', --rule, no-package-owned-native-source]
+      command: [python, .github/ci/check_applicability.py, --tarball, '{tarball}', --rule, no-package-owned-native-source]
 
   - id: nold
     group: additional
@@ -496,7 +522,17 @@ coverage:
     state: proxy
     driver: native-wrapper
     image: local/colocboost-noomp-proxy
-    proof: [source-tarball-sha256, r-executable, r-devel-revision, no-openmp-compile-flags, no-openmp-link-flags, no-loaded-openmp-runtime, dependency-openmp-audit]
+    dockerfile: .github/ci/images/noomp/Dockerfile
+    dockerfile_sha256: d1d3dc7f60ccbe1f73cf49c40cf74a06422106a97395c15c35e29bbda20ac87f
+    base_image: docker.io/library/fedora@sha256:be9d65e2344d805cc11114319c685ecaa96b6d9b4350a0a6460cdb931babbd19
+    r_source_url: https://svn.r-project.org/R/trunk
+    r_source_revision: 90483
+    r_configure: --disable-openmp
+    wrapper_path: /usr/local/bin/r-check
+    system_r: /opt/R/devel-noomp/bin/R
+    wrapper_input: tarball-parent
+    check_args: [--no-manual, --no-build-vignettes]
+    proof: [source-tarball-sha256, r-executable, r-devel-revision, no-openmp-compile-flags, no-openmp-link-flags, no-loaded-openmp-runtime, dependency-openmp-audit, structured-runtime-proof]
     limitation: Purpose-built no-OpenMP R and rebuilt hard dependencies are an acceptance spike; failed runtime proof changes this row to uncovered.
 
   - id: noremap
@@ -508,7 +544,7 @@ coverage:
     proof: [source-tarball-sha256, no-package-cpp-source, obsolete-special-area]
     predicate:
       input: built-source-tarball
-      command: [python, .github/ci/evaluate_native_features.py, --tarball, '{tarball}', --rule, no-cpp-source]
+      command: [python, .github/ci/check_applicability.py, --tarball, '{tarball}', --rule, no-cpp-source]
 
   - id: nosuggests
     group: additional
@@ -554,7 +590,7 @@ coverage:
     proof: [source-tarball-sha256, no-direct-native-interface, removed-official-experimental-support]
     predicate:
       input: built-source-tarball
-      command: [python, .github/ci/evaluate_native_features.py, --tarball, '{tarball}', --rule, no-direct-native-call]
+      command: [python, .github/ci/check_applicability.py, --tarball, '{tarball}', --rule, no-direct-native-call]
 
   - id: rchk
     group: additional
@@ -565,7 +601,7 @@ coverage:
     proof: [source-tarball-sha256, no-package-c-cpp-object, compiled-dependencies-visible-limitation]
     predicate:
       input: built-source-tarball
-      command: [python, .github/ci/evaluate_native_features.py, --tarball, '{tarball}', --rule, no-c-cpp-object]
+      command: [python, .github/ci/check_applicability.py, --tarball, '{tarball}', --rule, no-c-cpp-object]
 
   - id: rcnst
     group: additional
@@ -573,6 +609,24 @@ coverage:
     state: proxy
     driver: native-wrapper
     image: ghcr.io/r-hub/containers/ubuntu-clang@sha256:b66e5f86ce6f8fa3e6afd497fabfdb3aeac79c74ee3525e8a8814de79aa2bc82
+    wrapper_path: /usr/local/bin/r-check
+    wrapper_sha256: a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090
+    system_r: /opt/R/devel/bin/R
+    wrapper_input: tarball-parent
+    check_args: [--no-manual, --no-build-vignettes]
+    runtime_profile: rcnst
+    check_profile: standard
+    documentation_policy: forbidden
+    expected_r_kind: devel
+    expected_os: linux
+    expected_architecture: x86_64
+    expected_distribution: ubuntu
+    expected_distribution_version: "24.04"
+    wrapper_path: /usr/local/bin/r-check
+    wrapper_sha256: a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090
+    system_r: /opt/R/devel/bin/R
+    wrapper_input: tarball-parent
+    check_args: [--no-manual, --no-build-vignettes]
     proof: [source-tarball-sha256, container-system-r, r-executable, r-devel-revision, r-compile-pkgs-1, r-jit-strategy-4, r-check-constants-5, constant-corruption-diagnostics]
     limitation: No active direct rcnst image exists; an explicitly configured active R-devel lane is purpose-specific proxy coverage.
 
@@ -581,8 +635,14 @@ coverage:
     cran_name: rlibro
     state: proxy
     driver: native-wrapper
-    image: local/colocboost-rlibro-proxy
-    proof: [source-tarball-sha256, r-executable, nonroot-uid, readonly-bind-mount, write-failure, installed-library-path, package-check-executed]
+    image: ghcr.io/r-hub/containers/ubuntu-clang@sha256:b66e5f86ce6f8fa3e6afd497fabfdb3aeac79c74ee3525e8a8814de79aa2bc82
+    wrapper_path: /usr/local/bin/r-check
+    wrapper_sha256: a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090
+    system_r: /opt/R/devel/bin/R
+    wrapper_input: tarball-parent
+    check_mode: direct-r-cmd-check
+    check_args: [--as-cran, --no-manual, --no-build-vignettes]
+    proof: [source-tarball-sha256, container-system-r, r-executable, nonroot-uid, readonly-bind-mount, write-failure, installed-library-path, package-check-executed]
     limitation: No active direct image exists; the proxy must use a real read-only bind mount and non-root check rather than chmod under root.
 
   - id: musl
@@ -590,7 +650,12 @@ coverage:
     cran_name: musl
     state: direct
     driver: native-wrapper
-    image: cran-linked-public-musl-reproduction
+    image: ghcr.io/bastistician/rcheck-musl@sha256:8b33a511897c8025a84072efdb97dc0a58292428700bf90e6628a438134c453d
+    wrapper_path: /R/bin/R
+    system_r: /R/bin/R
+    wrapper_input: tarball-parent
+    check_mode: direct-r-cmd-check
+    check_args: [--as-cran, --no-manual, --no-build-vignettes]
     proof: [source-tarball-sha256, r-executable, r-version, musl-libc, alpine-version, locale, architecture]
 
   - id: linux-arm64
@@ -599,6 +664,10 @@ coverage:
     state: direct
     driver: r-binary
     runner: [ubuntu-24.04, ubuntu-24.04-arm]
+    rcheckserver_index: ghcr.io/r-devel/rcheckserver/ubuntu@sha256:74f3781764e90b6c4bf8e300c788b0f853e867289585f020dd3b842180c08bf6
+    amd64_image: ghcr.io/r-devel/rcheckserver/ubuntu@sha256:ef57b4fbbcc76a173e53622143d59f8d4a97978481237e81153af23b03c66e9
+    arm64_image: ghcr.io/r-devel/rcheckserver/ubuntu@sha256:bcfe37df999b716bd41ffc139d242c251c06b79d82f3632b4e8c65b6eb13f050
+    system_r: /usr/bin/R
     proof: [source-tarball-sha256, r-executable, native-amd64, native-arm64, identical-rcheckserver-image, identical-tarball-and-configuration, architecture-only-comparison]
 
   - id: vnu

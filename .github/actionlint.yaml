@@ -1,4 +1,4 @@
 self-hosted-runner:
   # actionlint v1.7.1 predates these GitHub-hosted runner labels.
-  labels: [macos-15, macos-15-intel]
+  labels: [macos-15, macos-15-intel, ubuntu-24.04-arm]
 config-variables: null

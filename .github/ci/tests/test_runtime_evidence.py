@@ -102,6 +102,8 @@ def valid_document(environment_id="r-devel-linux-x86-64-debian-clang"):
         "LANG", "LC_ALL", "LC_CTYPE", "ASAN_OPTIONS", "UBSAN_OPTIONS",
         "LD_PRELOAD", "VALGRIND_OPTS", "CHECK_ARGS",
         "_R_CHECK_DONTTEST_EXAMPLES_",
+        "OPENBLAS_NUM_THREADS", "BLIS_NUM_THREADS", "R_COMPILE_PKGS",
+        "R_JIT_STRATEGY", "R_CHECK_CONSTANTS",
     }
     environment = {name: None for name in environment_names}
     environment["PATH"] = f"{Path(selected_r).parent}:/usr/bin"

@@ -585,14 +585,12 @@ Pin Fedora base digests. BLIS must load serial BLIS after a real matrix operatio
 
 OpenBLAS runs one thread and proves its mapped library. rcnst sets the three official variables. rlibro uses a non-root process and read-only bind mount. musl proves musl/Alpine. linux-arm64 compares amd64 and arm64 under the same image/setup.
 
-- [ ] **Step 5: Test, commit, then perform the first explicit fork-only push**
+- [ ] **Step 5: Test and commit locally (the user explicitly requested no push)**
 
 ~~~bash
 pytest -q .github/ci/tests/test_applicability.py
 git add .github/ci .github/workflows/cran-preflight.yml
 git commit -m "ci: complete additional CRAN-like coverage"
-git push origin HEAD:refs/heads/codex/cran-preflight-ci
-gh run list --repo xueweic/colocboost --branch codex/cran-preflight-ci
 ~~~
 
 Expected: before this first push, static tests prove producers cover every one of the 60 composite keys. On the fork run, the manifest remains 13 primary plus 29 additional and 18 unit lanes, uncovered=0, and every expected result is present.

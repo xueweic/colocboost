@@ -22,6 +22,7 @@ from verify_runtime_evidence import validate_runtime_evidence
 FULL_DOCUMENTATION = "full-documentation"
 NO_DOCUMENTATION = "standard-no-documentation"
 ACTIVE_PROFILES = {
+    "openblas", "rcnst",
     "atlas", "clang-asan", "clang-ubsan", "donttest", "gcc-asan",
     "gcc-ubsan", "nold", "valgrind", "vnu",
 }

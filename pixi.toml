@@ -53,6 +53,11 @@ cmd = '''python -B .github/ci/verify_source.py --source-dir='{{ source_dir | rep
 cwd = "."
 args = ["source_dir", "source_sha", "event_sha", "github_output"]
 
+[tasks.ci-applicability]
+cmd = '''python -B .github/ci/check_applicability.py --tarball='{{ tarball | replace("'", "'\"'\"'") }}' --metadata='{{ metadata | replace("'", "'\"'\"'") }}' --source-sha='{{ source_sha | replace("'", "'\"'\"'") }}' --event-sha='{{ event_sha | replace("'", "'\"'\"'") }}' --environment-id='{{ environment_id | replace("'", "'\"'\"'") }}' --output='{{ output | replace("'", "'\"'\"'") }}' --rule='{{ rule | replace("'", "'\"'\"'") }}' '''
+cwd = "."
+args = ["tarball", "metadata", "source_sha", "event_sha", "environment_id", "output", "rule"]
+
 [tasks.ci-extract-source]
 cmd = '''python -B .github/ci/extract_source.py --tarball='{{ tarball | replace("'", "'\"'\"'") }}' --metadata='{{ metadata | replace("'", "'\"'\"'") }}' --source-sha='{{ source_sha | replace("'", "'\"'\"'") }}' --event-sha='{{ event_sha | replace("'", "'\"'\"'") }}' --destination='{{ destination | replace("'", "'\"'\"'") }}' --github-output='{{ github_output | replace("'", "'\"'\"'") }}' '''
 cwd = "."
@@ -143,6 +148,16 @@ args = [
   { arg = "r_entrypoint", default = "" },
   { arg = "required_r_executable", default = "" },
 ]
+
+[tasks.ci-host-docker]
+cmd = '''python -B .github/ci/run_host_docker.py --image='{{ image | replace("'", "'\"'\"'") }}' {% if wrapper %}--wrapper='{{ wrapper | replace("'", "'\"'\"'") }}'{% endif %} {% if r_binary %}--r-binary='{{ r_binary | replace("'", "'\"'\"'") }}'{% endif %} {% if direct == "true" %}--direct{% endif %} --tarball='{{ tarball | replace("'", "'\"'\"'") }}' --metadata='{{ metadata | replace("'", "'\"'\"'") }}' --source-sha='{{ source_sha | replace("'", "'\"'\"'") }}' --event-sha='{{ event_sha | replace("'", "'\"'\"'") }}' --environment-id='{{ environment_id | replace("'", "'\"'\"'") }}' --work-dir='{{ work_dir | replace("'", "'\"'\"'") }}' --result='{{ result | replace("'", "'\"'\"'") }}' --evidence='{{ evidence | replace("'", "'\"'\"'") }}' --user='{{ user | replace("'", "'\"'\"'") }}' {% if platform %}--platform='{{ platform | replace("'", "'\"'\"'") }}'{% endif %} {% if readonly_library %}--readonly-library='{{ readonly_library | replace("'", "'\"'\"'") }}'{% endif %} {% if runtime_proof %}--runtime-proof='{{ runtime_proof | replace("'", "'\"'\"'") }}'{% endif %}'''
+cwd = "."
+args = ["image", "tarball", "metadata", "source_sha", "event_sha", "environment_id", "work_dir", "result", "evidence", { arg = "wrapper", default = "" }, { arg = "user", default = "0:0" }, { arg = "platform", default = "" }, { arg = "readonly_library", default = "" }, { arg = "r_binary", default = "" }, { arg = "direct", default = "" }, { arg = "runtime_proof", default = "" }]
+
+[tasks.ci-host-unit]
+cmd = '''python -B .github/ci/run_host_unit.py --image='{{ image | replace("'", "'\"'\"'") }}' --package='{{ package | replace("'", "'\"'\"'") }}' --output='{{ output | replace("'", "'\"'\"'") }}' --environment-id='{{ environment_id | replace("'", "'\"'\"'") }}' --policy='{{ policy | replace("'", "'\"'\"'") }}' --user='{{ user | replace("'", "'\"'\"'") }}' {% if platform %}--platform='{{ platform | replace("'", "'\"'\"'") }}'{% endif %} {% if runtime_proof %}--runtime-proof='{{ runtime_proof | replace("'", "'\"'\"'") }}'{% endif %}'''
+cwd = "."
+args = ["image", "package", "output", "environment_id", "policy", { arg = "user", default = "0:0" }, { arg = "platform", default = "" }, { arg = "runtime_proof", default = "" }]
 
 [tasks.ci-native-check]
 cmd = '''python -B .github/ci/run_native_check.py --manifest=.github/ci/check-matrix.yml --environment-id='{{ environment_id | replace("'", "'\"'\"'") }}' --wrapper='{{ wrapper | replace("'", "'\"'\"'") }}' --required-r-executable='{{ r_executable | replace("'", "'\"'\"'") }}' --tarball='{{ tarball | replace("'", "'\"'\"'") }}' --metadata='{{ metadata | replace("'", "'\"'\"'") }}' --source-sha='{{ source_sha | replace("'", "'\"'\"'") }}' --event-sha='{{ event_sha | replace("'", "'\"'\"'") }}' --work-dir='{{ work_dir | replace("'", "'\"'\"'") }}' --check-library='{{ check_library | replace("'", "'\"'\"'") }}' --evidence='{{ evidence | replace("'", "'\"'\"'") }}' --log='{{ log | replace("'", "'\"'\"'") }}' '''

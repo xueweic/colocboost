@@ -100,8 +100,8 @@ EXPECTED_ROW_CORE = {
     "0len": ("additional", "0len", "not-applicable", "r-binary", "runner", "ubuntu-24.04"),
     "rchk": ("additional", "rchk", "not-applicable", "r-binary", "runner", "ubuntu-24.04"),
     "rcnst": ("additional", "rcnst", "proxy", "native-wrapper", "image", "ghcr.io/r-hub/containers/ubuntu-clang@sha256:b66e5f86ce6f8fa3e6afd497fabfdb3aeac79c74ee3525e8a8814de79aa2bc82"),
-    "rlibro": ("additional", "rlibro", "proxy", "native-wrapper", "image", "local/colocboost-rlibro-proxy"),
-    "musl": ("additional", "musl", "direct", "native-wrapper", "image", "cran-linked-public-musl-reproduction"),
+    "rlibro": ("additional", "rlibro", "proxy", "native-wrapper", "image", "ghcr.io/r-hub/containers/ubuntu-clang@sha256:b66e5f86ce6f8fa3e6afd497fabfdb3aeac79c74ee3525e8a8814de79aa2bc82"),
+    "musl": ("additional", "musl", "direct", "native-wrapper", "image", "ghcr.io/bastistician/rcheck-musl@sha256:8b33a511897c8025a84072efdb97dc0a58292428700bf90e6628a438134c453d"),
     "linux-arm64": ("additional", "linux-arm64", "direct", "r-binary", "runner", ("ubuntu-24.04", "ubuntu-24.04-arm")),
     "vnu": ("additional", "vnu", "direct", "native-wrapper", "image", "ghcr.io/r-hub/containers/vnu@sha256:03f45d5944fc092627cae2e944f16f037fed9795f8768c90d9511799098a7884"),
 }
@@ -140,7 +140,7 @@ REQUIRED_PROOFS = {
     "r-oldrel-macos-x86_64": _proofs("source-tarball-sha256 r-executable r-version r-oldrel operating-system macos-version compiler apple-and-gnu-compilers architecture x86-64 locale"),
     "r-oldrel-windows-x86_64": _proofs("source-tarball-sha256 r-executable r-version r-oldrel operating-system windows-server-2022 compiler rtools-gcc architecture locale"),
     "ATLAS": _proofs("source-tarball-sha256 container-system-r r-executable extsoftversion-blas la-library process-mappings loaded-atlas"),
-    "BLIS": _proofs("source-tarball-sha256 r-executable r-devel-revision operating-system compiler architecture loaded-blis blis-version single-thread"),
+    "BLIS": _proofs("source-tarball-sha256 r-executable r-devel-revision operating-system compiler architecture loaded-blis blis-version single-thread structured-runtime-proof"),
     "BLAS": _proofs("source-tarball-sha256 no-package-owned-native-source no-linkingto no-compilation-marker no-direct-native-call"),
     "C23": _proofs("source-tarball-sha256 no-package-c-source obsolete-special-area"),
     "Intel": _proofs("source-tarball-sha256 no-package-owned-native-source obsolete-special-area"),
@@ -157,14 +157,14 @@ REQUIRED_PROOFS = {
     "gcc": _proofs("source-tarball-sha256 no-package-owned-compiled-source"),
     "gcc15": _proofs("source-tarball-sha256 no-package-owned-native-source obsolete-special-area"),
     "noLD": _proofs("source-tarball-sha256 container-system-r r-executable opt-r-devel-nold long-double-disabled"),
-    "noOMP": _proofs("source-tarball-sha256 r-executable r-devel-revision no-openmp-compile-flags no-openmp-link-flags no-loaded-openmp-runtime dependency-openmp-audit"),
+    "noOMP": _proofs("source-tarball-sha256 r-executable r-devel-revision no-openmp-compile-flags no-openmp-link-flags no-loaded-openmp-runtime dependency-openmp-audit structured-runtime-proof"),
     "noRemap": _proofs("source-tarball-sha256 no-package-cpp-source obsolete-special-area"),
     "noSuggests": _proofs("source-tarball-sha256 container-system-r r-executable depends-only-policy allowed-test-frameworks allowed-vignette-builders ashr-absent susier-absent nonzero-installed-test-count"),
     "valgrind": _proofs("source-tarball-sha256 container-system-r r-executable opt-r-devel-valgrind use-valgrind valgrind-runtime suppression-and-error-scan"),
     "0len": _proofs("source-tarball-sha256 no-direct-native-interface removed-official-experimental-support"),
     "rchk": _proofs("source-tarball-sha256 no-package-c-cpp-object compiled-dependencies-visible-limitation"),
     "rcnst": _proofs("source-tarball-sha256 container-system-r r-executable r-devel-revision r-compile-pkgs-1 r-jit-strategy-4 r-check-constants-5 constant-corruption-diagnostics"),
-    "rlibro": _proofs("source-tarball-sha256 r-executable nonroot-uid readonly-bind-mount write-failure installed-library-path package-check-executed"),
+    "rlibro": _proofs("source-tarball-sha256 container-system-r r-executable nonroot-uid readonly-bind-mount write-failure installed-library-path package-check-executed"),
     "musl": _proofs("source-tarball-sha256 r-executable r-version musl-libc alpine-version locale architecture"),
     "linux-arm64": _proofs("source-tarball-sha256 r-executable native-amd64 native-arm64 identical-rcheckserver-image identical-tarball-and-configuration architecture-only-comparison"),
     "vnu": _proofs("source-tarball-sha256 container-system-r r-executable vnu-special-dispatch nu-validator-executed zero-bad-entries validator-output"),
@@ -172,7 +172,7 @@ REQUIRED_PROOFS = {
 
 PREDICATE_PREFIX = (
     "python",
-    ".github/ci/evaluate_native_features.py",
+    ".github/ci/check_applicability.py",
     "--tarball",
     "{tarball}",
     "--rule",
@@ -255,10 +255,60 @@ APPROVED_RHUB_IMAGE = {
     "noSuggests": "nosuggests",
     "valgrind": "valgrind",
     "rcnst": "ubuntu-clang",
+    "rlibro": "ubuntu-clang",
     "vnu": "vnu",
 }
 DRIVER_ENDPOINT = {"native-wrapper": "image", "r-binary": "runner"}
 SPECIAL_NATIVE_BINDINGS = {
+    "openblas": {
+        "wrapper_path": "/usr/local/bin/r-check", "wrapper_sha256": "a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090",
+        "system_r": "/opt/R/devel-gcc16/bin/R", "wrapper_input": "tarball-parent",
+        "check_args": ["--no-manual", "--no-build-vignettes"], "runtime_profile": "openblas", "check_profile": "standard", "documentation_policy": "forbidden", "expected_r_kind": "devel", "expected_os": "linux", "expected_architecture": "x86_64", "expected_distribution": "fedora", "expected_distribution_version": "44",
+    },
+    "blis": {
+        "dockerfile": ".github/ci/images/blis/Dockerfile",
+        "dockerfile_sha256": "8a838693ee62ca8aa1ad0bc3ec654a6273d38bc2bd95bf7e7ee4c286d830db1e",
+        "base_image": "docker.io/library/fedora@sha256:be9d65e2344d805cc11114319c685ecaa96b6d9b4350a0a6460cdb931babbd19",
+        "r_source_url": "https://svn.r-project.org/R/trunk",
+        "r_source_revision": 90483,
+        "blis_commit": "e8566eb3e773fb54d11b33e371d13f22d2941e50",
+        "wrapper_path": "/usr/local/bin/r-check",
+        "system_r": "/opt/R/devel-blis/bin/R",
+        "wrapper_input": "tarball-parent",
+        "check_args": ["--no-manual", "--no-build-vignettes"],
+    },
+    "noomp": {
+        "dockerfile": ".github/ci/images/noomp/Dockerfile",
+        "dockerfile_sha256": "d1d3dc7f60ccbe1f73cf49c40cf74a06422106a97395c15c35e29bbda20ac87f",
+        "base_image": "docker.io/library/fedora@sha256:be9d65e2344d805cc11114319c685ecaa96b6d9b4350a0a6460cdb931babbd19",
+        "r_source_url": "https://svn.r-project.org/R/trunk",
+        "r_source_revision": 90483,
+        "r_configure": "--disable-openmp",
+        "wrapper_path": "/usr/local/bin/r-check",
+        "system_r": "/opt/R/devel-noomp/bin/R",
+        "wrapper_input": "tarball-parent",
+        "check_args": ["--no-manual", "--no-build-vignettes"],
+    },
+    "rcnst": {
+        "wrapper_path": "/usr/local/bin/r-check", "wrapper_sha256": "a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090",
+        "system_r": "/opt/R/devel/bin/R", "wrapper_input": "tarball-parent",
+        "check_args": ["--no-manual", "--no-build-vignettes"], "runtime_profile": "rcnst", "check_profile": "standard", "documentation_policy": "forbidden", "expected_r_kind": "devel", "expected_os": "linux", "expected_architecture": "x86_64", "expected_distribution": "ubuntu", "expected_distribution_version": "24.04",
+    },
+    "musl": {
+        "wrapper_path": "/R/bin/R",
+        "system_r": "/R/bin/R",
+        "wrapper_input": "tarball-parent",
+        "check_mode": "direct-r-cmd-check",
+        "check_args": ["--as-cran", "--no-manual", "--no-build-vignettes"],
+    },
+    "rlibro": {
+        "wrapper_path": "/usr/local/bin/r-check",
+        "wrapper_sha256": "a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090",
+        "system_r": "/opt/R/devel/bin/R",
+        "wrapper_input": "tarball-parent",
+        "check_mode": "direct-r-cmd-check",
+        "check_args": ["--as-cran", "--no-manual", "--no-build-vignettes"],
+    },
     "atlas": {
         "wrapper_path": "/usr/local/bin/r-check",
         "wrapper_sha256": "a42092f0de63c4a9c1bed3c1c9b341b32c51f72335169d02732318c102646090",
@@ -489,6 +539,13 @@ SPECIAL_NATIVE_BINDINGS = {
     },
 }
 PLATFORM_R_BINDINGS = {
+    "m1mac": {
+        "setup_r_selector": "devel", "system_r": "/Library/Frameworks/R.framework/Resources/bin/R",
+        "check_args": ["--as-cran", "--no-manual", "--no-build-vignettes"],
+    },
+    "linux-arm64": {
+        "system_r": "/usr/bin/R",
+    },
     "r-devel-windows-x86-64": {
         "setup_r_selector": "devel",
         "system_r": "C:/R/bin/R.exe",
