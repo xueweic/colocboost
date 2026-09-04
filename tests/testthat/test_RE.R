@@ -319,7 +319,7 @@ test_that("colocboost use_entropy default is FALSE and preserves legacy behavior
 })
 
 test_that("colocboost use_entropy=TRUE can yield different VCP than FALSE under heterogeneous effects", {
-  td <- generate_entropy_test_data()
+  td <- generate_entropy_test_data(n = 600)
   
   suppressWarnings(suppressMessages({
     res_F <- colocboost(X = td$X_list, Y = td$Y_list,
@@ -328,14 +328,12 @@ test_that("colocboost use_entropy=TRUE can yield different VCP than FALSE under 
                         use_entropy = TRUE,  M = 30, output_level = 2)
   }))
   
-  if (!is.null(res_F$vcp) && !is.null(res_T$vcp) &&
-      length(res_F$vcp) == length(res_T$vcp)) {
-    expect_false(isTRUE(all.equal(as.numeric(res_F$vcp),
-                                  as.numeric(res_T$vcp),
-                                  tolerance = 1e-12)))
-  } else {
-    succeed("One run returned no colocalization; entropy-vs-uniform comparison skipped")
-  }
+  expect_false(is.null(res_F$vcp))
+  expect_false(is.null(res_T$vcp))
+  expect_length(res_F$vcp, length(res_T$vcp))
+  expect_false(isTRUE(all.equal(as.numeric(res_F$vcp),
+                                as.numeric(res_T$vcp),
+                                tolerance = 1e-12)))
 })
 
 test_that("colocboost use_entropy flag is propagated into cb_model_para", {

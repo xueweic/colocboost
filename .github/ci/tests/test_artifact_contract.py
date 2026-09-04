@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -396,6 +397,40 @@ def test_artifact_cli_atomically_appends_verified_github_outputs(tmp_path, opera
         "tarball_sha256": metadata["sha256"],
     }
     assert not list(tmp_path.glob(f".{github_output.name}.*.tmp"))
+
+
+def test_artifact_cli_preserves_existing_github_output_file_identity(tmp_path):
+    tarball, metadata_path, _ = create_valid_metadata(tmp_path, b"verified")
+    github_output = tmp_path / "github-output.txt"
+    github_output.write_text("existing=value\n", encoding="utf-8")
+    github_output.chmod(0o640)
+    before = github_output.stat()
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(CI_DIR / "artifact_contract.py"),
+            "verify",
+            "--tarball",
+            str(tarball),
+            "--metadata",
+            str(metadata_path),
+            "--source-sha",
+            SOURCE_SHA,
+            "--event-sha",
+            EVENT_SHA,
+            "--github-output",
+            str(github_output),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    after = github_output.stat()
+    assert completed.returncode == 0, completed.stderr
+    assert (after.st_dev, after.st_ino) == (before.st_dev, before.st_ino)
+    assert stat.S_IMODE(after.st_mode) == stat.S_IMODE(before.st_mode)
 
 
 def test_artifact_cli_github_output_is_optional(tmp_path):

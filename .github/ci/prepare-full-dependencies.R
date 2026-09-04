@@ -170,7 +170,7 @@ status <- tryCatch({
     tarball = tarball,
     hard_dependencies = hard,
     suggested_dependencies = suggests,
-    vignette_builders = builders,
+    vignette_builders = I(builders),
     tooling = tooling,
     installed_packages = installed,
     availability = availability,

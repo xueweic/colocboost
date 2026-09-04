@@ -24,6 +24,11 @@ def test_dependency_prep_binds_active_r_by_r_home_not_launcher_path():
     assert 'file.path(R.home("bin")' not in source
 
 
+def test_full_dependency_prep_preserves_single_vignette_builder_as_json_array():
+    source = (CI_DIR / "prepare-full-dependencies.R").read_text(encoding="utf-8")
+    assert "vignette_builders = I(builders)" in source
+
+
 def valid_document(environment_id="r-devel-linux-x86-64-debian-clang", purpose="unit"):
     selected_r = {
         "r-release-linux-x86-64": "/opt/R/release/bin/R",

@@ -83,6 +83,22 @@ def test_every_job_is_inert_outside_the_fork_and_dependents_stop_when_cancelled(
     ]
 
 
+def test_proxy_dockerfiles_are_passed_to_validator_as_absolute_paths():
+    _, workflow = load_workflow()
+    build = step_with_id(workflow["jobs"]["remaining-docker"], "build-image")
+
+    assert build["env"]["DOCKERFILE"] == (
+        "${{ github.workspace }}/${{ matrix.dockerfile }}"
+    )
+
+
+def test_as_cran_platform_checks_disable_only_remote_incoming_version_lookup():
+    _, workflow = load_workflow()
+    platform = workflow["jobs"]["primary-platform"]
+
+    assert platform["env"]["_R_CHECK_CRAN_INCOMING_REMOTE_"] == "false"
+
+
 def test_primary_linux_matrix_is_exact_and_binds_native_runtime_contracts():
     _, workflow = load_workflow()
     job = workflow["jobs"]["primary-linux"]
@@ -662,6 +678,10 @@ def test_prepare_builds_one_source_with_local_r45_and_uploads_only_its_contract(
     assert all("path" not in output for output in prepare["outputs"])
     run_steps = [step for step in prepare["steps"] if "run" in step]
     assert any("pixi run --locked ci-validate" in step["run"] for step in run_steps)
+    assert any(
+        "pixi run --locked ci-contract-tests" in step["run"]
+        for step in run_steps
+    )
     source = step_with_id(prepare, "prepare-source")
     assert source["env"] == {"EVENT_SHA": "${{ github.sha }}"}
     assert "pixi run --locked --environment local-r45 ci-prepare-source" in source["run"]

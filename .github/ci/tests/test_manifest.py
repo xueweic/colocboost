@@ -704,6 +704,7 @@ def test_primary_platform_rows_bind_setup_r_and_check_contracts(manifest):
         "r-oldrel-macos-arm64": ("macos-15", "oldrel-1", "release", "macos", "aarch64", "/Library/Frameworks/R.framework/Resources/bin/R"),
         "r-release-macos-x86_64": ("macos-15-intel", "release", "release", "macos", "x86_64", "/Library/Frameworks/R.framework/Resources/bin/R"),
         "r-oldrel-macos-x86_64": ("macos-15-intel", "oldrel-1", "release", "macos", "x86_64", "/Library/Frameworks/R.framework/Resources/bin/R"),
+        "M1mac": ("macos-15", "devel", "devel", "macos", "aarch64", "/Library/Frameworks/R.framework/Resources/bin/R"),
     }
     for cran_name, (runner, selector, kind, os_name, architecture, system_r) in expected.items():
         row = row_for(manifest, cran_name)

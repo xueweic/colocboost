@@ -542,6 +542,8 @@ PLATFORM_R_BINDINGS = {
     "m1mac": {
         "setup_r_selector": "devel", "system_r": "/Library/Frameworks/R.framework/Resources/bin/R",
         "check_args": ["--as-cran", "--no-manual", "--no-build-vignettes"],
+        "expected_r_kind": "devel", "expected_os": "macos",
+        "expected_architecture": "aarch64",
     },
     "linux-arm64": {
         "system_r": "/usr/bin/R",

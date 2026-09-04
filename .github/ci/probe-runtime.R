@@ -56,16 +56,19 @@ compiler_evidence <- function(configuration, label) {
   list(path = path, version = output[[1L]])
 }
 
-os_release_evidence <- function() {
-  path <- "/etc/os-release"
+os_release_evidence <- function(path = "/etc/os-release") {
   if (!file.exists(path)) stop("/etc/os-release is required for Linux identity.")
   lines <- readLines(path, warn = TRUE)
   value <- function(key) {
     match <- lines[startsWith(lines, paste0(key, "="))]
     if (length(match) != 1L) stop("Missing or duplicate ", key, " in /etc/os-release.")
     result <- sub("^[^=]+=", "", match)
-    result <- sub('^"(.*)"$', "\\1", result)
-    if (!nzchar(result) || grepl("[\\r\\n]", result)) stop("Invalid ", key, " in /etc/os-release.")
+    if (startsWith(result, '"') && endsWith(result, '"') && nchar(result) >= 2L) {
+      result <- substr(result, 2L, nchar(result) - 1L)
+    }
+    if (!grepl("^[A-Za-z0-9._-]+$", result)) {
+      stop("Invalid ", key, " in /etc/os-release.")
+    }
     result
   }
   list(id = tolower(value("ID")), version = value("VERSION_ID"))

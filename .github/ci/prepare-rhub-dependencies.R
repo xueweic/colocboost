@@ -210,7 +210,7 @@ status <- tryCatch({
     hard_dependencies = hard,
     suggested_dependencies = suggests,
     recognized_testing_frameworks = testing,
-    vignette_builders = vignette_builders,
+    vignette_builders = I(vignette_builders),
     selected_soft_dependencies = if (environment_id == "mkl") suggests else selected,
     selected_refs = selected_refs,
     excluded_suggests = if (environment_id == "mkl") character() else excluded,

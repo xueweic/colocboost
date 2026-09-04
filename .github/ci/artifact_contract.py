@@ -156,7 +156,7 @@ def _safe_github_output_path(value: str | os.PathLike[str]) -> Path:
 def append_github_outputs(
     output_path: str | os.PathLike[str], values: Mapping[str, Any]
 ) -> None:
-    """Atomically append trusted single-line values to a GitHub output file."""
+    """Append trusted values without replacing GitHub's runner-owned file."""
 
     if not isinstance(values, Mapping) or not values:
         raise ValueError("github outputs must be a nonempty mapping")
@@ -170,36 +170,36 @@ def append_github_outputs(
         lines.append(f"{key}={value}\n")
 
     path = _safe_github_output_path(output_path)
-    existing = b""
-    if path.exists():
-        try:
-            existing = path.read_bytes()
-            existing.decode("utf-8")
-        except (OSError, UnicodeError) as error:
-            raise ValueError("github output must contain valid UTF-8 text") from error
-        if existing and not existing.endswith(b"\n"):
-            raise ValueError("existing github output must end with a newline")
-
     payload = "".join(lines).encode("utf-8")
-    temporary_path: Path | None = None
+    flags = os.O_RDWR | os.O_APPEND
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
     try:
-        with tempfile.NamedTemporaryFile(
-            mode="wb",
-            dir=path.parent,
-            prefix=f".{path.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as stream:
-            temporary_path = Path(stream.name)
-            stream.write(existing)
+        try:
+            descriptor = os.open(path, flags)
+        except FileNotFoundError:
+            descriptor = os.open(path, flags | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(descriptor, "r+b") as stream:
+            opened = os.fstat(stream.fileno())
+            current = path.lstat()
+            if (
+                not stat.S_ISREG(opened.st_mode)
+                or stat.S_ISLNK(current.st_mode)
+                or (opened.st_dev, opened.st_ino) != (current.st_dev, current.st_ino)
+            ):
+                raise ValueError("github output must be a stable regular non-symlink file")
+            stream.seek(0)
+            existing = stream.read()
+            existing.decode("utf-8")
+            if existing and not existing.endswith(b"\n"):
+                raise ValueError("existing github output must end with a newline")
             stream.write(payload)
             stream.flush()
             os.fsync(stream.fileno())
-        os.replace(temporary_path, path)
-        temporary_path = None
-    finally:
-        if temporary_path is not None:
-            temporary_path.unlink(missing_ok=True)
+    except UnicodeError as error:
+        raise ValueError("github output must contain valid UTF-8 text") from error
+    except OSError as error:
+        raise ValueError("github output is not safely writable") from error
 
 
 def github_output_values(

@@ -320,6 +320,9 @@ coverage:
     system_r: /Library/Frameworks/R.framework/Resources/bin/R
     setup_r_selector: devel
     check_args: [--as-cran, --no-manual, --no-build-vignettes]
+    expected_r_kind: devel
+    expected_os: macos
+    expected_architecture: aarch64
     proof: [source-tarball-sha256, r-executable, r-version, r-devel-revision, operating-system, macos-version, compiler, architecture, arm64]
     limitation: GitHub arm64 hardware, flags, and system libraries differ from the CRAN M1mac check.
 

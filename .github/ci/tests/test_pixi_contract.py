@@ -48,6 +48,9 @@ R_DEPENDENCIES = {
     "r-mass",
     "r-susier",
     "r-yaml",
+    "r-v8",
+    "r-tinytex",
+    "tidy-html5",
 }
 R_TASK_ENV = {
     "LC_ALL": "C",
@@ -484,6 +487,10 @@ def test_local_check_wrapper_keeps_full_uncompromised_policy():
     assert "--no-manual" not in source
     assert "--no-build-vignettes" not in source
     assert "--ignore-vignettes" not in source
+    assert "tinytex::tinytex_root" in source
+    assert 'file.path(tex_bin, "pdflatex")' in source
+    assert 'file.path(tex_bin, "makeindex")' in source
+    assert "Sys.setenv(PATH" in source
 
 
 def test_contract_runner_suppresses_pytest_and_bytecode_caches(tmp_path):

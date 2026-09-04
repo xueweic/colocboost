@@ -44,6 +44,9 @@ jobs:
       - name: Validate the complete result inventory
         run: pixi run --locked ci-validate
 
+      - name: Test the CI contracts
+        run: pixi run --locked ci-contract-tests
+
       - name: Build the source artifact once
         id: prepare-source
         env:
@@ -543,6 +546,7 @@ jobs:
       SOURCE_SHA: ${{ needs.prepare.outputs.source_sha || github.sha }}
       EVENT_SHA: ${{ needs.prepare.outputs.event_sha || github.sha }}
       FALLBACK_TARBALL_SHA256: ${{ needs.prepare.outputs.tarball_sha256 || '0000000000000000000000000000000000000000000000000000000000000000' }}
+      _R_CHECK_CRAN_INCOMING_REMOTE_: "false"
     steps:
       - name: Checkout exact event commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -2219,7 +2223,7 @@ jobs:
         continue-on-error: true
         env:
           IMAGE: ${{ matrix.image }}
-          DOCKERFILE: ${{ matrix.dockerfile }}
+          DOCKERFILE: ${{ github.workspace }}/${{ matrix.dockerfile }}
           DOCKERFILE_SHA256: ${{ matrix.dockerfile_sha256 }}
           ENVIRONMENT_ID: ${{ matrix.environment_id }}
           DIAGNOSTIC_DIR: ${{ runner.temp }}/remaining-diagnostics/${{ matrix.environment_id }}

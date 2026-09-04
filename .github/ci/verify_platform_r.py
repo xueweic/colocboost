@@ -29,15 +29,45 @@ _WINDOWS_R = "C:/R/bin/R.exe"
 _R_IDENTITY_EXPRESSION = r'''
 value <- function(x) if (is.null(x) || !length(x) || is.na(x[[1L]]) || !nzchar(as.character(x[[1L]]))) "<none>" else as.character(x[[1L]])
 r_bin <- file.path(R.home("bin"), if (.Platform$OS.type == "windows") "R.exe" else "R")
-config <- function(name) paste(system2(r_bin, c("CMD", "config", name), stdout = TRUE, stderr = FALSE), collapse = " ")
+config <- function(name) {
+  output <- tryCatch(
+    suppressWarnings(system2(r_bin, c("CMD", "config", name), stdout = TRUE, stderr = TRUE)),
+    error = function(error) character()
+  )
+  status <- attr(output, "status")
+  if (!length(output) || !is.null(status) && status != 0L) "<none>" else paste(output, collapse = " ")
+}
+rtools_executable <- function(executable) {
+  if (.Platform$OS.type != "windows") return("")
+  environment_names <- grep("^RTOOLS[0-9]+_HOME$", names(Sys.getenv()), value = TRUE)
+  roots <- unique(unname(Sys.getenv(environment_names, unset = "")))
+  roots <- roots[nzchar(roots)]
+  candidates <- unique(unlist(lapply(roots, function(root) {
+    Sys.glob(file.path(root, "*", "bin", executable))
+  }), use.names = FALSE))
+  candidates <- candidates[file.exists(candidates)]
+  if (!length(candidates)) "" else normalizePath(candidates[[1L]], winslash = "/", mustWork = TRUE)
+}
 cc <- config("CC")
-cc_command <- strsplit(trimws(cc), "[[:space:]]+")[[1L]][[1L]]
-cc_path <- unname(Sys.which(cc_command))
+cc_command <- if (identical(cc, "<none>")) "" else strsplit(trimws(cc), "[[:space:]]+")[[1L]][[1L]]
+cc_path <- if (nzchar(cc_command)) unname(Sys.which(cc_command)) else ""
+if (!nzchar(cc_path)) cc_path <- rtools_executable("gcc.exe")
+if (identical(cc, "<none>") && nzchar(cc_path)) cc <- basename(cc_path)
 cc_version <- if (nzchar(cc_path)) {
   output <- system2(cc_path, "--version", stdout = TRUE, stderr = TRUE)
   status <- attr(output, "status")
   if ((!is.null(status) && status != 0L) || !length(output)) "<none>" else output[[1L]]
 } else "<none>"
+cxx <- config("CXX")
+if (identical(cxx, "<none>")) {
+  cxx_path <- rtools_executable("g++.exe")
+  if (nzchar(cxx_path)) cxx <- basename(cxx_path)
+}
+fc <- config("FC")
+if (identical(fc, "<none>")) {
+  fc_path <- rtools_executable("gfortran.exe")
+  if (nzchar(fc_path)) fc <- basename(fc_path)
+}
 fields <- c(
   version = paste(R.version$major, R.version$minor, sep = "."),
   version_string = R.version.string,
@@ -52,8 +82,8 @@ fields <- c(
   cc = cc,
   cc_path = value(cc_path),
   cc_version = value(cc_version),
-  cxx = config("CXX"),
-  fc = config("FC"),
+  cxx = cxx,
+  fc = fc,
   locale = Sys.getlocale()
 )
 cat(paste(names(fields), fields, sep = "="), sep = "\n")
@@ -189,7 +219,12 @@ def verify_platform_r(
         check=False, capture_output=True, text=True, shell=False,
     )
     if completed.returncode != 0:
-        raise ValueError(f"selected R identity probe failed with exit code {completed.returncode}")
+        detail = " ".join(completed.stderr.split())[:500]
+        suffix = f": {detail}" if detail else ""
+        raise ValueError(
+            f"selected R identity probe failed with exit code "
+            f"{completed.returncode}{suffix}"
+        )
     identity = _parse_identity(completed.stdout)
     if identity["version"] != setup_version:
         raise ValueError("setup-r output version does not match selected R version")

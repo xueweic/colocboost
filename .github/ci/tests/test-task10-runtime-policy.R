@@ -37,4 +37,24 @@ if (grepl('file.path(R.home("bin")', text, fixed = TRUE)) {
   stop("Runtime probe must compare R homes, not inequivalent launcher paths.")
 }
 
+function_lines <- source[
+  seq.int(
+    grep("^os_release_evidence <- function", source),
+    grep("^write_evidence <- function", source) - 1L
+  )
+]
+eval(parse(text = paste(function_lines, collapse = "\n")))
+
+for (fixture in list(
+  c("ID=ubuntu", 'VERSION_ID="24.04"'),
+  c('ID="fedora"', "VERSION_ID=44")
+)) {
+  os_release <- tempfile("os-release-")
+  on.exit(unlink(os_release), add = TRUE)
+  writeLines(fixture, os_release, useBytes = TRUE)
+  observed <- os_release_evidence(os_release)
+  expected_id <- if (grepl("ubuntu", fixture[[1L]], fixed = TRUE)) "ubuntu" else "fedora"
+  if (!identical(observed$id, expected_id)) stop("OS release ID was not parsed exactly.")
+}
+
 cat("Task 10 runtime policy contract passed.\n")

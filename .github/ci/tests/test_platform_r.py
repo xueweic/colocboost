@@ -96,6 +96,21 @@ def test_verifies_manifest_setup_r_selection_and_actual_identity(tmp_path, monke
     assert "r_executable=" in github_output.read_text(encoding="utf-8")
 
 
+def test_identity_probe_failure_preserves_bounded_diagnostic(tmp_path, monkeypatch):
+    r_binary = make_r(tmp_path)
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *args, **kwargs: completed("", returncode=1, stderr="compiler lookup failed\n"),
+    )
+    with pytest.raises(ValueError, match="compiler lookup failed"):
+        verify_platform_r(
+            row(r_binary), environment_id="platform-row", r_executable=r_binary,
+            selected_selector="devel", setup_r_version="4.7.0",
+            runner_label="ubuntu-24.04",
+        )
+
+
 def test_accepts_official_devel_revision_embedded_in_version_string(
     tmp_path, monkeypatch
 ):
@@ -379,3 +394,8 @@ def test_committed_windows_and_macos_paths_are_canonical():
         row["system_r"] == "/Library/Frameworks/R.framework/Resources/bin/R"
         for row in macos
     )
+
+
+def test_identity_expression_has_windows_rtools_fallback():
+    assert '"^RTOOLS[0-9]+_HOME$"' in module._R_IDENTITY_EXPRESSION
+    assert 'Sys.glob(file.path(root, "*", "bin", executable))' in module._R_IDENTITY_EXPRESSION

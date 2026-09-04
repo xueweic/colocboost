@@ -579,13 +579,13 @@ test_that("get_robust_colocalization works with X_ref results", {
 # ============================================================================
 
 test_that("get_robust_ucos works with X_ref results", {
-  test_data <- generate_xref_test_data(n_ref = 500, p = 30)
+  test_data <- generate_xref_test_data(n = 1000, n_ref = 500, p = 30)
   
   suppressWarnings(suppressMessages({
     result <- colocboost(
       sumstat = test_data$sumstat,
       X_ref = test_data$X_ref,
-      M = 10,
+      M = 30,
       output_level = 2,
       pvalue_cutoff = NULL,
       cos_npc_cutoff = 0,

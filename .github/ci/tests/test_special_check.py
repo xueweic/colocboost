@@ -350,12 +350,10 @@ def test_no_build_vignettes_allows_incidental_vignette_checks_but_not_rebuild(tm
 
 
 def test_real_task6_install_tests_and_examples_heading_shapes_are_accepted(tmp_path):
-    real = (CI_DIR.parent.parent / ".superpowers/sdd/task-6-00check.log").read_text()
     headings = [
-        line for line in real.splitlines()
-        if line.startswith("* checking whether package 'colocboost' can be installed")
-        or line.startswith("* checking tests ...")
-        or line.startswith("* checking examples ...")
+        "* checking whether package 'colocboost' can be installed ... [11s/11s] OK",
+        "* checking examples ... OK",
+        "* checking tests ... [28s/28s] OK",
     ]
     completed, *_ = invoke(
         tmp_path, environment_id="gcc-asan", profile="gcc-asan",

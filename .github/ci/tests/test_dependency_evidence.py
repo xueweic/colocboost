@@ -12,6 +12,11 @@ CI_DIR = Path(__file__).resolve().parents[1]
 SCRIPT = CI_DIR / "verify_dependency_evidence.py"
 
 
+def test_rhub_dependency_prep_preserves_single_vignette_builder_as_json_array():
+    source = (CI_DIR / "prepare-rhub-dependencies.R").read_text(encoding="utf-8")
+    assert "vignette_builders = I(vignette_builders)" in source
+
+
 def valid_document(environment_id="nosuggests"):
     suggestions = ["testthat", "knitr", "rmarkdown", "ashr", "MASS", "susieR"]
     if environment_id == "nosuggests":

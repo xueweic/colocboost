@@ -210,6 +210,9 @@ r-ashr = "*"
 r-mass = "*"
 r-susier = "*"
 r-yaml = "*"
+r-v8 = "*"
+r-tinytex = "*"
+tidy-html5 = "*"
 
 [feature.local-r44.tasks]
 test = { cmd = "Rscript --vanilla .github/ci/run-unit-tests.R --package=. --load-package=source --context=local-r44 --policy=.github/ci/check-policy.yml --output=.pixi/local-r44/unit-results.json", cwd = ".", env = { LC_ALL = "C", R_ENVIRON_USER = "/dev/null", R_PROFILE_USER = "/dev/null", R_LIBS_USER = "$CONDA_PREFIX/lib/R/library" } }
@@ -234,6 +237,9 @@ r-ashr = "*"
 r-mass = "*"
 r-susier = "*"
 r-yaml = "*"
+r-v8 = "*"
+r-tinytex = "*"
+tidy-html5 = "*"
 
 [feature.local-r45.tasks]
 test = { cmd = "Rscript --vanilla .github/ci/run-unit-tests.R --package=. --load-package=source --context=local-r45 --policy=.github/ci/check-policy.yml --output=.pixi/local-r45/unit-results.json", cwd = ".", env = { LC_ALL = "C", R_ENVIRON_USER = "/dev/null", R_PROFILE_USER = "/dev/null", R_LIBS_USER = "$CONDA_PREFIX/lib/R/library" } }
