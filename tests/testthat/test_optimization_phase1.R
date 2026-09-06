@@ -1,5 +1,7 @@
 library(testthat)
 
+colocboost_test_env <- environment(colocboost)
+
 # ---- Shared test data generators ----
 
 generate_test_data_opt <- function(n = 200, p = 30, L = 2, seed = 42) {
@@ -316,30 +318,18 @@ test_that("colocboost_assemble_cos handles non-contiguous purity outcomes", {
   )
   class(cb_obj) <- "colocboost"
 
-  ns <- asNamespace("colocboost")
-  original_check_null <- get("check_null_post", envir = ns)
-  original_between <- get("get_between_purity", envir = ns)
-  unlockBinding("check_null_post", ns)
-  assign("check_null_post", function(cb_obj, coloc_sets_temp, ...) {
-    list(
-      cs_change = matrix(1, nrow = length(coloc_sets_temp), ncol = L),
-      is_non_null = seq_along(coloc_sets_temp)
-    )
-  }, envir = ns)
-  lockBinding("check_null_post", ns)
-  unlockBinding("get_between_purity", ns)
-  assign("get_between_purity", function(...) {
-    c(min_abs_cor = 0.9, max_abs_cor = 1, median_abs_cor = 0.9)
-  }, envir = ns)
-  lockBinding("get_between_purity", ns)
-  on.exit({
-    unlockBinding("check_null_post", ns)
-    assign("check_null_post", original_check_null, envir = ns)
-    lockBinding("check_null_post", ns)
-    unlockBinding("get_between_purity", ns)
-    assign("get_between_purity", original_between, envir = ns)
-    lockBinding("get_between_purity", ns)
-  }, add = TRUE)
+  local_mocked_bindings(
+    check_null_post = function(cb_obj, coloc_sets_temp, ...) {
+      list(
+        cs_change = matrix(1, nrow = length(coloc_sets_temp), ncol = L),
+        is_non_null = seq_along(coloc_sets_temp)
+      )
+    },
+    get_between_purity = function(...) {
+      c(min_abs_cor = 0.9, max_abs_cor = 1, median_abs_cor = 0.9)
+    },
+    .package = "colocboost"
+  )
 
   expect_error({
     assembled <- colocboost_assemble_cos(
@@ -541,20 +531,16 @@ test_that("pairwise jk checks reuse LD calculation for shared reference data", {
     list(change_loglike = change_loglike, res = numeric(p))
   })
 
-  ns <- asNamespace("colocboost")
+  ns <- colocboost_test_env
   original_get_cormat <- get("get_cormat", envir = ns)
   call_count <- 0L
-  unlockBinding("get_cormat", ns)
-  assign("get_cormat", function(...) {
-    call_count <<- call_count + 1L
-    original_get_cormat(...)
-  }, envir = ns)
-  lockBinding("get_cormat", ns)
-  on.exit({
-    unlockBinding("get_cormat", ns)
-    assign("get_cormat", original_get_cormat, envir = ns)
-    lockBinding("get_cormat", ns)
-  }, add = TRUE)
+  local_mocked_bindings(
+    get_cormat = function(...) {
+      call_count <<- call_count + 1L
+      original_get_cormat(...)
+    },
+    .package = "colocboost"
+  )
 
   pair_check <- get("check_pair_jkeach", envir = ns)
   res <- pair_check(jk_each, pos.update, model_update, cb_data, X_dict)
@@ -634,20 +620,16 @@ make_shared_update_fixture <- function(n = 60, p = 25, n_outcomes = 5, update_jk
 test_that("colocboost_update reuses LD_jk for outcomes sharing reference data", {
   fixture <- make_shared_update_fixture(n_outcomes = 5, update_jk = 6)
 
-  ns <- asNamespace("colocboost")
+  ns <- colocboost_test_env
   original_get_LD_jk <- get("get_LD_jk", envir = ns)
   call_count <- 0L
-  unlockBinding("get_LD_jk", ns)
-  assign("get_LD_jk", function(...) {
-    call_count <<- call_count + 1L
-    original_get_LD_jk(...)
-  }, envir = ns)
-  lockBinding("get_LD_jk", ns)
-  on.exit({
-    unlockBinding("get_LD_jk", ns)
-    assign("get_LD_jk", original_get_LD_jk, envir = ns)
-    lockBinding("get_LD_jk", ns)
-  }, add = TRUE)
+  local_mocked_bindings(
+    get_LD_jk = function(...) {
+      call_count <<- call_count + 1L
+      original_get_LD_jk(...)
+    },
+    .package = "colocboost"
+  )
 
   updated <- colocboost_update(fixture$cb_model, fixture$cb_model_para, fixture$cb_data)
 
@@ -726,30 +708,19 @@ test_that("merge_ucos skips between-purity checks for disjoint uCoS pairs", {
     cos = list(cos = list())
   )
 
-  ns <- asNamespace("colocboost")
-  original_between <- get("get_between_purity", envir = ns)
-  original_purity <- get("get_purity", envir = ns)
+  ns <- colocboost_test_env
   between_calls <- 0L
-  unlockBinding("get_between_purity", ns)
-  assign("get_between_purity", function(pos1, pos2, ...) {
-    if (length(intersect(pos1, pos2)) == 0) {
-      stop("disjoint uCoS pair should not require between-purity")
-    }
-    between_calls <<- between_calls + 1L
-    c(min_abs_cor = 0.9, max_abs_cor = 1, median_abs_cor = 0.9)
-  }, envir = ns)
-  lockBinding("get_between_purity", ns)
-  unlockBinding("get_purity", ns)
-  assign("get_purity", function(...) c(1, 1, 1), envir = ns)
-  lockBinding("get_purity", ns)
-  on.exit({
-    unlockBinding("get_between_purity", ns)
-    assign("get_between_purity", original_between, envir = ns)
-    lockBinding("get_between_purity", ns)
-    unlockBinding("get_purity", ns)
-    assign("get_purity", original_purity, envir = ns)
-    lockBinding("get_purity", ns)
-  }, add = TRUE)
+  local_mocked_bindings(
+    get_between_purity = function(pos1, pos2, ...) {
+      if (length(intersect(pos1, pos2)) == 0) {
+        stop("disjoint uCoS pair should not require between-purity")
+      }
+      between_calls <<- between_calls + 1L
+      c(min_abs_cor = 0.9, max_abs_cor = 1, median_abs_cor = 0.9)
+    },
+    get_purity = function(...) c(1, 1, 1),
+    .package = "colocboost"
+  )
 
   result <- get("merge_ucos", envir = ns)(
     cb_obj, past_out,
@@ -793,18 +764,13 @@ test_that("merge_ucos skips full between-purity when top variants cannot pass me
     cos = list(cos = list())
   )
 
-  ns <- asNamespace("colocboost")
-  original_between <- get("get_between_purity", envir = ns)
-  unlockBinding("get_between_purity", ns)
-  assign("get_between_purity", function(...) {
-    stop("top-variant prefilter should skip full between-purity")
-  }, envir = ns)
-  lockBinding("get_between_purity", ns)
-  on.exit({
-    unlockBinding("get_between_purity", ns)
-    assign("get_between_purity", original_between, envir = ns)
-    lockBinding("get_between_purity", ns)
-  }, add = TRUE)
+  ns <- colocboost_test_env
+  local_mocked_bindings(
+    get_between_purity = function(...) {
+      stop("top-variant prefilter should skip full between-purity")
+    },
+    .package = "colocboost"
+  )
 
   result <- get("merge_ucos", envir = ns)(
     cb_obj, past_out,
@@ -835,7 +801,7 @@ test_that("overlap candidate pairs match pairwise intersect scan", {
   }))
   colnames(reference) <- c("i", "j")
 
-  candidate_pairs <- get(".merge_ucos_overlap_pairs", envir = asNamespace("colocboost"))(ucos_each)
+  candidate_pairs <- get(".merge_ucos_overlap_pairs", envir = colocboost_test_env)(ucos_each)
 
   expect_equal(candidate_pairs, reference)
 })
@@ -873,10 +839,14 @@ test_that("merge_ucos candidate pairs preserve pairwise intersect output", {
     cos = list(cos = list())
   )
 
-  ns <- asNamespace("colocboost")
-  original_pairs <- get(".merge_ucos_overlap_pairs", envir = ns)
-  original_between <- get("get_between_purity", envir = ns)
-  original_purity <- get("get_purity", envir = ns)
+  ns <- colocboost_test_env
+  local_mocked_bindings(
+    get_between_purity = function(...) {
+      c(min_abs_cor = 0.9, max_abs_cor = 1, median_abs_cor = 0.9)
+    },
+    get_purity = function(...) c(1, 1, 1),
+    .package = "colocboost"
+  )
 
   pairwise_pairs <- function(ucos_each) {
     if (length(ucos_each) < 2L) {
@@ -897,35 +867,16 @@ test_that("merge_ucos candidate pairs preserve pairwise intersect output", {
     pairs
   }
 
-  unlockBinding("get_between_purity", ns)
-  assign("get_between_purity", function(...) {
-    c(min_abs_cor = 0.9, max_abs_cor = 1, median_abs_cor = 0.9)
-  }, envir = ns)
-  lockBinding("get_between_purity", ns)
-  unlockBinding("get_purity", ns)
-  assign("get_purity", function(...) c(1, 1, 1), envir = ns)
-  lockBinding("get_purity", ns)
-  on.exit({
-    unlockBinding(".merge_ucos_overlap_pairs", ns)
-    assign(".merge_ucos_overlap_pairs", original_pairs, envir = ns)
-    lockBinding(".merge_ucos_overlap_pairs", ns)
-    unlockBinding("get_between_purity", ns)
-    assign("get_between_purity", original_between, envir = ns)
-    lockBinding("get_between_purity", ns)
-    unlockBinding("get_purity", ns)
-    assign("get_purity", original_purity, envir = ns)
-    lockBinding("get_purity", ns)
-  }, add = TRUE)
-
   candidate_result <- get("merge_ucos", envir = ns)(
     cb_obj, past_out,
     min_abs_corr = 0.5,
     median_cos_abs_corr = 0.8
   )
 
-  unlockBinding(".merge_ucos_overlap_pairs", ns)
-  assign(".merge_ucos_overlap_pairs", pairwise_pairs, envir = ns)
-  lockBinding(".merge_ucos_overlap_pairs", ns)
+  local_mocked_bindings(
+    .merge_ucos_overlap_pairs = pairwise_pairs,
+    .package = "colocboost"
+  )
   pairwise_result <- get("merge_ucos", envir = ns)(
     cb_obj, past_out,
     min_abs_corr = 0.5,
@@ -950,7 +901,7 @@ test_that("duplicate purity contexts are collapsed for post-assembly checks", {
     dict = rep(1L, 4)
   )
 
-  unique_outcomes <- get(".cb_unique_purity_outcomes", envir = asNamespace("colocboost"))(
+  unique_outcomes <- get(".cb_unique_purity_outcomes", envir = colocboost_test_env)(
     cb_data,
     seq_len(4)
   )
@@ -991,20 +942,15 @@ test_that("merge_cos_ucos reuses duplicate purity contexts", {
     ucos_outcome = 2L
   )
 
-  ns <- asNamespace("colocboost")
-  original_between <- get("get_between_purity", envir = ns)
+  ns <- colocboost_test_env
   between_calls <- 0L
-  unlockBinding("get_between_purity", ns)
-  assign("get_between_purity", function(...) {
-    between_calls <<- between_calls + 1L
-    c(min_abs_cor = 0.9, max_abs_cor = 1, median_abs_cor = 0.9)
-  }, envir = ns)
-  lockBinding("get_between_purity", ns)
-  on.exit({
-    unlockBinding("get_between_purity", ns)
-    assign("get_between_purity", original_between, envir = ns)
-    lockBinding("get_between_purity", ns)
-  }, add = TRUE)
+  local_mocked_bindings(
+    get_between_purity = function(...) {
+      between_calls <<- between_calls + 1L
+      c(min_abs_cor = 0.9, max_abs_cor = 1, median_abs_cor = 0.9)
+    },
+    .package = "colocboost"
+  )
 
   result <- get("merge_cos_ucos", envir = ns)(
     cb_obj,
@@ -1051,18 +997,13 @@ test_that("merge_cos_ucos skips purity checks for disjoint different-outcome set
     ucos_outcome = 2L
   )
 
-  ns <- asNamespace("colocboost")
-  original_between <- get("get_between_purity", envir = ns)
-  unlockBinding("get_between_purity", ns)
-  assign("get_between_purity", function(...) {
-    stop("disjoint different-outcome sets should not require between-purity")
-  }, envir = ns)
-  lockBinding("get_between_purity", ns)
-  on.exit({
-    unlockBinding("get_between_purity", ns)
-    assign("get_between_purity", original_between, envir = ns)
-    lockBinding("get_between_purity", ns)
-  }, add = TRUE)
+  ns <- colocboost_test_env
+  local_mocked_bindings(
+    get_between_purity = function(...) {
+      stop("disjoint different-outcome sets should not require between-purity")
+    },
+    .package = "colocboost"
+  )
 
   result <- get("merge_cos_ucos", envir = ns)(
     cb_obj,
@@ -1089,7 +1030,7 @@ test_that("chunked update history preserves legacy matrix output", {
     legacy$update_status <- cbind(legacy$update_status, as.matrix(update$update_status))
     legacy$real_update_jk <- rbind(legacy$real_update_jk, update$real_update_jk)
     legacy$jk <- rbind(legacy$jk, update$jk)
-    chunked <- get(".cb_append_update_history", envir = asNamespace("colocboost"))(
+    chunked <- get(".cb_append_update_history", envir = colocboost_test_env)(
       chunked,
       update_jk = update$jk,
       update_status = update$update_status,
@@ -1098,7 +1039,7 @@ test_that("chunked update history preserves legacy matrix output", {
   }
 
   expect_gt(attr(chunked, "update_history_capacity"), length(updates))
-  chunked <- get(".cb_trim_update_history", envir = asNamespace("colocboost"))(chunked)
+  chunked <- get(".cb_trim_update_history", envir = colocboost_test_env)(chunked)
 
   expect_equal(chunked$update_status, legacy$update_status)
   expect_equal(chunked$real_update_jk, legacy$real_update_jk)

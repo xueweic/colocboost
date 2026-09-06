@@ -1,8 +1,8 @@
 ---
-title: "Handling partial overlapping variants across traits in ColocBoost"
+title: "Handling Partial Overlapping Variants across Traits in ColocBoost"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Handling partial overlapping variants across traits in ColocBoost}
+  %\VignetteIndexEntry{Handling Partial Overlapping Variants across Traits in ColocBoost}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---

@@ -29,12 +29,14 @@ articles:
   - title: Interpretation and Visualization
     desc: "Tutorials on how to interpret and visualize the output from ColocBoost."
     contents:
+    - Conceptual_Multi_Trait_Colocalization
     - Interpret_ColocBoost_Output
     - Visualization_ColocBoost_Output
 
   - title: Advanced Topics
     desc: "Advanced topics and special cases in colocalization and fine-mapping analysis."
     contents:
+    - Advanced_Colocalization_Scenarios
     - Partial_Overlap_Variants
     - ColocBoost_Update
     - ColocBoost_Wrapper_Pipeline

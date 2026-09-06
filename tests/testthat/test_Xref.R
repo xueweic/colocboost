@@ -498,8 +498,9 @@ test_that("X_ref model has XtX_beta_cache in diagnostic output", {
 # ============================================================================
 
 test_that("purity functions dispatch correctly for X_ref", {
-  get_purity <- get("get_purity", envir = asNamespace("colocboost"))
-  get_between_purity <- get("get_between_purity", envir = asNamespace("colocboost"))
+  source_env <- environment(colocboost)
+  get_purity <- get("get_purity", envir = source_env)
+  get_between_purity <- get("get_between_purity", envir = source_env)
   
   set.seed(42)
   n_ref <- 50
