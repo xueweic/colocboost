@@ -1,0 +1,25 @@
+pandoc: '3.11'
+pkgdown: 2.2.1
+pkgdown_sha: ~
+articles:
+  Advanced_Colocalization_Scenarios: Advanced_Colocalization_Scenarios.html
+  Ambiguous_Colocalization: Ambiguous_Colocalization.html
+  announcements: announcements.html
+  ColocBoost_Update: ColocBoost_Update.html
+  ColocBoost_Wrapper_Pipeline: ColocBoost_Wrapper_Pipeline.html
+  Conceptual_Multi_Trait_Colocalization: Conceptual_Multi_Trait_Colocalization.html
+  Disease_Prioritized_Colocalization: Disease_Prioritized_Colocalization.html
+  FineBoost_Special_Case: FineBoost_Special_Case.html
+  Individual_Level_Colocalization: Individual_Level_Colocalization.html
+  Input_Data_Format: Input_Data_Format.html
+  installation: installation.html
+  Interpret_ColocBoost_Output: Interpret_ColocBoost_Output.html
+  LD_Free_Colocalization: LD_Free_Colocalization.html
+  Pairwise_Colocalization: Pairwise_Colocalization.html
+  Partial_Overlap_Variants: Partial_Overlap_Variants.html
+  Summary_Statistics_Colocalization: Summary_Statistics_Colocalization.html
+  Visualization_ColocBoost_Output: Visualization_ColocBoost_Output.html
+last_built: 2026-09-06T14:48Z
+urls:
+  reference: https://statfungen.github.io/colocboost/reference
+  article: https://statfungen.github.io/colocboost/articles
