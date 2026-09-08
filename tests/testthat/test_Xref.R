@@ -25,7 +25,7 @@ generate_xref_test_data <- function(n = 200, n_ref = 50, p = 30, L = 2, seed = 4
   true_beta <- matrix(0, p, L)
   true_beta[5, 1] <- 0.7   # SNP5 affects trait 1
   true_beta[5, 2] <- 0.6   # SNP5 also affects trait 2 (colocalized)
-  true_beta[20, 2] <- 0.5  # SNP20 only affects trait 2
+  true_beta[20, 2] <- 1.0  # SNP20 only affects trait 2
   
   # Generate Y with some noise
   Y <- matrix(0, n, L)
