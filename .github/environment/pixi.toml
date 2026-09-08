@@ -33,6 +33,7 @@ r45 = {features = ["r45"]}
 "r-devtools" = "*"
 "r-mass" = "*"
 "r-rcmdcheck" = "*"
+"r-roxygen2" = "7.3.3"
 "r-susier" = "*"
 "r-tidyverse" = "*"
 "qpdf" = "*"
