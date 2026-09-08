@@ -1,11 +1,14 @@
 name: Update documentation
 
 on:
-  pull_request_target:
+  pull_request:
     paths-ignore:
       - .github/*
       - .gitignore
       - README.md
+
+permissions:
+  contents: read
 
 jobs:
   update_documentation:
@@ -15,10 +18,7 @@ jobs:
       - name: Checkout pull request branch
         uses: actions/checkout@v7
         with:
-          token: ${{ secrets.CI_TOKEN }}
           fetch-depth: 0
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.ref }}
 
       - name: Create TOML from recipe
         run: .github/workflows/create_toml_from_yaml.sh ${GITHUB_WORKSPACE}
@@ -29,8 +29,5 @@ jobs:
       - name: Run unit tests
         run: pixi run devtools_document
 
-      - name: Commit changes to documentation
-        uses: EndBug/add-and-commit@v11
-        with:
-          push: true
-          message: Update documentation
+      - name: Verify documentation is up to date
+        run: git diff --exit-code
