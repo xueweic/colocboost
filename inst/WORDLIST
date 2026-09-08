@@ -8,8 +8,11 @@ SuSiE           # Sum of Single Effects regression model
 
 # Statistical and Genetic Terms
 bim             # PLINK BIM variant information file
+combinatorial   # Describing combinations in a hypothesis space
+combinatorially # Growing according to combinations
 eQTL            # Expression Quantitative Trait Loci
 GWAS            # Genome-Wide Association Study
+heritability    # Proportion of phenotypic variance attributable to genetic variation
 INDELs          # Insertions and Deletions
 LD              # Linkage Disequilibrium
 ld              # Linkage Disequilibrium
@@ -51,6 +54,10 @@ YI              # Yang I. Li
 et              # and more
 al              # and more
 
+# Journal Abbreviations
+JRSS            # Journal of the Royal Statistical Society
+PLOS            # Public Library of Science
+
 # Technical Terms
 changelog       # Release change log
 cis             # Referring to nearby location of a regulatory element
@@ -70,11 +77,13 @@ pos             # Position in genome
 precomputed     # Computed in advance
 precomputes     # Computes in advance
 probabilistically # Based on probability theory
+priori          # Used in the phrase a priori
 qc              # Quality Control
 rcond           # Reciprocal condition number
 reconciliate    # Process of resolving discrepancies
 repo            # Repository
 rss             # Residual Sum of Squares
+scalability     # Ability to handle increasing problem size
 subsampled      # Analyzed using data subsets
 uncolocalized   # Not showing colocalization
 uCoS            # Trait-specific (uncolocalization) confidence set
@@ -91,6 +100,8 @@ colocalize      # Having undergone colocalization analysis
 colocalized     # Having undergone colocalization analysis
 CoS             # Colocalization confidence set in our proposed ColocBoost method
 NPC             # Normalization probability of colocalization in our proposed ColocBoost method
+NPUC            # Normalized probability of uncolocalization
+PPFC            # Posterior probability of full colocalization
 PIPs            # Posterior Inclusion Probabilities
 SEL             # Single-effect learner in our proposed ColocBoost method
 uS              # The number of uCoS
@@ -99,3 +110,12 @@ Pre             # Before
 pre             # Before
 jk              # Index used in ColocBoost
 nd              # Second
+
+# LaTeX Commands
+ge
+geq
+ldots
+mathrm
+neq
+substack
+underbrace

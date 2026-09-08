@@ -26,7 +26,7 @@ The animation below demonstrates how ColocBoost iteratively updates across multi
 Observe how the blue points (proxies) distribute around the selected best update, showing the algorithm's ability to capture LD structure during optimization.
 
 ```{r, out.width="80%"}
-knitr::include_graphics("../man/figures/ColocBoost_update.gif")
+knitr::include_graphics("figures/ColocBoost_update.gif")
 ```
 
 

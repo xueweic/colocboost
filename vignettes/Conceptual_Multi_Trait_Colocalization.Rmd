@@ -49,7 +49,7 @@ A <u>*central challenge*</u> in multi-trait colocalization is that multiple even
 - ColocBoost avoids this enumeration by reformulating colocalization as a multi-task learning problem optimized through gradient boosting. This formulation jointly resolves multiple colocalization events and scales to hundreds of traits.
 
 
-<img src="../man/figures/Colocalization_Events.png"
+<img src="figures/Colocalization_Events.png"
      alt="Illustration of colocalization events in ColocBoost."
      style="max-width:100%; height:auto;">
 
@@ -94,7 +94,7 @@ The construction of VCP is based on the assumption that each event \(s\) is *con
 - <span style="color:#1D4F91;"><u>Structural analogy</u></span>: posterior inclusion probability (PIP) in SuSiE in a single-trait model.
 - <span style="color:#1D4F91;"><u>Structural analogy</u></span>: variant-level posterior probability for H4 (SNP.PP.H4) in COLOC in a pairwise colocalization analysis.
 
-<img src="../man/figures/Variant_Level_Analogues.png"
+<img src="figures/Variant_Level_Analogues.png"
      alt="Illustration of variant-level analogues in ColocBoost."
      style="max-width:100%; height:auto;">
 
@@ -199,7 +199,7 @@ See more details about filtering colocalization events by relative strength of e
 using ['get_robust_colocalization'](https://statfungen.github.io/colocboost/articles/Interpret_ColocBoost_Output.html#filter-colocalization-events-by-relative-strength-of-evidence) function.
 
 
-<img src="../man/figures/Event_Level_Analogues.png"
+<img src="figures/Event_Level_Analogues.png"
      alt="Illustration of event-level analogues in ColocBoost."
      style="max-width:100%; height:auto;">
 

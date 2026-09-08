@@ -22,7 +22,7 @@ This vignette demonstrates how ColocBoost handles partial overlapping variants a
 library(colocboost)
 ```
 
-![Illustration of partial overlapping variants across traits](../man/figures/missing_representation.png)
+![Illustration of partial overlapping variants across traits](figures/missing_representation.png)
 
 
 
@@ -107,4 +107,3 @@ res$data_info$n_variables
 # Plotting the results
 colocboost_plot(res)
 ```
-
