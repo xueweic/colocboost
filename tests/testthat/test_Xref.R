@@ -25,7 +25,7 @@ generate_xref_test_data <- function(n = 200, n_ref = 50, p = 30, L = 2, seed = 4
   true_beta <- matrix(0, p, L)
   true_beta[5, 1] <- 0.7   # SNP5 affects trait 1
   true_beta[5, 2] <- 0.6   # SNP5 also affects trait 2 (colocalized)
-  true_beta[20, 2] <- 0.5  # SNP20 only affects trait 2
+  true_beta[20, 2] <- 1.0  # SNP20 only affects trait 2
   
   # Generate Y with some noise
   Y <- matrix(0, n, L)
@@ -498,8 +498,9 @@ test_that("X_ref model has XtX_beta_cache in diagnostic output", {
 # ============================================================================
 
 test_that("purity functions dispatch correctly for X_ref", {
-  get_purity <- get("get_purity", envir = asNamespace("colocboost"))
-  get_between_purity <- get("get_between_purity", envir = asNamespace("colocboost"))
+  source_env <- environment(colocboost)
+  get_purity <- get("get_purity", envir = source_env)
+  get_between_purity <- get("get_between_purity", envir = source_env)
   
   set.seed(42)
   n_ref <- 50
@@ -586,11 +587,14 @@ test_that("get_robust_ucos works with X_ref results", {
       sumstat = test_data$sumstat,
       X_ref = test_data$X_ref,
       M = 10,
-      output_level = 2
+      output_level = 2,
+      pvalue_cutoff = NULL,
+      cos_npc_cutoff = 0,
+      npc_outcome_cutoff = 0
     )
   }))
   
-  skip_if(is.null(result$ucos_details), "No ucos detected")
+  expect_false(is.null(result$ucos_details))
   
   expect_error(
     suppressMessages(
@@ -726,6 +730,44 @@ test_that("get_LD_jk and get_LD_jk1_jk2 dispatch correctly for X_ref", {
   # get_LD_jk1_jk2 with No_ref
   ld_pair_noref <- get_LD_jk1_jk2(1, 2, XtX = 1, remain_jk = remain_idx, ref_label = "No_ref")
   expect_equal(ld_pair_noref, 0)
+})
+
+test_that("colocboost stores update-jk LD cache as a named list", {
+  set.seed(42)
+  n <- 80
+  p <- 25
+  sigma <- 0.8^abs(outer(1:p, 1:p, "-"))
+  X <- MASS::mvrnorm(n, rep(0, p), sigma)
+  colnames(X) <- paste0("SNP", seq_len(p))
+  Y <- cbind(X[, 5] * 0.8 + rnorm(n), X[, 5] * 0.7 + rnorm(n))
+
+  sumstat <- lapply(seq_len(ncol(Y)), function(i) {
+    beta <- se <- z <- numeric(p)
+    for (j in seq_len(p)) {
+      fit <- summary(lm(Y[, i] ~ X[, j]))$coef
+      beta[j] <- fit[2, 1]
+      se[j] <- fit[2, 2]
+      z[j] <- beta[j] / se[j]
+    }
+    data.frame(beta = beta, sebeta = se, z = z, n = n, variant = colnames(X))
+  })
+
+  suppressWarnings(suppressMessages({
+    result <- colocboost(
+      sumstat = sumstat,
+      LD = cor(X),
+      M = 15,
+      output_level = 3,
+      stop_thresh = 0
+    )
+  }))
+
+  cb_model <- result$diagnostic_details$cb_model
+  for (model in cb_model) {
+    expect_type(model$ld_jk, "list")
+    expect_true(all(nzchar(names(model$ld_jk))))
+    expect_equal(length(model$ld_jk), length(unique(model$jk)))
+  }
 })
 
 

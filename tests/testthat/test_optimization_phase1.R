@@ -1,5 +1,7 @@
 library(testthat)
 
+colocboost_test_env <- environment(colocboost)
+
 # ---- Shared test data generators ----
 
 generate_test_data_opt <- function(n = 200, p = 30, L = 2, seed = 42) {
@@ -253,6 +255,94 @@ test_that("optimization works with 3 outcomes", {
   expect_equal(result$data_info$n_outcomes, 3)
 })
 
+test_that("post-assembly purity optimization handles non-contiguous outcomes", {
+  X <- matrix(rep(seq_len(8), 4), nrow = 8, ncol = 4)
+  colnames(X) <- paste0("SNP", 1:4)
+  cb_obj <- list(
+    cb_data = list(
+      dict = c(1, 1, 3),
+      data = list(
+        list(X = X, XtX = NULL, variable_miss = integer(0), ref_label = "individual", N = nrow(X)),
+        list(X = X, XtX = NULL, variable_miss = integer(0), ref_label = "individual", N = nrow(X)),
+        list(X = X, XtX = NULL, variable_miss = integer(0), ref_label = "individual", N = nrow(X))
+      )
+    ),
+    cb_model_para = list(L = 3, P = ncol(X))
+  )
+  out_cos <- list(cos = list(
+    cos = list(c(1, 2)),
+    avWeight = list(matrix(c(0.7, 0.3, 0, 0), ncol = 1,
+                           dimnames = list(colnames(X), "outcome1"))),
+    coloc_outcomes = list(1),
+    cs_change = matrix(0, nrow = 1, ncol = 3)
+  ))
+  out_ucos <- list(
+    ucos_each = list(c(2, 3)),
+    ucos_outcome = 3,
+    avW_ucos_each = matrix(c(0, 0.7, 0.3, 0), ncol = 1,
+                           dimnames = list(colnames(X), "Y3")),
+    change_obj_each = matrix(0, nrow = 1, ncol = 3),
+    purity_each = matrix(1, nrow = 1, ncol = 3)
+  )
+
+  expect_error({
+    merged <- merge_cos_ucos(cb_obj, out_cos, out_ucos,
+                             coverage = 0.8, median_cos_abs_corr = 0.8)
+    expect_equal(merged$cos$cos$coloc_outcomes[[1]], c(1, 3))
+  }, NA)
+})
+
+test_that("colocboost_assemble_cos handles non-contiguous purity outcomes", {
+  p <- 4
+  L <- 3
+  LD <- matrix(0.95, nrow = p, ncol = p)
+  diag(LD) <- 1
+  cb_obj <- list(
+    cb_data = list(
+      dict = c(1L, 1L, 3L),
+      data = lapply(seq_len(L), function(i) {
+        list(X = NULL, XtX = LD, variable_miss = integer(0),
+             ref_label = "LD", N = 20)
+      })
+    ),
+    cb_model = list(
+      list(weights_path = rbind(c(0.6, 0.4, 0, 0), c(0.6, 0, 0.4, 0))),
+      list(weights_path = rbind(c(0.5, 0.5, 0, 0))),
+      list(weights_path = rbind(c(0.5, 0, 0.5, 0)))
+    ),
+    cb_model_para = list(
+      L = L,
+      P = p,
+      update_status = rbind(c(1, 1), c(1, 0), c(0, 1))
+    )
+  )
+  class(cb_obj) <- "colocboost"
+
+  local_mocked_bindings(
+    check_null_post = function(cb_obj, coloc_sets_temp, ...) {
+      list(
+        cs_change = matrix(1, nrow = length(coloc_sets_temp), ncol = L),
+        is_non_null = seq_along(coloc_sets_temp)
+      )
+    },
+    get_between_purity = function(...) {
+      c(min_abs_cor = 0.9, max_abs_cor = 1, median_abs_cor = 0.9)
+    },
+    .package = "colocboost"
+  )
+
+  expect_error({
+    assembled <- colocboost_assemble_cos(
+      cb_obj,
+      coverage = 0.8,
+      min_abs_corr = 0,
+      median_cos_abs_corr = 0.8
+    )
+    expect_equal(length(assembled$cos$cos), 1L)
+    expect_equal(assembled$cos$coloc_outcomes[[1]], c(1L, 2L, 3L))
+  }, NA)
+})
+
 # ---- Test: Missing variants ----
 
 test_that("optimization handles missing variants correctly", {
@@ -415,4 +505,545 @@ test_that("optimization does not break convergence behavior", {
   expect_s3_class(result, "colocboost")
   # Model should have converged (model_info should exist)
   expect_type(result$model_info, "list")
+})
+
+test_that("pairwise jk checks reuse LD calculation for shared reference data", {
+  set.seed(202)
+  n <- 80
+  p <- 20
+  n_outcomes <- 6
+  X <- matrix(rnorm(n * p), nrow = n)
+  colnames(X) <- paste0("SNP", seq_len(p))
+  jk_each <- c(3, 6, 9, 12, 15, 18)
+  pos.update <- seq_len(n_outcomes) + 1L
+  cb_data <- list(
+    data = c(
+      list(list(X = X, XtX = NULL, ref_label = "individual")),
+      lapply(seq_len(n_outcomes), function(i) {
+        list(N = n, variable_miss = integer(0))
+      })
+    )
+  )
+  X_dict <- rep(1L, n_outcomes)
+  model_update <- lapply(seq_len(n_outcomes), function(i) {
+    change_loglike <- seq_len(p) / p + i * 1e-4
+    change_loglike[jk_each] <- change_loglike[jk_each] + rnorm(n_outcomes, sd = 1e-5)
+    list(change_loglike = change_loglike, res = numeric(p))
+  })
+
+  ns <- colocboost_test_env
+  original_get_cormat <- get("get_cormat", envir = ns)
+  call_count <- 0L
+  local_mocked_bindings(
+    get_cormat = function(...) {
+      call_count <<- call_count + 1L
+      original_get_cormat(...)
+    },
+    .package = "colocboost"
+  )
+
+  pair_check <- get("check_pair_jkeach", envir = ns)
+  res <- pair_check(jk_each, pos.update, model_update, cb_data, X_dict)
+
+  expect_equal(call_count, 1L)
+  expect_equal(dim(res), c(n_outcomes, n_outcomes))
+  expect_true(all(res == t(res)))
+  expect_true(all(diag(res) == 0))
+})
+
+make_shared_update_fixture <- function(n = 60, p = 25, n_outcomes = 5, update_jk = 4, seed = 303) {
+  set.seed(seed)
+  X <- matrix(rnorm(n * p), nrow = n)
+  X <- scale(X)
+  colnames(X) <- paste0("SNP", seq_len(p))
+  Y <- matrix(rnorm(n * n_outcomes), nrow = n)
+  Y <- scale(Y)
+
+  cb_data <- list(
+    data = lapply(seq_len(n_outcomes), function(i) {
+      list(
+        X = if (i == 1L) X else NULL,
+        Y = as.matrix(Y[, i]),
+        N = n,
+        variable_miss = integer(0),
+        ref_label = "individual"
+      )
+    }),
+    dict = rep(1L, n_outcomes),
+    variable.names = colnames(X)
+  )
+  class(cb_data) <- "colocboost"
+
+  cb_model <- lapply(seq_len(n_outcomes), function(i) {
+    correlation <- rnorm(p)
+    list(
+      res = as.matrix(Y[, i]),
+      beta = rep(0, p),
+      weights_path = list(),
+      profile_loglike_each = mean(Y[, i]^2),
+      obj_path = 999999,
+      obj_single = 999999,
+      change_loglike = abs(rnorm(p)),
+      correlation = correlation,
+      z = correlation,
+      learning_rate_init = 0.01,
+      stop_thresh = 1e-6,
+      ld_jk = list(),
+      jk = integer(0),
+      scaling_factor = n - 1,
+      beta_scaling = 1,
+      XtX_beta_cache = NULL
+    )
+  })
+  class(cb_model) <- "colocboost"
+
+  cb_model_para <- list(
+    update_temp = list(
+      update_status = rep(1, n_outcomes),
+      real_update_jk = rep(update_jk, n_outcomes)
+    ),
+    focal_outcome_idx = NULL,
+    tau = 0.01,
+    lambda = 0.5,
+    lambda_focal_outcome = 1,
+    func_simplex = "LD_z2z",
+    LD_free = FALSE,
+    dynamic_learning_rate = FALSE,
+    learning_rate_decay = 1,
+    P = p
+  )
+  class(cb_model_para) <- "colocboost"
+
+  list(cb_model = cb_model, cb_model_para = cb_model_para, cb_data = cb_data)
+}
+
+test_that("colocboost_update reuses LD_jk for outcomes sharing reference data", {
+  fixture <- make_shared_update_fixture(n_outcomes = 5, update_jk = 6)
+
+  ns <- colocboost_test_env
+  original_get_LD_jk <- get("get_LD_jk", envir = ns)
+  call_count <- 0L
+  local_mocked_bindings(
+    get_LD_jk = function(...) {
+      call_count <<- call_count + 1L
+      original_get_LD_jk(...)
+    },
+    .package = "colocboost"
+  )
+
+  updated <- colocboost_update(fixture$cb_model, fixture$cb_model_para, fixture$cb_data)
+
+  expect_equal(call_count, 1L)
+  expect_true(all(vapply(updated, function(model) "6" %in% names(model$ld_jk), logical(1))))
+})
+
+test_that("individual profile log equals explicit and residual calculations", {
+  fixture <- make_shared_update_fixture(n_outcomes = 1, update_jk = 5)
+  fixture$cb_model[[1]]$ld_jk[["5"]] <- rep(1, fixture$cb_model_para$P)
+  matmul_count <- 0L
+  fixture$cb_data$data[[1]]$X <- structure(
+    fixture$cb_data$data[[1]]$X,
+    class = c("counted_matrix", "matrix")
+  )
+  assign("%*%.counted_matrix", function(x, y) {
+    matmul_count <<- matmul_count + 1L
+    NextMethod()
+  }, envir = .GlobalEnv)
+  on.exit(rm("%*%.counted_matrix", envir = .GlobalEnv), add = TRUE)
+
+  updated <- colocboost_update(fixture$cb_model, fixture$cb_model_para, fixture$cb_data)
+  profile_log <- tail(updated[[1]]$profile_loglike_each, n = 1)
+  X_plain <- matrix(fixture$cb_data$data[[1]]$X, nrow = nrow(fixture$cb_data$data[[1]]$X))
+  explicit_profile <- mean((fixture$cb_data$data[[1]]$Y - X_plain %*% updated[[1]]$beta)^2)
+  residual_profile <- mean(updated[[1]]$res^2)
+
+  expect_equal(matmul_count, 1L)
+  expect_equal(
+    as.numeric(profile_log),
+    explicit_profile,
+    tolerance = 1e-12
+  )
+  expect_equal(
+    as.numeric(profile_log),
+    residual_profile,
+    tolerance = 1e-12
+  )
+  expect_equal(
+    explicit_profile,
+    residual_profile,
+    tolerance = 1e-12
+  )
+})
+
+test_that("merge_ucos skips between-purity checks for disjoint uCoS pairs", {
+  set.seed(404)
+  p <- 30
+  n <- 20
+  n_outcomes <- 4
+  LD <- diag(p)
+  LD[1, 2] <- LD[2, 1] <- 0.9
+  cb_obj <- list(
+    cb_data = list(
+      data = lapply(seq_len(n_outcomes), function(i) {
+        list(X = NULL, XtX = LD, variable_miss = integer(0), ref_label = "LD", N = n)
+      }),
+      dict = seq_len(n_outcomes)
+    ),
+    cb_model_para = list(P = p, L = n_outcomes)
+  )
+  class(cb_obj) <- "colocboost"
+
+  ucos_each <- list(c(1, 2), c(10, 11), c(2, 3), c(20, 21))
+  names(ucos_each) <- paste0("sets:Y", seq_len(n_outcomes), ":ucos1")
+  avW <- matrix(runif(p * length(ucos_each)), nrow = p)
+  colnames(avW) <- names(ucos_each)
+  past_out <- list(
+    ucos = list(
+      ucos_each = ucos_each,
+      avW_ucos_each = avW,
+      change_obj_each = matrix(0.1, nrow = length(ucos_each), ncol = n_outcomes),
+      purity_each = matrix(1, nrow = length(ucos_each), ncol = 3),
+      ucos_outcome = seq_len(n_outcomes)
+    ),
+    cos = list(cos = list())
+  )
+
+  ns <- colocboost_test_env
+  between_calls <- 0L
+  local_mocked_bindings(
+    get_between_purity = function(pos1, pos2, ...) {
+      if (length(intersect(pos1, pos2)) == 0) {
+        stop("disjoint uCoS pair should not require between-purity")
+      }
+      between_calls <<- between_calls + 1L
+      c(min_abs_cor = 0.9, max_abs_cor = 1, median_abs_cor = 0.9)
+    },
+    get_purity = function(...) c(1, 1, 1),
+    .package = "colocboost"
+  )
+
+  result <- get("merge_ucos", envir = ns)(
+    cb_obj, past_out,
+    min_abs_corr = 0.5,
+    median_cos_abs_corr = 0.8
+  )
+
+  expect_equal(between_calls, 2L)
+  expect_equal(length(result$cos$cos$cos), 1L)
+  expect_equal(length(result$ucos$ucos_each), 2L)
+})
+
+test_that("merge_ucos skips full between-purity when top variants cannot pass merge cutoff", {
+  p <- 10
+  n <- 20
+  LD <- diag(p)
+  LD[1, 3] <- LD[3, 1] <- 0.1
+  cb_obj <- list(
+    cb_data = list(
+      data = lapply(seq_len(2), function(i) {
+        list(X = NULL, XtX = LD, variable_miss = integer(0), ref_label = "LD", N = n)
+      }),
+      dict = seq_len(2)
+    ),
+    cb_model_para = list(P = p, L = 2)
+  )
+  class(cb_obj) <- "colocboost"
+
+  ucos_each <- list(c(1, 2), c(3, 2))
+  names(ucos_each) <- c("sets:Y1:ucos1", "sets:Y2:ucos1")
+  avW <- matrix(runif(p * length(ucos_each)), nrow = p)
+  colnames(avW) <- names(ucos_each)
+  past_out <- list(
+    ucos = list(
+      ucos_each = ucos_each,
+      avW_ucos_each = avW,
+      change_obj_each = matrix(0.1, nrow = length(ucos_each), ncol = 2),
+      purity_each = matrix(1, nrow = length(ucos_each), ncol = 3),
+      ucos_outcome = seq_len(2)
+    ),
+    cos = list(cos = list())
+  )
+
+  ns <- colocboost_test_env
+  local_mocked_bindings(
+    get_between_purity = function(...) {
+      stop("top-variant prefilter should skip full between-purity")
+    },
+    .package = "colocboost"
+  )
+
+  result <- get("merge_ucos", envir = ns)(
+    cb_obj, past_out,
+    min_abs_corr = 0.5,
+    median_cos_abs_corr = 0.8
+  )
+
+  expect_equal(length(result$cos$cos$cos), 0L)
+  expect_equal(length(result$ucos$ucos_each), 2L)
+})
+
+test_that("overlap candidate pairs match pairwise intersect scan", {
+  ucos_each <- list(
+    c(1, 2),
+    c(3, 4),
+    c(2, 5),
+    c(5, 6),
+    7,
+    c(2, 6)
+  )
+  reference <- do.call(rbind, lapply(seq_len(length(ucos_each) - 1L), function(i) {
+    do.call(rbind, lapply((i + 1L):length(ucos_each), function(j) {
+      if (length(intersect(ucos_each[[i]], ucos_each[[j]])) == 0) {
+        return(NULL)
+      }
+      c(i, j)
+    }))
+  }))
+  colnames(reference) <- c("i", "j")
+
+  candidate_pairs <- get(".merge_ucos_overlap_pairs", envir = colocboost_test_env)(ucos_each)
+
+  expect_equal(candidate_pairs, reference)
+})
+
+test_that("merge_ucos candidate pairs preserve pairwise intersect output", {
+  set.seed(505)
+  p <- 30
+  n_outcomes <- 5
+  LD <- diag(p)
+  LD[1, 2] <- LD[2, 1] <- 0.9
+  LD[1, 20] <- LD[20, 1] <- 0.95
+  cb_obj <- list(
+    cb_data = list(
+      data = lapply(seq_len(n_outcomes), function(i) {
+        list(X = NULL, XtX = LD, variable_miss = integer(0), ref_label = "LD", N = 20)
+      }),
+      dict = seq_len(n_outcomes)
+    ),
+    cb_model_para = list(P = p, L = n_outcomes)
+  )
+  class(cb_obj) <- "colocboost"
+
+  ucos_each <- list(c(1, 2), c(10, 11), c(2, 3), c(20, 21), c(3, 4))
+  names(ucos_each) <- paste0("sets:Y", seq_len(n_outcomes), ":ucos1")
+  avW <- matrix(runif(p * length(ucos_each)), nrow = p)
+  colnames(avW) <- names(ucos_each)
+  past_out <- list(
+    ucos = list(
+      ucos_each = ucos_each,
+      avW_ucos_each = avW,
+      change_obj_each = matrix(0.1, nrow = length(ucos_each), ncol = n_outcomes),
+      purity_each = matrix(1, nrow = length(ucos_each), ncol = 3),
+      ucos_outcome = seq_len(n_outcomes)
+    ),
+    cos = list(cos = list())
+  )
+
+  ns <- colocboost_test_env
+  local_mocked_bindings(
+    get_between_purity = function(...) {
+      c(min_abs_cor = 0.9, max_abs_cor = 1, median_abs_cor = 0.9)
+    },
+    get_purity = function(...) c(1, 1, 1),
+    .package = "colocboost"
+  )
+
+  pairwise_pairs <- function(ucos_each) {
+    if (length(ucos_each) < 2L) {
+      return(matrix(integer(0), ncol = 2L, dimnames = list(NULL, c("i", "j"))))
+    }
+    pairs <- do.call(rbind, lapply(seq_len(length(ucos_each) - 1L), function(i) {
+      do.call(rbind, lapply((i + 1L):length(ucos_each), function(j) {
+        if (length(intersect(ucos_each[[i]], ucos_each[[j]])) == 0) {
+          return(NULL)
+        }
+        c(i, j)
+      }))
+    }))
+    if (is.null(pairs)) {
+      return(matrix(integer(0), ncol = 2L, dimnames = list(NULL, c("i", "j"))))
+    }
+    colnames(pairs) <- c("i", "j")
+    pairs
+  }
+
+  candidate_result <- get("merge_ucos", envir = ns)(
+    cb_obj, past_out,
+    min_abs_corr = 0.5,
+    median_cos_abs_corr = 0.8
+  )
+
+  local_mocked_bindings(
+    .merge_ucos_overlap_pairs = pairwise_pairs,
+    .package = "colocboost"
+  )
+  pairwise_result <- get("merge_ucos", envir = ns)(
+    cb_obj, past_out,
+    min_abs_corr = 0.5,
+    median_cos_abs_corr = 0.8
+  )
+
+  expect_equal(candidate_result, pairwise_result)
+  expect_equal(length(candidate_result$cos$cos$cos), 1L)
+  expect_equal(length(candidate_result$ucos$ucos_each), 3L)
+})
+
+test_that("duplicate purity contexts are collapsed for post-assembly checks", {
+  cb_data <- list(
+    data = lapply(seq_len(4), function(i) {
+      list(
+        X = NULL,
+        XtX = diag(5),
+        variable_miss = if (i <= 2) integer(0) else 5L,
+        ref_label = "LD"
+      )
+    }),
+    dict = rep(1L, 4)
+  )
+
+  unique_outcomes <- get(".cb_unique_purity_outcomes", envir = colocboost_test_env)(
+    cb_data,
+    seq_len(4)
+  )
+
+  expect_equal(unique_outcomes, c(1L, 3L))
+})
+
+test_that("merge_cos_ucos reuses duplicate purity contexts", {
+  p <- 6
+  L <- 3
+  cb_obj <- list(
+    cb_data = list(
+      data = lapply(seq_len(L), function(i) {
+        list(
+          X = NULL,
+          XtX = diag(p),
+          variable_miss = integer(0),
+          ref_label = "LD"
+        )
+      }),
+      dict = rep(1L, L)
+    ),
+    cb_model_para = list(P = p, L = L)
+  )
+  class(cb_obj) <- "colocboost"
+
+  out_cos <- list(cos = list(
+    cos = list(cos1 = c(1, 2)),
+    coloc_outcomes = list(1L),
+    avWeight = list(matrix(runif(p), nrow = p, dimnames = list(NULL, "outcome1"))),
+    cs_change = matrix(0.1, nrow = 1, ncol = L)
+  ))
+  out_ucos <- list(
+    ucos_each = list(ucos1 = c(2, 3)),
+    avW_ucos_each = matrix(runif(p), nrow = p, dimnames = list(NULL, "ucos1")),
+    change_obj_each = matrix(0.2, nrow = 1, ncol = L),
+    purity_each = matrix(1, nrow = 1, ncol = 3),
+    ucos_outcome = 2L
+  )
+
+  ns <- colocboost_test_env
+  between_calls <- 0L
+  local_mocked_bindings(
+    get_between_purity = function(...) {
+      between_calls <<- between_calls + 1L
+      c(min_abs_cor = 0.9, max_abs_cor = 1, median_abs_cor = 0.9)
+    },
+    .package = "colocboost"
+  )
+
+  result <- get("merge_cos_ucos", envir = ns)(
+    cb_obj,
+    out_cos,
+    out_ucos,
+    median_cos_abs_corr = 0.8
+  )
+
+  expect_equal(between_calls, 1L)
+  expect_null(result$ucos$ucos_each)
+  expect_equal(result$cos$cos$coloc_outcomes[[1]], c(1L, 2L))
+})
+
+test_that("merge_cos_ucos skips purity checks for disjoint different-outcome sets", {
+  p <- 6
+  L <- 2
+  cb_obj <- list(
+    cb_data = list(
+      data = lapply(seq_len(L), function(i) {
+        list(
+          X = NULL,
+          XtX = diag(p),
+          variable_miss = integer(0),
+          ref_label = "LD"
+        )
+      }),
+      dict = rep(1L, L)
+    ),
+    cb_model_para = list(P = p, L = L)
+  )
+  class(cb_obj) <- "colocboost"
+
+  out_cos <- list(cos = list(
+    cos = list(cos1 = c(1, 2)),
+    coloc_outcomes = list(1L),
+    avWeight = list(matrix(runif(p), nrow = p, dimnames = list(NULL, "outcome1"))),
+    cs_change = matrix(0.1, nrow = 1, ncol = L)
+  ))
+  out_ucos <- list(
+    ucos_each = list(ucos1 = c(4, 5)),
+    avW_ucos_each = matrix(runif(p), nrow = p, dimnames = list(NULL, "ucos1")),
+    change_obj_each = matrix(0.2, nrow = 1, ncol = L),
+    purity_each = matrix(1, nrow = 1, ncol = 3),
+    ucos_outcome = 2L
+  )
+
+  ns <- colocboost_test_env
+  local_mocked_bindings(
+    get_between_purity = function(...) {
+      stop("disjoint different-outcome sets should not require between-purity")
+    },
+    .package = "colocboost"
+  )
+
+  result <- get("merge_cos_ucos", envir = ns)(
+    cb_obj,
+    out_cos,
+    out_ucos,
+    median_cos_abs_corr = 0.8
+  )
+
+  expect_equal(length(result$ucos$ucos_each), 1L)
+  expect_equal(result$cos$cos$coloc_outcomes[[1]], 1L)
+})
+
+test_that("chunked update history preserves legacy matrix output", {
+  updates <- list(
+    list(update_status = c(1, 0, -1), real_update_jk = c(5, NA, 7), jk = c(5, 5, NA, 7)),
+    list(update_status = c(0, 1, 1), real_update_jk = c(NA, 4, 4), jk = c(4, NA, 4, 4)),
+    list(update_status = c(-1, 0, 0), real_update_jk = c(2, NA, NA), jk = c(2, 2, NA, NA))
+  )
+
+  legacy <- list(update_status = c(), real_update_jk = c(), jk = c())
+  chunked <- list(L = 3, update_status = c(), real_update_jk = c(), jk = c())
+
+  for (update in updates) {
+    legacy$update_status <- cbind(legacy$update_status, as.matrix(update$update_status))
+    legacy$real_update_jk <- rbind(legacy$real_update_jk, update$real_update_jk)
+    legacy$jk <- rbind(legacy$jk, update$jk)
+    chunked <- get(".cb_append_update_history", envir = colocboost_test_env)(
+      chunked,
+      update_jk = update$jk,
+      update_status = update$update_status,
+      real_update_jk = update$real_update_jk
+    )
+  }
+
+  expect_gt(attr(chunked, "update_history_capacity"), length(updates))
+  chunked <- get(".cb_trim_update_history", envir = colocboost_test_env)(chunked)
+
+  expect_equal(chunked$update_status, legacy$update_status)
+  expect_equal(chunked$real_update_jk, legacy$real_update_jk)
+  expect_equal(chunked$jk, legacy$jk)
+  expect_null(attr(chunked, "update_history_capacity"))
+  expect_null(attr(chunked, "update_history_n"))
 })

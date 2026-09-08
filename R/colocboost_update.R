@@ -12,6 +12,16 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data) {
   pos.update <- which(cb_model_para$update_temp$update_status != 0)
   focal_outcome_idx <- cb_model_para$focal_outcome_idx
   tau = cb_model_para$tau
+  ld_jk_cache <- list()
+  make_ld_jk_cache_key <- function(update_jk, outcome_idx, ref_idx) {
+    paste(
+      update_jk,
+      ref_idx,
+      cb_data$data[[ref_idx]]$ref_label,
+      paste(cb_data$data[[outcome_idx]]$variable_miss, collapse = ","),
+      sep = "|"
+    )
+  }
 
   for (i in pos.update) {
     update_jk <- cb_model_para$update_temp$real_update_jk[i]
@@ -20,20 +30,27 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data) {
     ########## BEGIN: MAIN CALCULATION ###################
 
     # - calucalate LD between update_jk and other variables
-    if (update_jk %in% unlist(cb_model[[i]]$jk)) {
-      pos <- which(unlist(cb_model[[i]]$jk) == update_jk)
-      ld_jk <- cb_model[[i]]$ld_jk[pos, ]
-    } else {
+    ld_jk_key <- as.character(update_jk)
+    ld_jk_cache_key <- make_ld_jk_cache_key(update_jk, i, X_dict)
+    ld_jk <- cb_model[[i]]$ld_jk[[ld_jk_key]]
+    if (!is.null(ld_jk)) {
+      ld_jk_cache[[ld_jk_cache_key]] <- ld_jk
+    }
+    if (is.null(ld_jk)) {
       cb_model[[i]]$jk <- c(cb_model[[i]]$jk, update_jk)
-      ld_jk <- get_LD_jk(update_jk,
-        X = cb_data$data[[X_dict]]$X,
-        XtX = cb_data$data[[X_dict]]$XtX,
-        N = cb_data$data[[i]]$N,
-        remain_idx = setdiff(1:cb_model_para$P, cb_data$data[[i]]$variable_miss),
-        P = cb_model_para$P,
-        ref_label = cb_data$data[[X_dict]]$ref_label
-      )
-      cb_model[[i]]$ld_jk <- rbind(cb_model[[i]]$ld_jk, ld_jk)
+      ld_jk <- ld_jk_cache[[ld_jk_cache_key]]
+      if (is.null(ld_jk)) {
+        ld_jk <- get_LD_jk(update_jk,
+          X = cb_data$data[[X_dict]]$X,
+          XtX = cb_data$data[[X_dict]]$XtX,
+          N = cb_data$data[[i]]$N,
+          remain_idx = setdiff(seq_len(cb_model_para$P), cb_data$data[[i]]$variable_miss),
+          P = cb_model_para$P,
+          ref_label = cb_data$data[[X_dict]]$ref_label
+        )
+        ld_jk_cache[[ld_jk_cache_key]] <- ld_jk
+      }
+      cb_model[[i]]$ld_jk[[ld_jk_key]] <- ld_jk
     }
     ld_feature <- sqrt(abs(ld_jk))
 
@@ -57,7 +74,7 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data) {
     x_tmp <- cb_data$data[[X_dict]]$X
     scaling_factor <- cb_model[[i]]$scaling_factor
     cov_Xtr <- if (!is.null(x_tmp)) {
-      t(x_tmp) %*% as.matrix(cb_model[[i]]$res) / scaling_factor
+      crossprod(x_tmp, cb_model[[i]]$res) / scaling_factor
     } else {
       cb_model[[i]]$res / scaling_factor
     }
@@ -99,10 +116,7 @@ colocboost_update <- function(cb_model, cb_model_para, cb_data) {
       prediction_beta <- cb_data$data[[X_dict]]$X %*% (beta_grad)
       cb_model[[i]]$res <- cb_model[[i]]$res - step1 * prediction_beta
       # - profile-loglikelihood
-      x <- cb_data$data[[X_dict]]$X
-      y <- cb_data$data[[i]]$Y
-      beta <- cb_model[[i]]$beta
-      profile_log <- mean((y - x %*% beta)^2)
+      profile_log <- mean(cb_model[[i]]$res^2)
     } else if (!is.null(cb_data$data[[X_dict]]$XtX)) {
       beta_scaling <- cb_model[[i]]$beta_scaling
       # - summary statistics
@@ -316,7 +330,7 @@ boost_obj_last <- function(cb_data, cb_model, cb_model_para) {
       x_tmp <- cb_data$data[[X_dict]]$X
       scaling_factor <- cb_model[[i]]$scaling_factor
       cov_Xtr <- if (!is.null(x_tmp)) {
-        t(x_tmp) %*% as.matrix(cb_model[[i]]$res) / scaling_factor
+        crossprod(x_tmp, cb_model[[i]]$res) / scaling_factor
       } else {
         cb_model[[i]]$res / scaling_factor
       }

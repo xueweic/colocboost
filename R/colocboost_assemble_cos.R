@@ -1,4 +1,10 @@
 #' @importFrom stats as.dist cutree hclust
+.group_coloc_candidates <- function(update, pos.coloc) {
+  signatures <- apply(update[, pos.coloc, drop = FALSE], 2, paste0, collapse = ",")
+  group_ids <- match(signatures, unique(signatures))
+  split(seq_along(pos.coloc), group_ids)
+}
+
 colocboost_assemble_cos <- function(cb_obj,
                                     coverage = 0.95,
                                     weight_fudge_factor = 1.5,
@@ -22,6 +28,7 @@ colocboost_assemble_cos <- function(cb_obj,
   cb_model <- cb_obj$cb_model
   cb_model_para <- cb_obj$cb_model_para
   cb_data <- cb_obj$cb_data
+  purity_outcomes <- .cb_unique_purity_outcomes(cb_data, seq_len(cb_model_para$L))
 
   # define the confident sets for colocalization
   update <- cb_model_para$update_status
@@ -124,22 +131,15 @@ colocboost_assemble_cos <- function(cb_obj,
       }
     }
   } else {
-    coloc_candidate <- update[, pos.coloc]
-    coloc_candidate <- apply(coloc_candidate, 2, paste0, collapse = ",")
-    coloc_temp <- table(coloc_candidate)
-    # iterations for each colocalization sets
-    pos_coloc_sets <- lapply(1:length(coloc_temp), function(x) {
-      which(coloc_candidate == names(coloc_temp)[x])
-    })
-    names(pos_coloc_sets) <- names(coloc_temp)
+    pos_coloc_sets <- .group_coloc_candidates(update, pos.coloc)
     # - define coloc_sets
     coloc_sets <- avWeight_coloc_sets <-
       total_change_Loglik_coloc <- evidence_strength_coloc <-
       cs_change_coloc <- coloc_outcomes_sets <- list()
     flag <- 0
-    for (i in 1:length(coloc_temp)) {
+    for (i in seq_along(pos_coloc_sets)) {
       pos_temp_coloc_each <- pos_coloc_sets[[i]]
-      coloc_outcomes <- which(unlist(strsplit(names(coloc_temp)[i], ",")) == 1)
+      coloc_outcomes <- which(update[, pos.coloc[pos_temp_coloc_each[1]]] == 1)
 
       # - if only one iteration for this coloc_set
       if (length(pos_temp_coloc_each) == 1) {
@@ -349,14 +349,17 @@ colocboost_assemble_cos <- function(cb_obj,
         # calculate between purity
         ncsets <- length(coloc_sets)
         min_between <- max_between <- ave_between <- matrix(0, nrow = ncsets, ncol = ncsets)
-        for (i.between in 1:(ncsets - 1)) {
-          for (j.between in (i.between + 1):ncsets) {
+        overlap_pairs <- .merge_ucos_overlap_pairs(coloc_sets)
+        if (nrow(overlap_pairs) > 0L) {
+          for (pair_idx in seq_len(nrow(overlap_pairs))) {
+            i.between <- overlap_pairs[pair_idx, 1L]
+            j.between <- overlap_pairs[pair_idx, 2L]
             cset1 <- coloc_sets[[i.between]]
             cset2 <- coloc_sets[[j.between]]
             res <- list()
-            for (i in 1:cb_model_para$L) {
+            for (i in purity_outcomes) {
               X_dict <- cb_data$dict[i]
-              res[[i]] <- get_between_purity(cset1, cset2,
+              res[[length(res) + 1L]] <- get_between_purity(cset1, cset2,
                 X = cb_data$data[[X_dict]]$X,
                 Xcorr = cb_data$data[[X_dict]]$XtX,
                 miss_idx = cb_data$data[[i]]$variable_miss,

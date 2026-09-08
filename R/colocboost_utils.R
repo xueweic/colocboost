@@ -13,12 +13,33 @@
 #' @rdname colocboost_refine_cos
 #' @keywords cb_refine_cos
 #' @noRd
+.cb_unique_purity_outcomes <- function(cb_data, outcomes) {
+  if (length(outcomes) == 0L) {
+    return(integer(0))
+  }
+
+  keys <- vapply(outcomes, function(i) {
+    ref_idx <- cb_data$dict[i]
+    ref_label <- cb_data$data[[ref_idx]]$ref_label
+    ref_label <- if (is.null(ref_label)) "" else ref_label
+    missing_idx <- cb_data$data[[i]]$variable_miss
+    missing_idx <- if (is.null(missing_idx)) integer(0) else missing_idx
+    paste(ref_idx, ref_label, paste(missing_idx, collapse = ","), sep = "|")
+  }, character(1))
+
+  outcomes[!duplicated(keys)]
+}
+
 merge_cos_ucos <- function(cb_obj, out_cos, out_ucos, coverage = 0.95,
                            min_abs_corr = 0.5, tol = 1e-9,
                            median_cos_abs_corr = 0.8) {
   change_obj_each <- out_ucos$change_obj_each
   coloc_sets <- out_cos$cos$cos
   ucos_each <- out_ucos$ucos_each
+  purity_outcomes <- .cb_unique_purity_outcomes(
+    cb_obj$cb_data,
+    seq_len(cb_obj$cb_model_para$L)
+  )
 
   # - remove overlap between coloc_sets and single_sets
   is_overlap <- is_highLD <- c()
@@ -60,10 +81,13 @@ merge_cos_ucos <- function(cb_obj, out_cos, out_ucos, coverage = 0.95,
         # - if fine_y not in coloc_y, we check overlap and also min_purity
         change_obj_coloc <- out_cos$cos$cs_change
         cset1 <- coloc_sets[[i]]
+        if (length(intersect(cset1, cset2)) == 0L) {
+          next
+        }
         res <- list()
-        for (ii in 1:cb_obj$cb_model_para$L) {
+        for (ii in purity_outcomes) {
           X_dict <- cb_obj$cb_data$dict[ii]
-          res[[ii]] <- get_between_purity(cset1, cset2,
+          res[[length(res) + 1L]] <- get_between_purity(cset1, cset2,
             X = cb_obj$cb_data$data[[X_dict]]$X,
             Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
             miss_idx = cb_obj$cb_data$data[[ii]]$variable_miss,
@@ -120,6 +144,40 @@ merge_cos_ucos <- function(cb_obj, out_cos, out_ucos, coverage = 0.95,
   return(ll)
 }
 
+# Build only uCoS pairs that can merge because they share at least one variant.
+.merge_ucos_overlap_pairs <- function(ucos_each) {
+  empty_pairs <- matrix(integer(0), ncol = 2L, dimnames = list(NULL, c("i", "j")))
+  if (length(ucos_each) < 2L) {
+    return(empty_pairs)
+  }
+
+  variants <- unlist(ucos_each, use.names = FALSE)
+  if (length(variants) == 0L) {
+    return(empty_pairs)
+  }
+
+  ucos_idx <- rep(seq_along(ucos_each), lengths(ucos_each))
+  pairs <- lapply(split(ucos_idx, variants), function(idx) {
+    idx <- sort(unique(idx))
+    if (length(idx) < 2L) {
+      return(NULL)
+    }
+    do.call(rbind, lapply(seq_len(length(idx) - 1L), function(i) {
+      cbind(idx[i], idx[(i + 1L):length(idx)])
+    }))
+  })
+  pairs <- pairs[!vapply(pairs, is.null, logical(1))]
+  if (length(pairs) == 0L) {
+    return(empty_pairs)
+  }
+
+  pairs <- do.call(rbind, pairs)
+  pairs <- pairs[!duplicated(paste(pairs[, 1L], pairs[, 2L], sep = "\r")), , drop = FALSE]
+  pairs <- pairs[order(pairs[, 1L], pairs[, 2L]), , drop = FALSE]
+  colnames(pairs) <- c("i", "j")
+  pairs
+}
+
 #' @importFrom stats na.omit
 merge_ucos <- function(cb_obj, past_out,
                        min_abs_corr = 0.5,
@@ -131,12 +189,37 @@ merge_ucos <- function(cb_obj, past_out,
   out_cos <- past_out$cos
   ucos_each <- out_ucos$ucos_each
   change_obj_each <- out_ucos$change_obj_each
+  get_top_abs_corr <- function(pos1, pos2, X = NULL, Xcorr = NULL,
+                               miss_idx = NULL, P = NULL, ref_label = "LD") {
+    if (is.null(Xcorr)) {
+      value <- suppressWarnings(stats::cor(X[, pos1], X[, pos2]))
+    } else if (identical(ref_label, "No_ref") || (length(Xcorr) == 1 && Xcorr == 1)) {
+      value <- 0
+    } else {
+      if (length(miss_idx) != 0) {
+        pos1 <- match(pos1, setdiff(seq_len(P), miss_idx))
+        pos2 <- match(pos2, setdiff(seq_len(P), miss_idx))
+      }
+      if (is.na(pos1) || is.na(pos2)) {
+        value <- 0
+      } else if (identical(ref_label, "X_ref")) {
+        value <- suppressWarnings(stats::cor(Xcorr[, pos1], Xcorr[, pos2]))
+      } else {
+        value <- Xcorr[pos1, pos2]
+      }
+    }
+    if (is.na(value)) value <- 0
+    abs(value)
+  }
 
   # calculate between purity
   ncsets <- length(ucos_each)
   min_between <- max_between <- ave_between <- matrix(0, nrow = ncsets, ncol = ncsets)
-  for (i.between in 1:(ncsets - 1)) {
-    for (j.between in (i.between + 1):ncsets) {
+  overlap_pairs <- .merge_ucos_overlap_pairs(ucos_each)
+  if (nrow(overlap_pairs) > 0L) {
+    for (pair_idx in seq_len(nrow(overlap_pairs))) {
+      i.between <- overlap_pairs[pair_idx, 1L]
+      j.between <- overlap_pairs[pair_idx, 2L]
       cset1 <- ucos_each[[i.between]]
       cset2 <- ucos_each[[j.between]]
       y.i <- out_ucos$ucos_outcome[i.between]
@@ -145,6 +228,22 @@ merge_ucos <- function(cb_obj, past_out,
         next
       }
       yy <- c(y.i, y.j)
+      # Top-top LD is one element of the full between-set LD matrix; if it
+      # cannot pass the merge cutoff, the full min-between check cannot pass.
+      top_abs_corr <- vapply(yy, function(ii) {
+        X_dict <- cb_obj$cb_data$dict[ii]
+        get_top_abs_corr(cset1[1], cset2[1],
+          X = cb_obj$cb_data$data[[X_dict]]$X,
+          Xcorr = cb_obj$cb_data$data[[X_dict]]$XtX,
+          miss_idx = cb_obj$cb_data$data[[ii]]$variable_miss,
+          P = cb_obj$cb_model_para$P,
+          ref_label = cb_obj$cb_data$data[[X_dict]]$ref_label
+        )
+      }, numeric(1))
+      top_abs_corr <- if (min_abs_corr == 0) min(top_abs_corr) else max(top_abs_corr)
+      if (top_abs_corr <= median_cos_abs_corr) {
+        next
+      }
       res <- list()
       flag <- 1
       for (ii in yy) {
@@ -662,7 +761,7 @@ get_cos_details <- function(cb_obj, coloc_out, data_info = NULL) {
       coloc_out$purity <- purity_all[is_pure,,drop = FALSE]
       colocset_names <- colocset_names[is_pure]
     }
-    vcp <- as.vector(1 - apply(1 - do.call(cbind, int_weight), 1, prod))
+    vcp <- as.vector(1 - apply(1 - do.call(cbind, unname(int_weight)), 1, prod))
     names(vcp) <- data_info$variables
     
     
@@ -851,7 +950,7 @@ get_full_output <- function(cb_obj, past_out = NULL, variables = NULL, cb_output
     cb$change_loglike <- cb$change_loglike[ordered]
     cb$correlation <- as.numeric(cb$correlation[ordered])
     cb$z <- as.numeric(cb$z[ordered])
-    cb$ld_jk <- cb$ld_jk[, ordered]
+    cb$ld_jk <- lapply(cb$ld_jk, function(x) x[ordered])
     cb$z_univariate <- as.numeric(cb$z_univariate[ordered])
     cb$beta_hat <- as.numeric(cb$beta_hat[ordered])
     cb$multi_correction <- as.numeric(cb$multi_correction[ordered])
@@ -1094,4 +1193,3 @@ pseudo_inverse <- function(mat) {
     diag(1 / eig$values[1:keep], keep, keep) %*%
     t(eig$vectors[, 1:keep, drop = FALSE])
 }
-

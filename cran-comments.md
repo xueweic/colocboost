@@ -1,47 +1,30 @@
-## colocboost 1.0.9 release comments
+## colocboost 1.0.10 release comments
 
-This is a CRAN-requested patch update to colocboost 1.0.8.
+This is a CRAN-requested patch update to colocboost 1.0.10.
 
 This patch includes:
 
-* Fixed the CRAN-reported macOS arm64 test issue in the uCoS robustness tests.
+* Fixed the CRAN-reported MKL test issue in the CoS robustness tests.
   The tests now use a stronger simulation setting and aligned inputs for
   `get_robust_ucos()` and `get_ucos_evidence()`, so they no longer depend on
   weak or platform-sensitive simulated signals.
 
-No R source code or package dependency changes were made for this CRAN-requested
-patch.
+* R source code changes were limited to targeted computational optimizations and robustness fixes. No package dependencies were changed.
 
-## CRAN-requested macOS arm64 fix
 
-CRAN reported test failures for colocboost 1.0.8 on macOS arm64 and requested a
-correction before 2026-06-21. The failing test checked robust trait-specific
-uncolocalized event filtering and evidence calculation. The issue has been
-addressed by strengthening the simulation used in the test suite and by using
-matched `cb_obj` and `cb_res` inputs for the evidence check.
+## Advanced documentation and tutorials
 
-CRAN also pointed to the M1mac check service for arm64 issues:
-https://www.stats.ox.ac.uk/pub/bdr/M1mac/README.txt. CRAN noted that this
-service runs a much older OS/toolchain and that toolchain differences often
-matter. This submission therefore fixes the test design itself, rather than
-relying on a platform-specific workaround.
+* Added conceptual and advanced-scenario vignettes to help users understand multi-trait colocalization events and interpret CoS, VCP, and NPC.
+* Added practical illustrations of multiple causal variants and weaker disease GWAS signals, together with supporting figures and guidance.
 
 ## R CMD check results
 
 There is one NOTE about installed package size:
 
 * checking installed package size ... NOTE
-  installed size is 5.0 MB
-  sub-directories of 1Mb or more:
-    data 2.0 MB
-    doc  1.9 MB
+    installed size is  7.1Mb
+    sub-directories of 1Mb or more:
+      data   2.0Mb
+      doc    4.1Mb
 
-This NOTE is expected. The installed size is mainly due to reduced example datasets and rendered vignettes with figures. These files are kept to make the tutorials reproducible and self-contained for multi-trait colocalization workflows. No external data are downloaded during examples or vignette rendering.
-
-## Previous comments
-
-* This package implements methods described in our paper "ColocBoost"
-  (Cao et al., 2025), now cited in DESCRIPTION.
-* Previous CRAN-requested fixes addressed tarball size, user option handling,
-  LICENSE metadata, and accepted package/domain terms in inst/WORDLIST.
-* The examples and vignettes use small datasets to avoid long check times.
+This NOTE is expected. The increase from the previous release is primarily due to two substantive documentation vignettes that introduce the conceptual framework for multi-trait colocalization and provide tutorials on advanced analysis scenarios in ColocBoost. These vignettes include six high-level summary figures: three explain the key conceptual definitions and their relationships to existing methods, and three provide empirical illustrations based on representative simulation results. The figures are embedded in the rendered, self-contained vignettes in the `doc` directory to help users understand the methodology and interpret ColocBoost results. The `data` directory contains reduced example datasets used in reproducible tutorials. No external data are downloaded during examples or vignette rendering.

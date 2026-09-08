@@ -238,7 +238,7 @@ get_robust_colocalization <- function(cb_output,
     cos_details$cos_purity$min_abs_cor <- as.matrix(cos_details$cos_purity$min_abs_cor)[-remove_idx, -remove_idx, drop = FALSE]
     cos_details$cos_purity$median_abs_cor <- as.matrix(cos_details$cos_purity$median_abs_cor)[-remove_idx, -remove_idx, drop = FALSE]
     cos_details$cos_purity$max_abs_cor <- as.matrix(cos_details$cos_purity$max_abs_cor)[-remove_idx, -remove_idx, drop = FALSE]
-    vcp <- as.vector(1 - apply(1 - do.call(cbind, cos_details$cos_vcp), 1, prod))
+    vcp <- as.vector(1 - apply(1 - do.call(cbind, unname(cos_details$cos_vcp)), 1, prod))
     names(vcp) <- cb_output$data_info$variables
     cb_output$vcp <- vcp
     cb_output$cos_details <- cos_details
@@ -323,7 +323,7 @@ get_robust_colocalization <- function(cb_output,
                        use_entropy = use_entropy, residual_correlation = residual_correlation)
   names(int_weight) <- names(cos_weights) <- colocset_names
   cos_details$cos_weights <- cos_weights
-  vcp <- as.vector(1 - apply(1 - do.call(cbind, int_weight), 1, prod))
+  vcp <- as.vector(1 - apply(1 - do.call(cbind, unname(int_weight)), 1, prod))
   names(vcp) <- cb_output$data_info$variables
   cb_output$vcp <- vcp
   cos_details$cos_vcp <- int_weight

@@ -27,16 +27,22 @@ articles:
     - Disease_Prioritized_Colocalization
 
   - title: Interpretation and Visualization
-    desc: "Tutorials on how to interpret and visualize the output from ColocBoost."
+    desc: "Tutorials on how to interpret and visualize ColocBoost results."
     contents:
     - Interpret_ColocBoost_Output
     - Visualization_ColocBoost_Output
 
-  - title: Advanced Topics
-    desc: "Advanced topics and special cases in colocalization and fine-mapping analysis."
+  - title: Colocalization Concepts and Methodology
+    desc: "Educational tutorials on the statistical concepts, assumptions, and algorithms underlying ColocBoost."
+    contents:
+    - Conceptual_Multi_Trait_Colocalization
+    - Advanced_Colocalization_Scenarios
+    - ColocBoost_Update
+
+  - title: Advanced Workflows and Special Cases
+    desc: "Practical guidance for specialized data structures, diagnostic scenarios, and extended ColocBoost workflows."
     contents:
     - Partial_Overlap_Variants
-    - ColocBoost_Update
     - ColocBoost_Wrapper_Pipeline
     - LD_Free_Colocalization
     - Ambiguous_Colocalization

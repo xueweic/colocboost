@@ -404,7 +404,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
   coloc_index <- cb_output$cos_details$cos_outcomes$outcome_index
   # top_variables
   coloc_hits <- lapply(names(coloc_cos), function(cn) {
-    p <- grep(cn, rownames(cb_output$cos_details$cos_top_variables))
+    p <- which(startsWith(rownames(cb_output$cos_details$cos_top_variables), cn))
     cb_output$cos_details$cos_top_variables$top_index[p]
   })
   names(coloc_hits) <- names(coloc_cos)
@@ -413,7 +413,7 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
     cos_vcp <- lapply(1:length(analysis_outcome), function(iy) {
       pos <- which(sapply(coloc_index, function(idx) iy %in% idx))
       if (length(pos) != 0) {
-        w <- do.call(cbind, cb_output$cos_details$cos_vcp[pos])
+        w <- do.call(cbind, unname(cb_output$cos_details$cos_vcp[pos]))
         return(1 - apply(1 - w, 1, prod))
       } else {
         return(rep(0, length(variables)))
@@ -810,4 +810,3 @@ plot_initial <- function(cb_plot_input, y = "log10p",
   
   return(args)
 }
-
