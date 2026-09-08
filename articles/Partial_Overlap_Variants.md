@@ -7,7 +7,7 @@ variants across traits in ColocBoost.
 [`library`](https://rdrr.io/r/base/library.html)`(`[`colocboost`](https://github.com/StatFunGen/colocboost)`)`
 
 ![Illustration of partial overlapping variants across
-traits](../reference/figures/missing_representation.png)
+traits](figures/missing_representation.png)
 
 Illustration of partial overlapping variants across traits
 

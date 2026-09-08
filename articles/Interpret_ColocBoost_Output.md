@@ -84,27 +84,47 @@ the following code:
 
 ## 2. Filter colocalization events by relative strength of evidence
 
-In `cos_summary`, for each 95% CoS, the `cos_npc` column provides a
-normalized probability of colocalization and `min_npc_outcome` column
-provides the minimum normalized probability among colocalized traits.
-Those two metrics are measured as an empirical evidence of
-colocalization both in CoS-level and in trait-level. To obtain the best
-minimal colocalization configuration can be defined by using both
-`cos_npc` and `npc_outcome`. See the detailed usage of this function in
-[link](https://statfungen.github.io/colocboost/reference/get_robust_colocalization.html).
+For each 95% colocalization confidence set (CoS) reported in
+`cos_summary`, two complementary quantities summarize the strength of
+colocalization evidence:
+
+- `cos_npc` reports the event-level normalized probability of
+  colocalization (NPC), which quantifies support for sharing beyond a
+  single-trait explanation.
+- `min_npc_outcome` reports the minimum trait-level normalized evidence
+  among the traits assigned to the event.
+
+These quantities assess whether an event is supported by multiple traits
+and whether each trait contributes sufficient evidence. The
+[`get_robust_colocalization()`](https://statfungen.github.io/colocboost/reference/get_robust_colocalization.md)
+function applies thresholds at both levels to obtain a parsimonious,
+well-supported trait configuration.
+
+See [Conceptual Framework for Multi-trait Colocalization and
+ColocBoost](https://statfungen.github.io/colocboost/articles/Conceptual_Multi_Trait_Colocalization.html)
+for detailed definitions and interpretation of these quantities.
 
 \
-`filter_res`` ``<-`` `[`get_robust_colocalization`](https://statfungen.github.io/colocboost/reference/get_robust_colocalization.md)`(``res``, cos_npc_cutoff ``=`` ``0.5``, npc_outcome_cutoff ``=`` ``0.2``)`\
+`filter_res`` ``<-`` `[`get_robust_colocalization`](https://statfungen.github.io/colocboost/reference/get_robust_colocalization.md)`(`\
+`  ``res``, `\
+`  cos_npc_cutoff ``=`` ``0.5``,`\
+`  npc_outcome_cutoff ``=`` ``0.2`\
+`)`\
 `#> Extracting colocalization results with cos_npc_cutoff = 0.5 and npc_outcome_cutoff = 0.2.`\
 `#> Keep only CoS with cos_npc >= 0.5. For each CoS, keep the outcomes configurations that the npc_outcome >= 0.2.`
 
-- The output from `get_robust_colocalization` is the same as output from
-  `colocboost`, which can be directly used in any post inference and
-  visualization.
-- `npc=0.5` or `npc_outcome = 0.2` maintains robust colocalization
-  signals for cases when many traits are evaluated. Higher thresholds
-  can be specified if users want to focus only on strong colocalization
-  events.
+**Highlight:**
+
+- The output of
+  [`get_robust_colocalization()`](https://statfungen.github.io/colocboost/reference/get_robust_colocalization.md)
+  retains the same structure as the output of
+  [`colocboost()`](https://statfungen.github.io/colocboost/reference/colocboost.md)
+  and can be used directly in downstream inference and visualization
+  workflows.
+- In our numerical studies, `cos_npc_cutoff = 0.5` and
+  `npc_outcome_cutoff = 0.2` retained robust colocalization signals when
+  many traits were evaluated. Higher thresholds may be used to
+  prioritize events with stronger colocalization evidence.
 
 ## 3. More details on ColocBoost output
 

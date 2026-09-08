@@ -155,7 +155,7 @@ Y <- X %*% true_beta + rnorm(N, 0, 1)
 res <- colocboost(X = X, Y = Y, output_level = 2)
 #> Validating input data.
 #> Starting gradient boosting algorithm.
-#> Gradient boosting for outcome 1 converged after 56 iterations!
+#> Gradient boosting for outcome 1 converged after 63 iterations!
 #> Performing inference on colocalization events.
 #> No colocalization results in this region!
 #> Extracting outcome-specific (uncolocalized) results with pvalue_cutoff = 1e-05, and npc_outcome_cutoff = 0.2.
@@ -163,12 +163,12 @@ res <- colocboost(X = X, Y = Y, output_level = 2)
 # Get the trait-specifc effect summary
 get_ucos_summary(res)
 #>   outcomes  ucos_id    purity top_variable top_variable_vpa n_variables
-#> 1       Y1 ucos1:y1 0.9100012        SNP10        0.8598058           2
-#> 2       Y1 ucos2:y1 0.6653318        SNP80        0.5863380           4
+#> 1       Y1 ucos1:y1 0.9073274        SNP10        0.7186494           2
+#> 2       Y1 ucos2:y1 0.6571040        SNP81        0.4489895           4
 #>       ucos_index             ucos_variables
 #> 1          10; 9                SNP10; SNP9
-#> 2 80; 81; 77; 79 SNP80; SNP81; SNP77; SNP79
+#> 2 81; 80; 77; 79 SNP81; SNP80; SNP77; SNP79
 #>                                                            ucos_variables_vpa
-#> 1                                        0.859805771708525; 0.138573636458965
-#> 2 0.58633798749248; 0.267009614298653; 0.0964229672581591; 0.0233288874828693
+#> 1                                          0.718649373566354; 0.2778624951498
+#> 2 0.448989535514876; 0.343287698749178; 0.137240951187496; 0.0478207052053731
 ```

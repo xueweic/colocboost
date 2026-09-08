@@ -42,7 +42,7 @@ two traits. ColocBoost instead resolves the two shared signals as
 distinct colocalization events.
 
 ![Heterogeneous effects of two causal variants across
-traits.](../reference/figures/Figure2b_i.png)
+traits.](figures/Figure2b_i.png)
 
 ### Scenario 2: Non-causal strongest marginal effect
 
@@ -64,7 +64,7 @@ colocalized signal to a non-causal variant, whereas ColocBoost resolves
 the two shared causal signals as distinct colocalization events.
 
 ![A non-causal variant has the strongest marginal
-association.](../reference/figures/Figure2b_ii.png)
+association.](figures/Figure2b_ii.png)
 
 ## 2. Colocalization with weaker effects in GWAS
 
@@ -91,7 +91,7 @@ initial single-trait analysis. ColocBoost identifies both shared signals
 using its disease-prioritized colocalization approach.
 
 ![Colocalization with a weaker causal effect in the disease
-GWAS.](../reference/figures/Figure2b_iii.png)
+GWAS.](figures/Figure2b_iii.png)
 
 See [Mixed Data-type and Disease Prioritized
 Colocalization](https://statfungen.github.io/colocboost/articles/Disease_Prioritized_Colocalization.html)

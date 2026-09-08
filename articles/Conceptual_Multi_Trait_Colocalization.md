@@ -34,7 +34,7 @@ or distinct sets of traits and multiple causal variants.
   scales to hundreds of traits.
 
 ![Illustration of colocalization events in
-ColocBoost.](../reference/figures/Colocalization_Events.png)
+ColocBoost.](figures/Colocalization_Events.png)
 
 ## 2. Conceptual ColocBoost summaries and their analogies to existing methods
 
@@ -100,7 +100,7 @@ is *conditionally* independent.
   (SNP.PP.H4) in COLOC in a pairwise colocalization analysis.
 
 ![Illustration of variant-level analogues in
-ColocBoost.](../reference/figures/Variant_Level_Analogues.png)
+ColocBoost.](figures/Variant_Level_Analogues.png)
 
 ### 2.2. Colocalization evidence
 
@@ -235,7 +235,7 @@ strength of evidence using
 function.
 
 ![Illustration of event-level analogues in
-ColocBoost.](../reference/figures/Event_Level_Analogues.png)
+ColocBoost.](figures/Event_Level_Analogues.png)
 
 Concordance between NPC and PP.H4 or PPFC was assessed only for detected
 CoS with at least 95% overlap variants between ColocBoost and COLOC or
@@ -310,9 +310,9 @@ Colocalization events summary:
 `#>   colocalized_outcomes          colocalized_variables`\
 `#> 1       Y1; Y2; Y3; Y4 rs_186; rs_194; rs_168; rs_205`\
 `#> 2           Y2; Y3; Y5                 rs_589; rs_593`\
-`#>                                                   colocalized_variables_vcp`\
-`#> 1 0.283698494935173; 0.235702194620198; 0.23031425057979; 0.224446848624299`\
-`#> 2                                      0.816960678269378; 0.182762268369858`\
+`#>                                                    colocalized_variables_vcp`\
+`#> 1 0.283698494935173; 0.235702194620198; 0.230314250579791; 0.224446848624299`\
+`#> 2                                       0.816960678269378; 0.182762268369858`\
 `#>   cos_npc    purity`\
 `#> 1  0.9989 0.9941612`\
 `#> 2  0.9974 0.9761542`
