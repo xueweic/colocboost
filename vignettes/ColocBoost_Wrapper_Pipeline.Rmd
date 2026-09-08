@@ -18,7 +18,7 @@ knitr::opts_chunk$set(
 This vignette demonstrates how to use the bioinformatics pipeline for ColocBoost to perform colocalization analysis with `colocboost` for multiple individual-level datasets and/or summary statistics datasets. 
 
 - See more details about functions in the package `pecotmr` with [link](https://github.com/StatFunGen/pecotmr/tree/main) and 
-`colocboost_pipeline` with [link](https://github.com/StatFunGen/pecotmr/blob/main/R/colocboost_pipeline.R). 
+`colocboost_pipeline` with [link](https://github.com/xueweic/pecotmr/blob/main/R/colocboost_pipeline.R). 
 - See more details about input data preparation in `xqtl_protocol` with [link](https://statfungen.github.io/xqtl-protocol/code/mnm_analysis/mnm_methods/colocboost.html).
 
 Acknowledgment: Thanks to Kate (Kathryn) Lawrence (GitHub:@kal26) for her contributions to this vignette.
