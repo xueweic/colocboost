@@ -499,6 +499,10 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
       ucos <- ucos_details$ucos$ucos_index
       ucos_outcome_index <- ucos_details$ucos_outcomes$outcome_index
       ucos_hits <- lapply(ucos, function(x) x[[1]])
+      if (variant_coord) {
+        ucos <- lapply(ucos, function(cos) x$pos[cos])
+        ucos_hits <- lapply(ucos_hits, function(hit) x$pos[hit])
+      }
       # check inclusion of other options
       select_ucos <- 1:length(ucos)
       if (!is.null(plot_ucos_idx)) {
