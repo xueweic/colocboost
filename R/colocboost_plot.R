@@ -19,7 +19,7 @@
 #' @param add_highlight_idx Optional indices for add_highlight variables.
 #' @param outcome_names Optional vector of outcomes names for the subtitle of each figure. \code{outcome_names=NULL} for the outcome name shown in \code{data_info}.
 #' @param plot_cols Number of columns in the plot grid, default is 2. If you have many colocalization. please consider increasing this.
-#' @param variant_coord Logical, if TRUE uses variant coordinates on x-axis, default is FALSE. This is required the variable names including position information.
+#' @param variant_coord Logical, if TRUE uses variant coordinates on x-axis when base-pair positions can be extracted from all variable names, default is TRUE. Otherwise, variants are plotted by index.
 #' @param show_top_variables Logical, if TRUE shows top variables for each CoS, default is FALSE
 #' @param show_cos_to_uncoloc Logical, if TRUE shows colocalization to uncolocalized outcomes to diagnose, default is FALSE
 #' @param show_cos_to_uncoloc_idx Optional indices for showing CoS to all uncolocalized outcomes
@@ -84,7 +84,7 @@ colocboost_plot <- function(cb_output, y = "log10p",
                             add_highlight_style = "vertical_lines",
                             outcome_names = NULL,
                             plot_cols = 2,
-                            variant_coord = FALSE,
+                            variant_coord = TRUE,
                             show_top_variables = FALSE,
                             show_cos_to_uncoloc = FALSE,
                             show_cos_to_uncoloc_idx = NULL,
@@ -382,6 +382,20 @@ get_input_plot <- function(cb_output, plot_cos_idx = NULL,
   if_focal <- !is.na(match(names(cb_output$cos_details$cos$cos_variables), focal_cos))
   # extract z-scores
   variables <- cb_output$data_info$variables
+  if (variant_coord) {
+    variable_parts <- strsplit(variables, ":", fixed = TRUE)
+    bp <- suppressWarnings(vapply(variable_parts, function(x) {
+      if (length(x) < 2L) NA_real_ else as.numeric(x[2L])
+    }, numeric(1)))
+    if (length(bp) == 0L || any(!is.finite(bp))) {
+      message(
+        "Base-pair coordinates were not detected for all variables. ",
+        "First five variable names: ", paste(head(variables, 5), collapse = ", "),
+        ". Plotting variants by index."
+      )
+      variant_coord <- FALSE
+    }
+  }
   Z <- cb_output$data_info$z
   coef <- cb_output$data_info$coef
   vcp <- list(as.numeric(cb_output$vcp))
